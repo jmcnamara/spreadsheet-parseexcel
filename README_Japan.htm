@@ -1,0 +1,156 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=x-euc-jp">
+<title></title>
+</head>
+
+<body bgcolor="#00FFFF">
+
+<pre>Speadsheet::ParseExcel.pm - 0.2405
+
+                                                by 川合孝典 (Hippo2000)
+
+更新履歴はChangesをご覧ください
+
+概要
+  このモジュールは、まだαバージョンです。
+
+  Microsoft社のExcelファイルをWindows以外のプラットフォームでも情報を取り
+  出すようにするモジュールです。
+
+動作確認
+  DOS/V     WindowsNT ver.4.0    Perl5.005
+  DOS/V     TurboLinux ver.6.0   Perl5.005
+  Sun Sparc Solaris 2.6          Perl5.005
+  DOS/V     Vine Linux 2.0       Perl5.005
+  Macintosh JPerl、FreeBSDでも動いているというレポートをいただいています
+
+  その他の環境で実行された方は、教えてください。
+  動いても動かなくても、ご協力よろしくお願いします。 &lt;(__)&gt;
+
+簡単な確認(testディレクトリ）
+  sampleディレクトリに以下のファイルが入っています：
+
+  sample.pl   ：簡単なテストスクリプト（Spreadsheet::ParseExcel::FmtDefaultを使用）
+  sample_j.pl ：簡単なテストスクリプト（Spreadsheet::ParseExcel::FmtJapanを使用、コードを指定して出力）
+  res_sample  ：sample.plの実行結果
+  res_sample_j：sample_j.plの実行結果(euc)
+
+  dmpEx.pl  : Excelファイルの内容を表示する（Spreadsheet::ParseExcel::FmtDefaultを使用）
+  dmpExj.pl : Excelファイルの内容を表示する（Spreadsheet::ParseExcel::FmtJapanを使用）
+
+  簡単にこのモジュールの動きを確認したいだけであれば、dmpExj.plによって
+  指定したExcelファイルの内容を表示させることができます。
+
+  ex.
+    # perl -I.. dmpExj.pl Excel/Test97.xls euc 
+
+    「-I..」は、親ディレクトリにあるSpreadsheet::ParseExcel.pmを利用するために指定します。
+    「Excel/Test97.xls」は対象となるファイル名。
+    「euc」は漢字を出力するときの文字コードです。euc、sjis、jisなど
+    Jcode.pmと同じです。
+
+インストール
+  OLE::Storage_Liteがインストールされている必要があります。
+　Spreadsheet::ParseExcel::FmtJapanを使用する場合、Jcode.pmを必要とします。（他のモジュールを必要としません。）
+　Spreadsheet::ParseExcel::FmtJapan2を使用する場合、Jcode.pm、Unicode::Mapを必要とします。
+　Perlの標準的なインストールになりました。このモジュール自体はPerlのみで作成されているので、コピーするだけでも動きます。</pre>
+
+<pre>  perl Makefile.PL
+  make
+  make test
+  make install (rootになって）
+</pre>
+
+<pre>FmtJapan2のために</pre>
+
+<pre> 機種依存文字に対応するためのFmtJapan2を0.09から同梱します。
+ 利用するためにはUnicode::Mapをインストールするほか、以下の手順が必要になります：</pre>
+
+<pre>  (1) 同梱される&quot;CP932Excel.map&quot;を適切なディレクトリにコピーします。</pre>
+
+<pre>  (2) &quot;CP932Excel&quot;をマップ名として追加するために、Unicode::Map階層にあるREGISTRYに以下の行を追加します。
+      （mapのディレクトリ名は適切なディレクトリ名にしてください）</pre>
+
+<pre>name:    CP932Excel
+srcURL:  $SrcUnicode/VENDORS/MICSFT/WINDOWS/CP932.TXT
+src:     $DestUnicode/VENDORS/MICSFT/WINDOWS/CP932.TXT
+map:     (コピー先のディレクトリ)/CP932Excel.map
+# Don't remove this line</pre>
+
+<pre>使い方
+  use strict;
+  use Spreadsheet::ParseExcel;
+  my $oExcel = new Spreadsheet::ParseExcel;
+  my $oBook = $oExcel-&gt;Parse('Excel/Test97.xls');
+  
+  #または日本語対応では
+  use strict;
+  use Spreadsheet::ParseExcel;
+  use Spreadsheet::ParseExcel::FmtJapan;
+  my $oExcel = new Spreadsheet::ParseExcel;
+  my $oFmtJ = Spreadsheet::ParseExcel::FmtJapan-&gt;new(Code =&gt; 'euc'); #sjis、jisなどのコード
+  my $oBook = $oExcel-&gt;Parse('Excel/Test97.xls', $oFmtJ);
+</pre>
+
+<pre>  #情報の取り出し例
+  my($iR, $iC, $oWkS, $oWkC);
+  
+  print &quot;FILE  :&quot;, $oBook-&gt;{File} , &quot;\n&quot;;
+  print &quot;COUNT :&quot;, $oBook-&gt;{SheetCount} , &quot;\n&quot;;
+  print &quot;AUTHOR:&quot;, $oBook-&gt;{Author} , &quot;\n&quot;;
+  for(my $iSheet=0; $iSheet &lt; $oBook-&gt;{SheetCount} ; $iSheet++) {
+    $oWkS = $oBook-&gt;{Worksheet}[$iSheet];
+    print &quot;--------- SHEET:&quot;, $oWkS-&gt;{Name}, &quot;\n&quot;;
+    for(my $iR = $oWkS-&gt;{MinRow} ; 
+            defined $oWkS-&gt;{MaxRow} &amp;&amp; $iR &lt;= $oWkS-&gt;{MaxRow} ; $iR++) {
+        for(my $iC = $oWkS-&gt;{MinCol} ;
+               defined $oWkS-&gt;{MaxCol} &amp;&amp; $iC &lt;= $oWkS-&gt;{MaxCol} ; $iC++) {
+            $oWkC = $oWkS-&gt;{Cells}[$iR][$iC];
+            print &quot;( $iR , $iC ) =&gt;&quot;, $oWkC-&gt;Value, &quot;\n&quot; if($oWkC);
+        }
+    }
+  }
+
+問題点・バグ</pre>
+
+<pre>最大の問題点であった「Exce97 デベロッパーズ キット」が手に入りました。
+  ただただHirofumi Morisadaさんに感謝、感謝です。
+</pre>
+
+<pre>  Excel97/2000で保存した場合、FmtJapanでは機種依存文字（(株)やローマ数字のIなど）が〓になってしまいます。
+  FmtJapan2では一応対応しているつもりです。</pre>
+
+<pre>  まだテストもちゃんとできていません。とりあえずは動くでしょう。 &lt;(__)&gt;
+  TurboLinux Version 6で作成しているので、他の環境でどうなるのかとても気に
+  なります。
+  Solarisでは動作確認をしてもらいました。（まだ不具合がありそうですが）
+
+  コメント、バグレポートをお待ちしています 川合孝典：kwitknr@cpn.org
+
+やらなきゃいけないこと：
+  テスト！
+  ドキュメントの整備
+  出力への対応 (^_^) Spreadsheet::WriteExcelを使っていただくのが一番
+
+  だれかまるごと引きついてくれる人はいませんか？(^^)
+
+謝辞：
+  こんな半端な状態で謝辞もあったものではありませんが、以下のプログラム、
+  モジュールを参考にさせていただきました。
+
+    xlHtml
+    OLE::Storage
+        herbert (OLE::Storageに同梱されるツール）
+    Spreadsheet::WriteExcel
+
+   Solarisのデバッグは島本武氏と山路春奈さんがいなければ、成立しませんでした。(cloudyに感謝）
+　 埜口晴美さんにはExcel2000のファイルをいただきました。
+   Hirofumi Morisadaさんからの情報で文字列のバグを発見、修正することができました。
+   そして「Excel97デベロッパーズキット」をどうもありがとうございました。
+
+  その他、たくさんの方からの動作報告やバグレポートをいただき感謝、感謝です。</pre>
+</body>
+</html>

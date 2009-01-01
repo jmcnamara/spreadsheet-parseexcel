@@ -1,0 +1,122 @@
+=========================================
+FILE  :sample/Excel/Test97J.xls
+COUNT :2
+AUTHOR:kawait
+--------- SHEET:Sheet1-ASC
+( 0 , 0 ) =>ASC
+( 0 , 1 ) =>This Data is 'ASC Only'
+( 1 , 0 ) =>Date
+( 1 , 1 ) =>1964/3/23
+( 2 , 0 ) =>INTEGER
+( 2 , 1 ) =>12345
+( 3 , 0 ) =>Float
+( 3 , 1 ) =>1.29
+( 4 , 0 ) =>Double
+( 4 , 1 ) =>1234567.89012345
+( 5 , 0 ) =>Formula
+( 5 , 1 ) =>1246912.89012345
+( 6 , 0 ) =>Data
+( 6 , 1 ) =>1234567.89
+( 7 , 0 ) =>BIG INTEGER
+( 7 , 1 ) =>123456789012
+--------- SHEET:漢字名
+( 0 , 0 ) =>ASC
+( 0 , 1 ) =>This Data is 'ASC Only'
+( 1 , 0 ) =>漢字も入る
+( 1 , 1 ) =>漢字のデータ
+( 2 , 0 ) =>Date
+( 2 , 1 ) =>1964/3/23
+( 3 , 0 ) =>INTEGER
+( 3 , 1 ) =>12345
+( 4 , 0 ) =>Float
+( 4 , 1 ) =>1.29
+( 5 , 0 ) =>Double
+( 5 , 1 ) =>1234567.89012345
+( 6 , 0 ) =>Formula
+( 6 , 1 ) =>1246912.89012345
+( 7 , 0 ) =>書式に漢字:Float
+=========================================
+FILE  :sample/Excel/Test95J.xls
+COUNT :2
+AUTHOR:kawait
+--------- SHEET:Sheet1-ASC
+( 0 , 0 ) =>ASC
+( 0 , 1 ) =>This Data is 'ASC Only'
+( 1 , 0 ) =>Date
+( 1 , 1 ) =>1964/3/23
+( 2 , 0 ) =>INTEGER
+( 2 , 1 ) =>12345
+( 3 , 0 ) =>Float
+( 3 , 1 ) =>1.29
+( 4 , 0 ) =>Double
+( 4 , 1 ) =>1234567.89012345
+( 5 , 0 ) =>Formula
+( 5 , 1 ) =>1246912.89012345
+--------- SHEET:漢字名
+( 0 , 0 ) =>ASC
+( 0 , 1 ) =>This Data is 'ASC Only'
+( 1 , 0 ) =>漢字も入る
+( 1 , 1 ) =>漢字のデータ
+( 2 , 0 ) =>Date
+( 2 , 1 ) =>1964/3/23
+( 3 , 0 ) =>INTEGER
+( 3 , 1 ) =>12345
+( 4 , 0 ) =>Float
+( 4 , 1 ) =>1.29
+( 5 , 0 ) =>Double
+( 5 , 1 ) =>1234567.89012345
+( 6 , 0 ) =>Formula
+( 6 , 1 ) =>1246912.89012345
+( 7 , 0 ) =>書式に漢字:Float
+=========================================
+FILE  :sample/Excel/Test1904.xls
+COUNT :1
+AUTHOR:kawait
+--------- SHEET:Sheet1-ASC
+( 0 , 0 ) =>ASC
+( 0 , 1 ) =>This Data is 'ASC Only'
+( 1 , 0 ) =>Date
+( 1 , 1 ) =>1964/3/23
+( 2 , 0 ) =>INTEGER
+( 2 , 1 ) =>12345
+( 3 , 0 ) =>Float
+( 3 , 1 ) =>1.29
+( 4 , 0 ) =>Double
+( 4 , 1 ) =>1234567.89012345
+( 5 , 0 ) =>Formula
+( 5 , 1 ) =>1246912.89012345
+=========================================
+FILE  :sample/Excel/Test1904_95.xls
+COUNT :1
+AUTHOR:kawait
+--------- SHEET:Sheet1-ASC
+( 0 , 0 ) =>ASC
+( 0 , 1 ) =>This Data is 'ASC Only'
+( 1 , 0 ) =>Date
+( 1 , 1 ) =>1964/3/23
+( 2 , 0 ) =>INTEGER
+( 2 , 1 ) =>12345
+( 3 , 0 ) =>Float
+( 3 , 1 ) =>1.29
+( 4 , 0 ) =>Double
+( 4 , 1 ) =>1234567.89012345
+( 5 , 0 ) =>Formula
+( 5 , 1 ) =>1246912.89012345
+=========================================
+FILE  :sample/Excel/AuthorK.xls
+COUNT :3
+AUTHOR:kawait
+--------- SHEET:Sheet1
+( 0 , 0 ) =>漢字名のテスト
+( 0 , 1 ) =>漢字データはどうなる？
+--------- SHEET:Sheet2
+--------- SHEET:Sheet3
+=========================================
+FILE  :sample/Excel/AuthorK95.xls
+COUNT :3
+AUTHOR:kawait
+--------- SHEET:Sheet1
+( 0 , 0 ) =>漢字名のテスト
+( 0 , 1 ) =>漢字データはどうなる？
+--------- SHEET:Sheet2
+--------- SHEET:Sheet3

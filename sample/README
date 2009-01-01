@@ -1,0 +1,36 @@
+chkFmt.pl   : Sample Script for formatting
+res_fmt     : result of chkFmt.pl
+
+chkInfo.pl   : Sample Script for get information about format
+res_info     : result of chkInfo.pl with Excel/FmtTest.xls
+
+sample.pl   :Simple Script (using SpreadSheet::ParseExcel::FmtDefault)
+sample_j.pl :Simple Script using Japanese character
+        (using SpreadSheet::ParseExcel::FmtJapan)
+res_sample  :result of sample.pl
+res_samplej :result of sample_j.pl (in euc)
+
+dmpEx.pl    : print out content of Excel file
+        (using SpreadSheet::ParseExcel::FmtDefault)
+dmpExJ.pl   : print out content of Excel file
+        (using SpreadSheet::ParseExcel::FmtJapan)
+dmpExU.pl   : print out content of Excel file
+        (using SpreadSheet::ParseExcel::FmtUnicode)
+
+dmpExH.pl   : print out content of Excel file
+        (using SpreadSheet::ParseExcel::FmtDefault + event handler)
+
+sampleOEM.pl: Displys difference between FmtJapan and FmtJapan2
+res_oem     : result of samplOEM.pl
+
+dmpExR.pl   : Sample Script for get information about each characters.
+res_rich    : result of dmpExR.pl with Excel/Rich.xls
+
+Ilya.pl     : Sample script for Object Oriented callback
+
+smpFile.pl  : Sample scripr for parsing perl variable
+
+xls2csv.pl  : Sample script for xls2csv
+
+iftest.pl   : Sample script for new interface
+iftestj.pl  : Sample script for new interface with FmtJapan

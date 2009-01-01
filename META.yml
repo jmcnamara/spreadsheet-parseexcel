@@ -1,0 +1,17 @@
+--- #YAML:1.0
+name:                Spreadsheet-ParseExcel
+version:             0.33
+abstract:            ~
+license:             ~
+author:              ~
+generated_by:        ExtUtils::MakeMaker version 6.44
+distribution_type:   module
+requires:     
+    IO::File:                      0
+    IO::Scalar:                    0
+    OLE::Storage_Lite:             0.08
+    Scalar::Util:                  0
+    Test::More:                    0.47
+meta-spec:
+    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
+    version: 1.3

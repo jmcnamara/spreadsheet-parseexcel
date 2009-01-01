@@ -1,0 +1,311 @@
+Revision history for Perl extension Spreadsheet::ParseExcel.
+
+0.41 24 October 2008
+
+    + Changed maintainership to John McNamara.
+
+    ! Fixed bug when parsing RK numbers (generally ints or small floats).
+      http://rt.cpan.org/Public/Bug/Display.html?id=39892
+
+    ! Changed margin units to inches to (cleanly) avoid undef warning in
+      SaveParser.
+
+
+0.33 2008.09.07
+    - Default format for formatted dates changed from 'm-d-yy' to 'yyyy-mm-dd'
+    - Numeric fields with date-formats now promote to Date
+    - Added docs about date type 14 problem
+    - skip another test when prereq is missing
+    - split Spreadsheet::ParseExcel::SaveParser into packages
+    - split Spreadsheet::ParseExcel into packages
+
+0.32 2007.05.05
+    - Remove the memory_leak test as well as it still fails.
+
+0.31 2007.05.03
+    - Require IO::Scalar always as OLE::Storage_Lite needs it but does not prereq it
+    - disable some of the tests that don't yet work on 64 bit due to number precision
+      in order to allow automatic installation
+
+0.30 2007.03.31
+    - add some more tests
+    - add test to see memory leak using Proc::ProcessTable
+    - Start using Scalar::Util qw(weaken) to (hopefully) avoid memory leak
+    - It seems we did not check correctly if PERLIO is available in Makefile.PL
+      now it is the same test we do in the code itself.
+    - Flag1904 renamed to Flg1904 in documentation (Chad) RT #24293
+
+0.29 2007.03.30
+    - clean up basic.t to skip tests that need additional and missing module
+    - No more need for IO::Scalar if PERLIO is available (H.Merijn Brand)
+
+0.28 Wed Jan  7, 2007
+    - Documentation update
+    - Add t/parse.t
+    - Add sample/parse.pl
+    - fix some syntax errors in the sub-modules
+
+0.27 Wed Jan  3, 2007
+    - See changes in the 0.27_XX versions
+
+0.27_03 Thu Nov 2, 2006
+    - Officially receive maintainership (Gabor Szabo)
+    - slight code cleanup
+    - more sample test
+
+0.27_02
+    - Fixing another warning:
+      Character in 'c' format wrapped in pack
+      http://rt.cpan.org/Ticket/Display.html?id=18063
+      (Grant Stevens)
+    - More test, enable use of Devel::Cover
+
+0.27_01  Mon Sep 11, 2006
+    - Moving test.pl to t/ and using Test::More
+    - Add tests running (some of the) sample files
+    - Add 'use warnings', remove prototypes
+    - Fix the warning in Spreadsheet::ParseExcel::FmtDefault
+      Character in "C" format wrapped at .../Spreadsheet/ParseExcel/FmtDefault.pm line 68.
+      http://rt.cpan.org/Public/Bug/Display.html?id=7376
+      (Slaven Rezić and others)
+
+0.2603  Mon May 30, 2004
+    - Mod SaveParser : Apply a path from Eduardo J
+                        adding Protect feature
+                        (Thank you, Eduardo J for patch)
+    - Mod ParseExcel : Apply a path from C. Jon Larsen
+                        adding GetContent
+                        (Thank you, C. Jon Larsen)
+
+0.2602  Mon Jul 15, 2002
+    - Fix SaveParser : Mod hidden support(with 0 column width)
+                        (Thank you, HIROSHIGE,Shigeru for report)
+
+0.2601  Sat Jul 13, 2002
+    Thank you for Peter Marschall for PATCH.
+    - Mod ParseExcel : Add new methods
+    - Mod SaveParser : Add new methods
+
+    - Mod ParseExcel : Mod subHeader, subFooter
+                        (Thank you, RT? for report)
+    - Mod SaveParser : Add hidden support
+                        (Thank you, HIROSHIGE,Shigeru for report)
+    - Add new sample : Add  dmpEx_2xml.pl
+                        (Thank you, Khalid EZZARAOUI for new code)
+
+0.26  Sat Jun 1, 2002
+    Thank you for Peter Marschall.
+    - Mod ParseExcel : Add new interface
+    - Mod SaveParser : Add new interface
+
+0.25  Fri May  10, 2002
+    - Mod ParseExcel : Fix For SaveParser
+    - Mod SaveParser : Add Create
+                       Add page setting
+                       Add some documents
+
+0.2407 Mon Apr  24, 2002
+    - Mod Utility    : Fix Numeric format
+                        (Thank you, Jeff Shaffer for report)
+                       Fix MakeBun
+    - Mod ParseExcel : Fix Continue (COTINUE with no header)
+                        (Thank you, Tuneyosi Fukusima for report)
+                     : Add {Val} in sample :-)
+                        (Thank you, Ernst Kloppenburg for suggestion)
+
+0.2406 Mon Apr  8, 2002
+    - Mod Utility    : Fix $sNUMEXP
+                            (Thank you for Xavier Catteau for patch)
+                       Add col2int int2col sheetRef xls2csv
+                        (Thank you for Xavier Catteau for patch)
+    - Mod ParseExcel : Add file contents
+    - Mod SaveParser : Mod AddCell
+
+0.2405 Tue Jan 29, 2002
+    - Mod FmtDefault : Fix 0x01 (='0') format
+                        (Thank you Marc Pohl for report)
+    - Mod ParseExcel : Mod Parse Fh of CGI.pm and GLOB ref.
+                        (Thank you Nicholas Hamlin and Abe Daisuke for reports)
+                       Fix PrintArea detection
+                        (Thank you Todd A. Green for patch)
+                       Add  custom palette support
+                        (Thank you Florian Pflug for patch)
+                       Fix  _SetDimension prototype
+                        (Thank you David Dyck for patch)
+    - Mod SaveParser : Mod return value of SaveParser
+                        (Thank you Iceman for patch)
+    - Mod Utility    : Mod $iAftP manipulation
+                        (Thank you Stanislav Sukholet for patch)
+
+0.2404 Tue Jul 24  7:30:00 2001 - Tue Dec 4 11:00:00 2001
+    - Mod ParseExcel : Mod _SwapForUnicode for a string with odd length
+                        (Thank you, Mikhail Turenko)
+                     : Add GLOB reference support
+                        (Thank you, coral.)
+                     : Fix/Add Font name Unicode judge
+                        (Thank you, Mikhail Turenko, Alex Edelman)
+    - Mod Utility    : Fix Backslash problem
+                        (Thank you, Bruno Wolff III. And sorry for TOO LATE)
+                     : Fix add number expressions
+                        (Thank you, Jing Zhao)
+
+0.2403 Tue Jul 24 7:30:00 2001
+    - Mod FmtUnicode, FmtJapan, FmtJapan2 : Fix NL
+                        (Thank you, Jeremy Smartt)
+
+0.2402 Thu Jul 12 20:30:00 2001
+    - Mod Utility, FmtDefault :Fix format error
+                        (Thank you, Kevin Ko)
+    - Mod Utility :Mod for Japanese sign(triangle)
+
+0.2401 Mon Jul 9  19:00:00 2001
+    - Mod FmtUnicode :Mod alphanumeric in BIG5
+                        (Thank you, Kevin Ko)
+        Sorry, it is not effective (ToT)
+
+0.24 Wed Jul 5  06:30:00 2001
+    - Mod ParseExcel :Add OO style callback
+                        (Thank you, Ilya Sterin)
+    - Add sample/Ilya.pl :-)
+    - Mod ParseExcel : Mod use FmtDefault for PDK
+                        (Thank you, Maxime Alechine)
+
+0.2301 Tue Jun 26  8:00:00 2001
+    - Mod FmtDefault
+                    :Fix not convert undefined or '' string
+
+0.23 Thu Jun 21  21:00:00 2001
+    - Mod ParseExcel, FmtUnicode, FmtJapan, FmtJapan2 :
+                    :Fix Unicode Latin1 adapt
+                       (Thank you, Seiko Yamamura and Sadahiro)
+    - Mod ParseExcel : my(undef)  -> my($undef1) ...
+                       (Thank you, Alex)
+
+0.22.3 Thu May 16  8:00:00 2001
+    - Mod FmtUnicode : Fix code undefined
+    - Mod ParseExcel : Fix Marged area (row>255)
+                       (Thank you, Dmitriy Litovchin)
+
+0.22.2 Thu May 16  8:00:00 2001
+    - Mod ParseExcel : Fix Hidden RowHeight, ColWidht
+                       (Thank you, Maxim Ovchinnikov)
+
+0.22.1 Wed May 14 20:35:00 2001
+    - Mod ParseExcel : Fix Continue (COTINUE with no header)
+                       (Thank you, Steve Sapovits)
+                     : Fix ignore Graph sheet
+                       (Thank you, Joel Defarge )
+    - Mod Utility : Fix eval at Conditiona-Format
+                       (Thank you, Alok K. Dhir)
+
+0.22 Sat May 5 19:00:00 2001
+    - Add SaveParser : For DBD::Excel
+
+0.21.2 Tue May 1 7:00:00 2001
+    - Fix ParseExcel : MergedArea
+                       (Thank you, Bradley M. Handy )
+
+0.21.1 Sat Apr 29 14:00:00 2001
+    - Add ParseExcel : Rich text information support
+                       (Thank you, Vladimir Igrevsky)
+
+0.21 Sat Apr 24 18:00:00 2001
+    - Mod ParseExcel : Add New Feature for CellHandler
+                       (Thank you, Jeff Clark)
+    - Mod ParseExcel, FmtDefault, FmtJapan, Utility:
+                     : Expanding format information to support
+                       (Supported by Nippon-RAD OP Division)
+
+0.20.2 Wed Apr 18 9:00:00 2001
+    - Fix Utility : ExcelFmt (For Number format)
+                       (Thank you, Jeff Clark)
+
+0.20.1 Sun Apr 11 9:00:00 2001
+    - Fix FmtJapan, FmtJapan2 : TxtFmt
+    - Fix FmtDefault : ValFmt (for 'String' format')
+                       (Thank you, Fukusima, Tuneyosi)
+
+0.20  Mon Mar 30  20:00:00 2001
+    - Fix ParseExcel.pm : RK int minus
+                       (Thank you, Morten Sickel)
+    - Mod ParseExcel.pm : Fix Font number but not complete
+                       (Thank you, Vladimir Igrevsky)
+    - Fix ParseExcel.pm : _convBIFF8 non conversion (LABEL, String...)
+                       (Thank you, Fukusima, Tuneyosi)
+    - Add pod : Limitaion with Spreadsheet::WriteExcel.pm
+                       (Thank you, Venkataramana Mokkapati)
+
+0.19  Mon Mar 26  12:00:00 2001
+    - Fix Utility.pm :Month short name
+                       (Thank you, Morten Sickel)
+    - Fix Utility.pm :Formatting Error
+                       (Thank you, yusuf_najuddin)
+    - Fix FmtJapan2.pm: CP932Excel.map readable check
+                       (Thank you, Kawasaki)
+
+0.18  Sat Mar 18  16:00:00 2001
+    - Fix Excel4 file support
+    - Fix subLabel (Unicode)
+            (Thank you, yusuf_najmuddin)
+
+0.17  Wed Mar 12  9:00:00 2001
+    - Fix Utility.pm for Number format
+    - Fix FmtJapan2.pm to use FmtJapan
+            (Thank you, Kawasaki)
+    - Fix Utility.pm for Number format (not Numeric)
+            (Thank you, John Dawson)
+    - Fix Format string with Chinese Character (in Excel95)
+
+0.16  Wed Mar 7  22:00:00 2001
+    - Fix Format String
+    - Avoding warnings
+            (Thank you Jimmy Sieben and Daniel Berger)
+
+0.15  Wed Mar 6  10:00:00 2001
+    - Fix RK number
+            (Thank you Jimmy Sieben)
+    - Modify many internal functions!!
+    - Add Spreadsheet::ParseExcel::Utity for formatting!
+
+0.13  Sat Feb 21  20:40:00 2001
+    - Support Pps 'BOOK' (not 'Book') with OLE::Storage_Lite 0.07
+                             (Thank you, Punam Chordia )
+    - Modify Makefile.PL (define OLE::Storage_Lite Version)
+                             (Thank you, Aldo Calpini)
+    - Fix Conetinue ASCII-Unicode pattern
+                             (Thank you, Tim Wills)
+    - Add FmtUnicode sample :dmpExU.pl (Sorry and thank you, Mike Goblin)
+
+0.12  Sat Feb 5  11:00:00 2001
+    - Support Excel4 file (Thank you, Jeff Haferman and herbert )
+    - Add reference of scalar and IO::File object support in Parse
+                          (Thank you, Jeff Haferman)
+    - Fix Continue SST (Thank you, Gennadiy)
+    - Delete VBAMacros from sample/Excel/Test97j.xls and Test97.xls
+      avoiding virus check.
+                          (Thank you, Alfred Nathaniel)
+    - Fix weekday of ExcelLocaltime
+
+0.11  Sat Jan 26 14:00:00 2001
+    - Skip 0xEF to EOF(0x0A) (Thank you, Phil DiFalco)
+
+0.10  Mon Jan 15 12:00:00 2001
+    - Fix _subString, _subFormula  (Thank you, Ilter Cekic and Mike Edwards)
+
+0.09  Sat Dec 15 12:00:00 2000
+    - Fix Month name of FmtDefault.pm  (Thank you, Michael Edwards)
+    - Add FmtJapan2.pm
+    - Fix Slightly Bug
+
+0.08  Sat Nov 25 12:00:00 2000
+    - Fix RString, PackedString BUGS (Thank you, Kim Namsuk)
+    - Fix undefined function _subDefColW (Thank you, Hirofumi Morisada)
+
+0.07  Sat Nov 18 12:00:00 2000
+    - Change to use OLE::Storage_Lite
+    - Fix RString, PackedString BUGS (Thank you, Hirofumi Morisada)
+    - Fix and Add Formula String     (Thank you, Michael Edwards)
+
+0.05  Mon Oct  2 03:14:04 2000
+    - original version
+

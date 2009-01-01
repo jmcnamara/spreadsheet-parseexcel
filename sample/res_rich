@@ -1,0 +1,68 @@
+=========================================
+FILE  :sample/Excel/Rich.xls
+COUNT :1
+AUTHOR:kawait
+--------- SHEET:Sheet1
+( 0 , 0 ) =>example 
+( 1 , 0 ) =>example 
+--------------------------------------------
+POS              :1
+Name             :Times New Roman
+Bold             :0
+Italic           :0
+Height           :18
+Underline        :0
+UnderlineStyle   :00
+Color            :13
+Color RGB        :FFFF00
+Strikeout        :0
+Super            :0
+--------------------------------------------
+POS              :2
+Name             :Times New Roman
+Bold             :0
+Italic           :0
+Height           :16
+Underline        :1
+UnderlineStyle   :01
+Color            :12
+Color RGB        :0000FF
+Strikeout        :0
+Super            :0
+--------------------------------------------
+POS              :3
+Name             :Times New Roman
+Bold             :0
+Italic           :0
+Height           :11
+Underline        :0
+UnderlineStyle   :00
+Color            :17
+Color RGB        :008000
+Strikeout        :0
+Super            :0
+--------------------------------------------
+POS              :4
+Name             :Times New Roman
+Bold             :1
+Italic           :1
+Height           :11
+Underline        :0
+UnderlineStyle   :00
+Color            :14
+Color RGB        :FF00FF
+Strikeout        :0
+Super            :0
+--------------------------------------------
+POS              :5
+Name             :Times New Roman
+Bold             :0
+Italic           :0
+Height           :11
+Underline        :0
+UnderlineStyle   :00
+Color            :32767
+Color RGB        :000000
+Strikeout        :0
+Super            :0
+( 2 , 0 ) =>
