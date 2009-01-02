@@ -1,7 +1,11 @@
 Revision history for Perl extension Spreadsheet::ParseExcel.
 
-0.41 24 October 2008
 
+0.42 1 January 2009
+    + Fix for world writeable files in distro to allow PAUSE indexing.
+
+
+0.41 24 October 2008
     + Changed maintainership to John McNamara.
 
     ! Fixed bug when parsing RK numbers (generally ints or small floats).

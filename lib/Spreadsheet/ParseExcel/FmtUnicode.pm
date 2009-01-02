@@ -10,7 +10,7 @@ use warnings;
 use Unicode::Map;
 use base 'Spreadsheet::ParseExcel::FmtDefault';
 
-our $VERSION = '0.33';
+our $VERSION = '0.42';
 
 #------------------------------------------------------------------------------
 # new (for Spreadsheet::ParseExcel::FmtUnicode)

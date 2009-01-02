@@ -18,7 +18,7 @@ use Spreadsheet::ParseExcel::SaveParser::Workbook;
 use Spreadsheet::ParseExcel::SaveParser::Worksheet;
 use Spreadsheet::WriteExcel;
 use base 'Spreadsheet::ParseExcel';
-our $VERSION = '0.40';
+our $VERSION = '0.42';
 
 use constant MagicCol => 1.14;
 #------------------------------------------------------------------------------

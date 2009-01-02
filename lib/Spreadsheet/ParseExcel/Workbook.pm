@@ -2,7 +2,7 @@ package Spreadsheet::ParseExcel::Workbook;
 use strict;
 use warnings;
 
-our $VERSION = '0.33';
+our $VERSION = '0.42';
 
 sub new {
     my ($class) = @_;

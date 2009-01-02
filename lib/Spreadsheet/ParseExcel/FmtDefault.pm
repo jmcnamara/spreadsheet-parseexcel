@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 use Spreadsheet::ParseExcel::Utility qw(ExcelFmt);
-our $VERSION = '0.33';
+our $VERSION = '0.42';
 
 my %hFmtDefault = (
     0x00 => '@',
