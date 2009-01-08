@@ -1811,26 +1811,21 @@ Spreadsheet::ParseExcel - Extract information from an Excel file.
     my $parser   = Spreadsheet::ParseExcel->new();
     my $workbook = $parser->Parse('Book1.xls');
 
+    for my $worksheet ( $workbook->worksheets() ) {
 
-    for my $worksheet (@{$workbook->{Worksheet}}) {
-        if (defined $worksheet->{MaxRow}) {
-            for (my $row =  $worksheet->{MinRow};
-                    $row <= $worksheet->{MaxRow};
-                    $row++)
-            {
-                for (my $col =  $worksheet->{MinCol};
-                        $col <= $worksheet->{MaxCol};
-                        $col++)
-                {
-                    my $cell = $worksheet->Cell($row, $col);
+        my ( $row_min, $row_max ) = $worksheet->row_range();
+        my ( $col_min, $col_max ) = $worksheet->col_range();
 
-                    next unless $cell;
+        for my $row ( $row_min .. $row_max ) {
+            for my $col ( $col_min .. $col_max ) {
 
-                    print "Row, Col    = ($row, $col)\n";
-                    print "Value       = ", $cell->Value(), "\n";
-                    print "Unformatted = ", $cell->{Val},   "\n";
-                    print "\n";
-                }
+                my $cell = $worksheet->get_cell( $row, $col );
+                next unless $cell;
+
+                print "  Row, Col    = ($row, $col)\n";
+                print "  Value       = ", $cell->value(),       "\n";
+                print "  Unformatted = ", $cell->unformatted(), "\n";
+                print "\n";
             }
         }
     }
@@ -1904,9 +1899,18 @@ As a syntactic shorthand you can create a Parser and Workbook object in one go u
     # Method 2
     my $workbook = Spreadsheet::ParseExcel::Workbook->Parse('Book1.xls');
 
+
+=head2 worksheets()
+
+Returns an array of L<"Worksheet"> objects. This was most commonly used to iterate over the worksheets in a workbook:
+
+    for my $worksheet ( $workbook->worksheets() ) {
+        ...
+    }
+
 =head2 Worksheet()
 
-The C<Worksheet()> method returns a C<Worksheet> object using either its name or index:
+The C<Worksheet()> method returns a single C<Worksheet> object using either its name or index:
 
     $worksheet = $workbook->Worksheet('Sheet1');
     $worksheet = $workbook->Worksheet(0);
@@ -1930,11 +1934,13 @@ These properties are generally only of interest to advanced users. Casual users 
 
 =head2 $workbook->{Worksheet}->[$index]
 
-Returns an array of L<"Worksheet"> objects. This is most commonly used to iterate over the worksheets in a workbook:
+Returns an array of L<"Worksheet"> objects. This was most commonly used to iterate over the worksheets in a workbook:
 
     for my $worksheet (@{$workbook->{Worksheet}}) {
         ...
     }
+
+It is now deprecated, use C<worksheets())> instead.
 
 =head2 $workbook->{File}
 
@@ -1980,19 +1986,23 @@ The C<Spreadsheet::ParseExcel::Worksheet> class has the following methods and pr
 
 =head1 Worksheet methods
 
-=head2 Cell($row, $col)
+=head2 get_cell($row, $col)
 
-Return the C<Cell> object at row C<$row> and column C<$col> if it is defined. Otherwise returns undef.
+Return the L<"Cell"> object at row C<$row> and column C<$col> if it is defined. Otherwise returns undef.
 
-    my $cell = $worksheet->Cell($row, $col);
+    my $cell = $worksheet->get_cell($row, $col);
 
-=head2 RowRange()
+=head2 row_range()
 
 Return a two-element list C<($min, $max)> containing the minimum and maximum defined rows in the worksheet. If there is no row defined C<$max> is smaller than C<$min>.
 
-=head2 ColRange()
+    my ( $row_min, $row_max ) = $worksheet->row_range();
+
+=head2 col_range()
 
 Return a two-element list C<($min, $max)> containing the minimum and maximum of defined columns in the worksheet. If there is no column defined C<$max> is smaller than C<$min>.
+
+    my ( $col_min, $col_max ) = $worksheet->col_range();
 
 =head1 Worksheet Properties
 
@@ -2582,7 +2592,7 @@ However, in a lot of cases when an Excel file is being processed the only inform
         my $cell        = $_[4];
 
         # Do something useful with the formatted cell value
-        print $cell->Value(), "\n";
+        print $cell->value(), "\n";
 
     }
 
@@ -2620,7 +2630,7 @@ If you don't want all of the data in the spreadsheet you can add some control lo
         return if $row >= 10;
 
         # Do something with the formatted cell value
-        print $cell->Value(), "\n";
+        print $cell->value(), "\n";
 
     }
 
@@ -2654,7 +2664,7 @@ However, this still processes the entire workbook. If you wish to save some addi
         }
 
         # Do something with the formatted cell value
-        print $cell->Value(), "\n";
+        print $cell->value(), "\n";
 
     }
 
