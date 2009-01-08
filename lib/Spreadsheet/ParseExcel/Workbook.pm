@@ -42,6 +42,18 @@ sub Worksheet {
     return undef;
 }
 
+#------------------------------------------------------------------------------
+# Spreadsheet::ParseExcel::Workbook worksheets
+#------------------------------------------------------------------------------
+sub worksheets {
+    my $self = shift;
+
+    return @{ $self->{Worksheet} };
+}
+
+
+
+
 #DESTROY {
 #    my ($self) = @_;
 #    warn "DESTROY $self called\n"
