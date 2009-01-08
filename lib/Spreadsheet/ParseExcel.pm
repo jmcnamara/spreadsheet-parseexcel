@@ -1,10 +1,11 @@
-# Spreadsheet::ParseExcel
-#  by Kawai, Takanori (Hippo2000) 2000.10.2
-#                                 2001. 2.2 (Ver. 0.15)
-# This Program is ALPHA version.
-#//////////////////////////////////////////////////////////////////////////////
-# Spreadsheet::ParseExcel Objects
-#//////////////////////////////////////////////////////////////////////////////
+###############################################################################
+#
+# Spreadsheet::ParseExcel - Extract information from an Excel file.
+#
+# Copyright 2000-2008, Takanori Kawai
+#
+# Documentation after __END__
+#
 package Spreadsheet::ParseExcel;
 use strict;
 use warnings;
@@ -12,7 +13,7 @@ use warnings;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.42';
+our $VERSION = '0.43';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -58,10 +59,10 @@ my %ProcTbl =(
     0x1A    => \&_subVPageBreak,        # Vertical Page Break
     0x1B    => \&_subHPageBreak,        # Horizontal Page Break
     0x22    => \&_subFlg1904,           # 1904 Flag
-    0x26    => \&_subMergin,            # Left Margin
-    0x27    => \&_subMergin,            # Right Margin
-    0x28    => \&_subMergin,            # Top Margin
-    0x29    => \&_subMergin,            # Bottom Margin
+    0x26    => \&_subMargin,            # Left Margin
+    0x27    => \&_subMargin,            # Right Margin
+    0x28    => \&_subMargin,            # Top Margin
+    0x29    => \&_subMargin,            # Bottom Margin
     0x2A    => \&_subPrintHeaders,      # Print Headers
     0x2B    => \&_subPrintGridlines,    # Print Gridlines
     0x3C    => \&_subContinue,          # Continue
@@ -1288,24 +1289,30 @@ sub _subVPageBreak {
     $oBook->{Worksheet}[$oBook->{_CurSheet}]->{VPageBreak} = \@aBreak;
 }
 #------------------------------------------------------------------------------
-# _subMergin (for Spreadsheet::ParseExcel) DK: P306, 345, 400, 440
+# _subMargin (for Spreadsheet::ParseExcel) DK: P306, 345, 400, 440
 #------------------------------------------------------------------------------
-sub _subMergin {
+sub _subMargin {
     my($oBook, $bOp, $bLen, $sWk) = @_;
     return undef unless(defined $oBook->{_CurSheet});
+
+    # The "Mergin" options are a workaround for a backward compatible typo.
 
     my $dWk = _convDval(substr($sWk, 0, 8));
     if($bOp == 0x26) {
         $oBook->{Worksheet}[$oBook->{_CurSheet}]->{LeftMergin} = $dWk;
+        $oBook->{Worksheet}[$oBook->{_CurSheet}]->{LeftMargin} = $dWk;
     }
     elsif($bOp == 0x27) {
         $oBook->{Worksheet}[$oBook->{_CurSheet}]->{RightMergin} = $dWk;
+        $oBook->{Worksheet}[$oBook->{_CurSheet}]->{RightMargin} = $dWk;
     }
     elsif($bOp == 0x28) {
         $oBook->{Worksheet}[$oBook->{_CurSheet}]->{TopMergin} = $dWk;
+        $oBook->{Worksheet}[$oBook->{_CurSheet}]->{TopMargin} = $dWk;
     }
     elsif($bOp == 0x29) {
         $oBook->{Worksheet}[$oBook->{_CurSheet}]->{BottomMergin} = $dWk;
+        $oBook->{Worksheet}[$oBook->{_CurSheet}]->{BottomMargin} = $dWk;
     }
 }
 #------------------------------------------------------------------------------
@@ -1369,8 +1376,8 @@ sub _subSETUP {
      $oWkS->{Res},
      $oWkS->{VRes},) = unpack('v8', $sWk);
 
-    $oWkS->{HeaderMergin} = _convDval(substr($sWk, 16, 8));
-    $oWkS->{FooterMergin} = _convDval(substr($sWk, 24, 8));
+    $oWkS->{HeaderMargin} = _convDval(substr($sWk, 16, 8));
+    $oWkS->{FooterMargin} = _convDval(substr($sWk, 24, 8));
     $oWkS->{Copis}= unpack('v2', substr($sWk, 32, 2));
     $oWkS->{LeftToRight}= (($iGrBit & 0x01)? 1: 0);
     $oWkS->{Landscape}  = (($iGrBit & 0x02)? 1: 0);
@@ -1380,6 +1387,11 @@ sub _subSETUP {
     $oWkS->{Notes}      = (($iGrBit & 0x20)? 1: 0);
     $oWkS->{NoOrient}   = (($iGrBit & 0x40)? 1: 0);
     $oWkS->{UsePage}    = (($iGrBit & 0x80)? 1: 0);
+
+    # Workaround for a backward compatible typo.
+    $oWkS->{HeaderMergin} = $oWkS->{HeaderMargin};
+    $oWkS->{FooterMergin} = $oWkS->{FooterMargin};
+
 }
 #------------------------------------------------------------------------------
 # _subName (for Spreadsheet::ParseExcel) DK: P350
@@ -1787,538 +1799,664 @@ __END__
 
 =head1 NAME
 
-Spreadsheet::ParseExcel - Get information from Excel file
+Spreadsheet::ParseExcel - Extract information from an Excel file.
 
 =head1 SYNOPSIS
 
-
-I<new interface>
+    #!/usr/bin/perl -w
 
     use strict;
     use Spreadsheet::ParseExcel;
 
-    my $excel = Spreadsheet::ParseExcel::Workbook->Parse($file);
-    foreach my $sheet (@{$excel->{Worksheet}}) {
-        printf("Sheet: %s\n", $sheet->{Name});
-        $sheet->{MaxRow} ||= $sheet->{MinRow};
-        foreach my $row ($sheet->{MinRow} .. $sheet->{MaxRow}) {
-            $sheet->{MaxCol} ||= $sheet->{MinCol};
-            foreach my $col ($sheet->{MinCol} ..  $sheet->{MaxCol}) {
-                my $cell = $sheet->{Cells}[$row][$col];
-                if ($cell) {
-                    printf("( %s , %s ) => %s\n", $row, $col, $cell->{Val});
+    my $parser   = Spreadsheet::ParseExcel->new();
+    my $workbook = $parser->Parse('Book1.xls');
+
+
+    for my $worksheet (@{$workbook->{Worksheet}}) {
+        if (defined $worksheet->{MaxRow}) {
+            for (my $row =  $worksheet->{MinRow};
+                    $row <= $worksheet->{MaxRow};
+                    $row++)
+            {
+                for (my $col =  $worksheet->{MinCol};
+                        $col <= $worksheet->{MaxCol};
+                        $col++)
+                {
+                    my $cell = $worksheet->Cell($row, $col);
+
+                    next unless $cell;
+
+                    print "Row, Col    = ($row, $col)\n";
+                    print "Value       = ", $cell->Value(), "\n";
+                    print "Unformatted = ", $cell->{Val},   "\n";
+                    print "\n";
                 }
             }
         }
     }
 
 
-I<old interface>
-    use strict;
-    use Spreadsheet::ParseExcel;
-    my $oExcel = Spreadsheet::ParseExcel->new;
-
-    #1.1 Normal Excel97
-    my $oBook = $oExcel->Parse('Excel/Test97.xls');
-    my($iR, $iC, $oWkS, $oWkC);
-    print "FILE  :", $oBook->{File} , "\n";
-    print "COUNT :", $oBook->{SheetCount} , "\n";
-    print "AUTHOR:", $oBook->{Author} , "\n";
-    for(my $iSheet=0; $iSheet < $oBook->{SheetCount} ; $iSheet++) {
-        $oWkS = $oBook->{Worksheet}[$iSheet];
-        print "--------- SHEET:", $oWkS->{Name}, "\n";
-        for(my $iR = $oWkS->{MinRow} ;
-                defined $oWkS->{MaxRow} && $iR <= $oWkS->{MaxRow} ; $iR++) {
-            for(my $iC = $oWkS->{MinCol} ;
-                            defined $oWkS->{MaxCol} && $iC <= $oWkS->{MaxCol} ; $iC++) {
-                $oWkC = $oWkS->{Cells}[$iR][$iC];
-                print "( $iR , $iC ) =>", $oWkC->Value, "\n" if($oWkC);  # Formatted Value
-                print "( $iR , $iC ) =>", $oWkC->{Val}, "\n" if($oWkC);  # Original Value
-            }
-        }
-    }
-
 =head1 DESCRIPTION
 
-Spreadsheet::ParseExcel makes you to get information from Excel95, Excel97, Excel2000 file.
+The Spreadsheet::ParseExcel module can be used to read information from an Excel 95-2003 file.
 
-=head2 Functions
+=head1 Parser
 
-=over 4
+=head2 new()
 
-=item new
+The C<new()> method is used to create a new C<Spreadsheet::ParseExcel> parser object.
 
-I<$oExcel> = Spreadsheet::ParseExcel->new(
-                    [ I<CellHandler> => \&subCellHandler,
-                      I<NotSetCell> => undef | 1,
-                    ]);
+    my $parser = Spreadsheet::ParseExcel->new();
 
-Constructor.
+As an B<advanced> feature it is also possible to pass a call-back handler to the parser to control the parsing of the spreadsheet.
 
+    $parser = Spreadsheet::ParseExcel->new(
+                        [ CellHandler => \&cell_handler,
+                          NotSetCell  => 1,
+                        ]);
 
-=over 4
 
-=item CellHandler I<(experimental)>
+The call-back can be used to ignore certain cells or to reduce memory usage. See the section L<Reducing the memory usage of Spreadsheet::ParseExcel> for more information.
 
-specify callback function when a cell is detected.
 
-I<subCellHandler> gets arguments like below:
+=head2 Parse($filename, [$formatter])
 
-sub subCellHandler (I<$oBook>, I<$iSheet>, I<$iRow>, I<$iCol>, I<$oCell>);
+The Parser C<Parse()> method return a L<"Workbook"> object.
 
-B<CAUTION> : The atributes of Workbook may not be complete.
-This function will be called almost order by rows and columns.
-Take care B<almost>, I<not perfectly>.
+    my $parser   = Spreadsheet::ParseExcel->new();
+    my $workbook = $parser->Parse('Book1.xls');
 
-=item NotSetCell I<(experimental)>
+If an error occurs C<Parse()> returns C<undef>.
 
-specify set or not cell values to Workbook object.
+The C<$filename> parameter is generally the file to be parsed. However, it can also be a filehandle or a scalar reference.
 
-=back
+The optional C<$formatter> array ref can be an reference to a L<"Formatter Class"> to format the value of cells.
 
-=item Parse
 
-I<$oWorkbook> = $oParse->Parse(I<$sFileName> [, I<$oFmt>]);
+=head2 ColorIdxToRGB()
 
-return L<"Workbook"> object.
-if error occurs, returns undef.
+The C<ColorIdxToRGB()> method returns a RGB string corresponding to a specified color index. The RGB string has 6 characters, representing the RGB hex value, for example C<'FF0000'>. The color index is generally obtained from a L<FONT> object.
 
-=over 4
+    $RGB = $parser->ColorIdxToRGB($color_index);
 
-=item I<$sFileName>
 
-name of the file to parse
 
-From 0.12 (with OLE::Storage_Lite v.0.06),
-scalar reference of file contents (ex. \$sBuff) or
-IO::Handle object (including IO::File etc.) are also available.
 
-=item I<$oFmt>
+=head1 Workbook
 
-L<"Formatter Class"> to format the value of cells.
+A C<Spreadsheet::ParseExcel::Workbook> is created via the C<Spreadsheet::ParseExcel> C<Parse()> method:
 
-=back
+    my $parser   = Spreadsheet::ParseExcel->new();
+    my $workbook = $parser->Parse('Book1.xls');
 
-=item ColorIdxToRGB
+The Workbook class has methods and properties that are outlined in the following sections.
 
-I<$sRGB> = $oParse->ColorIdxToRGB(I<$iColorIdx>);
+=head1 Workbook Methods
 
-I<ColorIdxToRGB> returns RGB string corresponding to specified color index.
-RGB string has 6 characters, representing RGB hex value. (ex. red = 'FF0000')
+=head2 Parse()
 
-=back
+As a syntactic shorthand you can create a Parser and Workbook object in one go using the Workbook C<Parse()> method. The following examples are equivalent:
 
-=head2 Workbook
+    # Method 1
+    my $parser   = Spreadsheet::ParseExcel->new();
+    my $workbook = $parser->Parse('Book1.xls');
 
-I<Spreadsheet::ParseExcel::Workbook>
+    # Method 2
+    my $workbook = Spreadsheet::ParseExcel::Workbook->Parse('Book1.xls');
 
-Workbook class has these methods :
+=head2 Worksheet()
 
-=over 4
+The C<Worksheet()> method returns a C<Worksheet> object using either its name or index:
 
-=item Parse
+    $worksheet = $workbook->Worksheet('Sheet1');
+    $worksheet = $workbook->Worksheet(0);
 
-(class method) : same as Spreadsheet::ParseExcel
+Returns C<undef> if the sheet name or index doesn't exist.
 
-=back
+=head1 Workbook Properties
 
-=over 4
+A workbook object exposes a number of properties as shown below:
 
-=item Worksheet
+    $workbook->{Worksheet }->[$index]
+    $workbook->{File}
+    $workbook->{Author}
+    $workbook->{Flg1904}
+    $workbook->{Version}
+    $workbook->{SheetCount}
+    $workbook->{PrintArea }->[$index]
+    $workbook->{PrintTitle}->[$index]
 
-I<$oWorksheet> = $oBook->Worksheet(I<$sName>);
+These properties are generally only of interest to advanced users. Casual users can skip this section.
 
-I<Worksheet> returns a Worksheet object with I<$sName> or undef.
-If there is no worksheet with I<$sName> and I<$sName> contains only digits,
-it returns a Worksheet object at that position.
+=head2 $workbook->{Worksheet}->[$index]
 
-=back
+Returns an array of L<"Worksheet"> objects. This is most commonly used to iterate over the worksheets in a workbook:
 
-Workbook class has these properties :
+    for my $worksheet (@{$workbook->{Worksheet}}) {
+        ...
+    }
 
-=over 4
+=head2 $workbook->{File}
 
-=item File
+Returns the name of the Excel file.
 
-Name of the file
+=head2 $workbook->{Author}
 
-=item Author
+Returns the author of the Excel file.
 
-Author of the file
+=head2 $workbook->{Flg1904}
 
-=item Flg1904
+Returns true if the Excel file is using the 1904 date epoch instead of the 1900 epoch. The Windows version of Excel generally uses the 1900 epoch while the Mac version of Excel generally uses the 1904 epoch.
 
-If this flag is on, date of the file count from 1904.
+=head2 $workbook->{Version}
 
-=item Version
+Returns the version of the Excel file.
 
-Version of the file
+=head2 $workbook->{SheetCount}
 
-=item SheetCount
+Returns the numbers of L<"Worksheet"> objects in the Workbook.
 
-Numbers of L<"Worksheet"> s in that Workbook
+=head2 $workbook->{PrintArea}->[$index]
 
-=item Worksheet[SheetNo]
+Returns an array ref of print areas. Each print area is as follows:
 
-Array of L<"Worksheet">s class
+    [ $start_row, $start_col, $end_row, $end_col]
 
-=item PrintArea[SheetNo]
+=head2 $workbook->{PrintTitle}->[$index]
 
-Array of PrintArea array refs.
+Returns an array ref  of print title hash refs. Each print title is as follows:
 
-Each PrintArea is : [ I<StartRow>, I<StartColumn>, I<EndRow>, I<EndColumn>]
+    {
+        Row    => [$start_row, $end_row],
+        Column => [$start_col, $end_col]
+    }
 
-=item PrintTitle[SheetNo]
 
-Array of PrintTitle hash refs.
 
-Each PrintTitle is :
-        { Row => [I<StartRow>, I<EndRow>],
-          Column => [I<StartColumn>, I<EndColumn>]}
 
-=back
+=head1 Worksheet
 
-=head2 Worksheet
+The C<Spreadsheet::ParseExcel::Worksheet> class has the following methods and properties.
 
-I<Spreadsheet::ParseExcel::Worksheet>
+=head1 Worksheet methods
 
-Worksheet class has these methods:
+=head2 Cell($row, $col)
 
-=over 4
+Return the C<Cell> object at row C<$row> and column C<$col> if it is defined. Otherwise returns undef.
 
-=item Cell ( ROW, COL )
+    my $cell = $worksheet->Cell($row, $col);
 
-Return the Cell object at row ROW and column COL if
-it is defined. Otherwise return undef.
+=head2 RowRange()
 
-=item RowRange ()
+Return a two-element list C<($min, $max)> containing the minimum and maximum defined rows in the worksheet. If there is no row defined C<$max> is smaller than C<$min>.
 
-Return a two-element list (MIN, MAX) containing the
-minimum and maximum of defined rows in the worksheet
-If there is no row defined MAX is smaller than MIN.
+=head2 ColRange()
 
-=item ColRange ()
+Return a two-element list C<($min, $max)> containing the minimum and maximum of defined columns in the worksheet. If there is no column defined C<$max> is smaller than C<$min>.
 
-Return a two-element list (MIN, MAX) containing the
-minimum and maximum of defined columns in the worksheet
-If there is no row defined MAX is smaller than MIN.
+=head1 Worksheet Properties
 
-=back
+A worksheet object exposes a number of properties as shown below:
 
-Worksheet class has these properties:
+    $worksheet->{Name}
+    $worksheet->{DefRowHeight}
+    $worksheet->{DefColWidth}
+    $worksheet->{RowHeight}->[$row]
+    $worksheet->{ColWidth}->[$col]
+    $worksheet->{Cells}->[$row]->[$col]
+    $worksheet->{Landscape}
+    $worksheet->{Scale}
+    $worksheet->{PageFit}
+    $worksheet->{FitWidth}
+    $worksheet->{FitHeight}
+    $worksheet->{PaperSize}
+    $worksheet->{PageStart}
+    $worksheet->{UsePage}
+    $worksheet->{$margin}
+    $worksheet->{HCenter}
+    $worksheet->{VCenter}
+    $worksheet->{Header}
+    $worksheet->{Footer}
+    $worksheet->{PrintGrid}
+    $worksheet->{PrintHeaders}
+    $worksheet->{NoColor}
+    $worksheet->{Draft}
+    $worksheet->{Notes}
+    $worksheet->{LeftToRight}
+    $worksheet->{HPageBreak}
+    $worksheet->{VPageBreak}
+    $worksheet->{MergedArea}
 
-=over 4
+These properties are generally only of interest to advanced users. Casual users can skip this section.
 
-=item Name
+=head2 $worksheet->{Name}
 
-Name of that Worksheet
+Returns the name of the worksheet such as 'Sheet1'.
 
-=item DefRowHeight
+=head2 $worksheet->{DefRowHeight}
 
-Default height of rows
+Returns default height of the rows in the worksheet.
 
-=item DefColWidth
+=head2 $worksheet->{DefColWidth}
 
-Default width of columns
+Returns default width of columns in the worksheet.
 
-=item RowHeight[Row]
+=head2 $worksheet->{RowHeight}->[$row]
 
-Array of row height
+Returns an array of row heights.
 
-=item ColWidth[Col]
+=head2 $worksheet->{ColWidth}->[$col]
 
-Array of column width (undef means DefColWidth)
+Returns array of column widths. A value of C<undef> means the column has the C<DefColWidth>.
 
-=item Cells[Row][Col]
+=head2 $worksheet->{Cells}->[$row]->[$col]
 
-Array of L<"Cell">s information in the worksheet
+Returns array of L<"Cell"> objects in the worksheet.
 
-=item Landscape
+    my $cell = $worksheet->{Cells}->[$row]->[$col];
 
-Print in horizontal(0) or vertical (1).
+=head2 $worksheet->{Landscape}
 
-=item Scale
+Returns 0 for horizontal or 1 for vertical.
 
-Print scale.
+=head2 $worksheet->{Scale}
 
-=item FitWidth
+Returns the worksheet print scale.
 
-Number of pages with fit in width.
+=head2 $worksheet->{PageFit}
 
-=item FitHeight
+Returns true if the "fit to" print option is set.
 
-Number of pages with fit in height.
+=head2 $worksheet->{FitWidth}
 
-=item PageFit
+Return the number of pages in the "fit to width" option.
 
-Print with fit (or not).
+=head2 $worksheet->{FitHeight}
 
-=item PaperSize
+Return the number of pages in the "fit to height" option.
 
-Paper size. The value is like below:
+=head2 $worksheet->{PaperSize}
 
-  Letter               1, LetterSmall          2, Tabloid              3 ,
-  Ledger               4, Legal                5, Statement            6 ,
-  Executive            7, A3                   8, A4                   9 ,
-  A4Small             10, A5                  11, B4                  12 ,
-  B5                  13, Folio               14, Quarto              15 ,
-  10x14               16, 11x17               17, Note                18 ,
-  Envelope9           19, Envelope10          20, Envelope11          21 ,
-  Envelope12          22, Envelope14          23, Csheet              24 ,
-  Dsheet              25, Esheet              26, EnvelopeDL          27 ,
-  EnvelopeC5          28, EnvelopeC3          29, EnvelopeC4          30 ,
-  EnvelopeC6          31, EnvelopeC65         32, EnvelopeB4          33 ,
-  EnvelopeB5          34, EnvelopeB6          35, EnvelopeItaly       36 ,
-  EnvelopeMonarch     37, EnvelopePersonal    38, FanfoldUS           39 ,
-  FanfoldStdGerman    40, FanfoldLegalGerman  41, User                256
+Returns the printer paper size. The value corresponds to the formats shown below:
 
-=item PageStart
 
-Start page number.
+    Index   Paper format            Paper size
+    =====   ============            ==========
+      0     Printer default         -
+      1     Letter                  8 1/2 x 11 in
+      2     Letter Small            8 1/2 x 11 in
+      3     Tabloid                 11 x 17 in
+      4     Ledger                  17 x 11 in
+      5     Legal                   8 1/2 x 14 in
+      6     Statement               5 1/2 x 8 1/2 in
+      7     Executive               7 1/4 x 10 1/2 in
+      8     A3                      297 x 420 mm
+      9     A4                      210 x 297 mm
+     10     A4 Small                210 x 297 mm
+     11     A5                      148 x 210 mm
+     12     B4                      250 x 354 mm
+     13     B5                      182 x 257 mm
+     14     Folio                   8 1/2 x 13 in
+     15     Quarto                  215 x 275 mm
+     16     -                       10x14 in
+     17     -                       11x17 in
+     18     Note                    8 1/2 x 11 in
+     19     Envelope  9             3 7/8 x 8 7/8
+     20     Envelope 10             4 1/8 x 9 1/2
+     21     Envelope 11             4 1/2 x 10 3/8
+     22     Envelope 12             4 3/4 x 11
+     23     Envelope 14             5 x 11 1/2
+     24     C size sheet            -
+     25     D size sheet            -
+     26     E size sheet            -
+     27     Envelope DL             110 x 220 mm
+     28     Envelope C3             324 x 458 mm
+     29     Envelope C4             229 x 324 mm
+     30     Envelope C5             162 x 229 mm
+     31     Envelope C6             114 x 162 mm
+     32     Envelope C65            114 x 229 mm
+     33     Envelope B4             250 x 353 mm
+     34     Envelope B5             176 x 250 mm
+     35     Envelope B6             176 x 125 mm
+     36     Envelope                110 x 230 mm
+     37     Monarch                 3.875 x 7.5 in
+     38     Envelope                3 5/8 x 6 1/2 in
+     39     Fanfold                 14 7/8 x 11 in
+     40     German Std Fanfold      8 1/2 x 12 in
+     41     German Legal Fanfold    8 1/2 x 13 in
+     256    User defined
 
-=item UsePage
+The two most common paper sizes are C<1 = "US Letter"> and C<9 = A4>.
 
-Use own start page number (or not).
+=head2 $worksheet->{PageStart}
 
-=item LeftMergin, RightMergin, TopMergin, BottomMergin, HeaderMergin, FooterMergin
+Returns the page number where printing starts.
 
-Margins for left, right, top, bottom, header and footer.
+=head2 $worksheet->{UsePage}
 
-=item HCenter
+Returns whether a user defined start page is in use.
 
-Print in horizontal center (or not)
+=head2 $worksheet->{$margin}
 
-=item VCenter
+Returns the worksheet margin for left, right, top, bottom, header and footer where C<$margin> has one of the following values:
 
-Print in vertical center  (or not)
+    LeftMargin
+    RightMargin
+    TopMargin
+    BottomMargin
+    HeaderMargin
+    FooterMargin
 
-=item Header
+=head2 $worksheet->{HCenter}
 
-Content of print header.
-Please refer Excel Help.
+Returns true if the "Center horizontally when Printing" option is set.
 
-=item Footer
+=head2 $worksheet->{VCenter}
 
-Content of print footer.
-Please refer Excel Help.
+Returns true if the "Center vertically when Printing" option is set.
 
-=item PrintGrid
+=head2 $worksheet->{Header}
 
-Print with Gridlines (or not)
+Returns the print header string. This can contain control codes for alignment and font properties. Refer to the Excel on-line help on headers and footers or to the Spreadsheet::WriteExcel documentation for C<set_header()>.
 
-=item PrintHeaders
+=head2 $worksheet->{Footer}
 
-Print with headings (or not)
+Returns the print footer string. This can contain control codes for alignment and font properties. Refer to the Excel on-line help on headers and footers or to the Spreadsheet::WriteExcel documentation for C<set_header()>.
 
-=item NoColor
+=head2 $worksheet->{PrintGrid}
 
-Print in black-white (or not).
+Returns true if Print with gridlines is set.
 
-=item Draft
+=head2 $worksheet->{PrintHeaders}
 
-Print in draft mode (or not).
+Returns true if Print with headings is set.
 
-=item Notes
+=head2 $worksheet->{NoColor}
 
-Print with notes (or not).
+Returns true if Print in black and white is set.
 
-=item LeftToRight
+=head2 $worksheet->{Draft}
 
-Print left to right(0) or top to down(1).
+Returns true if the "draft mode" print option is set.
 
-=item HPageBreak
+=head2 $worksheet->{Notes}
 
-Array ref of horizontal page breaks.
+Returns true if print with notes option is set.
 
-=item VPageBreak
+=head2 $worksheet->{LeftToRight}
 
-Array ref of vertical page breaks.
+Returns the print order for the worksheet. Returns 0 for "left to right" printing and 1 for "top down" printing.
 
-=item MergedArea
+=head2 $worksheet->{HPageBreak}
 
-Array ref of merged areas.
-Each merged area is : [ I<StartRow>, I<StartColumn>, I<EndRow>, I<EndColumn>]
+Return an array ref of horizontal page breaks.
 
-=back
+=head2 $worksheet->{VPageBreak}
 
-=head2 Cell
+Return an array ref of vertical page breaks.
 
-I<Spreadsheet::ParseExcel::Cell>
+=head2 $worksheet->{MergedArea}
 
-Cell class has these properties:
+Return an array ref of merged areas. Each merged area is:
 
-=over 4
+    [ $start_row, $start_col, $end_row, $end_col]
 
-=item Value
 
-I<Method>
-Formatted value of that cell
 
-=item Val
 
-Original Value of that cell
+=head1 Cell
 
-=item Type
+The C<Spreadsheet::ParseExcel::Cell> class has the following methods and properties.
 
-Kind of that cell ('Text', 'Numeric', 'Date')
+=head1 Cell methods
 
-If the Type was detected as Numeric, and the field format is defined and
-matches m{^[dmy][-\\/dmy]*$}, it will be set to Date.
+=head2 value()
 
-=item Code
+Formatted value of the cell.
 
-Character code of that cell (undef, 'ucs2', '_native_')
-undef tells that cell seems to be ascii.
-'_native_' tells that cell seems to be 'sjis' or something like that.
+=head2 unformatted()
 
-=item Format
+Unformatted value of the cell.
 
-L<"Format"> for that cell.
 
-=item Merged
+=head1 Cell properties
 
-That cells is merged (or not).
+    $cell->{Val}
+    $cell->{Type}
+    $cell->{Code}
+    $cell->{Format}
+    $cell->{Merged}
+    $cell->{Rich}
 
-=item Rich
+=head2 $cell->{Val}
 
-Array ref of font informations about each characters.
+Returns the unformatted value of the cell. This is B<Deprecated>, use C<< $cell->unformatted() >> instead.
 
-Each entry has : [ I<Start Position>, I<Font Object>]
+=head2 $cell->{Type}
 
-For more information please refer sample/dmpExR.pl
+Returns the type of cell such as C<Text>, C<Numeric> or C<Date>.
 
-=back
+If the type was detected as C<Numeric>, and the Cell Format matches C<m{^[dmy][-\\/dmy]*$}>, it will be treated as a C<Date> type.
 
-=head2 Format
+=head2 $cell->{Code}
 
-I<Spreadsheet::ParseExcel::Format>
+Returns the character encoding of the cell. It is either  C<undef>, C<ucs2> or C<_native_>.
 
-Format class has these properties:
+If C<undef> then the character encoding seems to be C<ascii>.
 
-=over 4
+If C<_native_> it means that cell seems to be 'sjis' or something similar.
 
-=item Font
+=head2 $cell->{Format}
 
-L<"Font"> object for that Format.
+Returns the L<"Format"> object for the cell.
 
-=item AlignH
+=head2 $cell->{Merged}
 
-Horizontal Alignment.
+Returns true if the cell is merged.
 
-  0: (standard), 1: left,       2: center,     3: right,
-  4: fill ,      5: justify,    7:equal_space
+=head2 $cell->{Rich}
 
-B<Notice:> 6 may be I<merge> but it seems not to work.
+Returns an array ref of font information about each string block in a "rich", i.e. multi-format, string. Each entry has the form:
 
-=item AlignV
+    [ $start_position>, $font_object ]
 
-Vertical Alignment.
+For more information refer to the example program C<sample/dmpExR.pl>.
 
-    0: top,  1: vcenter, 2: bottom, 3: vjustify, 4: vequal_space
 
-=item Indent
 
-Number of indent
 
-=item Wrap
+=head1 Format
 
-Wrap (or not).
+The C<Spreadsheet::ParseExcel::Format> class has the following properties:
 
-=item Shrink
+=head2 Format properties
 
-Display in shrinking (or not)
+    $format->{Font}
+    $format->{AlignH}
+    $format->{AlignV}
+    $format->{Indent}
+    $format->{Wrap}
+    $format->{Shrink}
+    $format->{Rotate}
+    $format->{JustLast}
+    $format->{ReadDir}
+    $format->{BdrStyle}
+    $format->{BdrColor}
+    $format->{BdrDiag}
+    $format->{Fill}
+    $format->{Lock}
+    $format->{Hidden}
+    $format->{Style}
 
-=item Rotate
+These properties are generally only of interest to advanced users. Casual users can skip this section.
 
-In Excel97, 2000      : degrees of string rotation.
-In Excel95 or earlier : 0: No rotation, 1: Top down, 2: 90 degrees anti-clockwise,
-                        3: 90 clockwise
+=head2 $format->{Font}
 
-=item JustLast
+Returns the L<"Font"> object for the Format.
 
-JustLast (or not).
-I<I have never seen this attribute.>
+=head2 $format->{AlignH}
 
-=item ReadDir
+Returns the horizontal alignment of the format where the value has the following meaning:
 
-Direction for read.
+    0 => No alignment
+    1 => Left
+    2 => Center
+    3 => Right
+    4 => Fill
+    5 => Justify
+    6 => Center across
+    7 => Distributed/Equal spaced
 
-=item BdrStyle
+=head2 $format->{AlignV}
 
-Array ref of border styles : [I<Left>, I<Right>, I<Top>, I<Bottom>]
+Returns the vertical alignment of the format where the value has the following meaning:
 
-=item BdrColor
+    0 => Top
+    1 => Center
+    2 => Bottom
+    3 => Justify
+    4 => Distributed/Equal spaced
 
-Array ref of border color indexes : [I<Left>, I<Right>, I<Top>, I<Bottom>]
+=head2 $format->{Indent}
 
-=item BdrDiag
+Returns the indent level of the C<Left> horizontal alignment.
 
-Array ref of diag border kind, style and color index : [I<Kind>, I<Style>, I<Color>]
-  Kind : 0: None, 1: Right-Down, 2:Right-Up, 3:Both
+=head2 $format->{Wrap}
 
-=item Fill
+Returns true if textwrap is on.
 
-Array ref of fill pattern and color indexes : [I<Pattern>, I<Front Color>, I<Back Color>]
+=head2 $format->{Shrink}
 
-=item Lock
+Returns true if "Shrink to fit" is set for the format.
 
-Locked (or not).
+=head2 $format->{Rotate}
 
-=item Hidden
+Returns the text rotation. In Excel97+, it returns the angle in degrees of the text rotation.
 
-Hidden (or not).
+In Excel95 or earlier it returns a value as follows:
 
-=item Style
+    0 => No rotation
+    1 => Top down
+    2 => 90 degrees anti-clockwise,
+    3 => 90 clockwise
 
-Style format (or Cell format)
+=head2 $format->{JustLast}
 
-=back
+Return true if the "justify last" property is set for the format.
 
-=head2 Font
+=head2 $format->{ReadDir}
+
+Returns the direction that the text is read from.
+
+=head2 $format->{BdrStyle}
+
+Returns an array ref of border styles as follows:
+
+    [ $left, $right, $top, $bottom ]
+
+=head2 $format->{BdrColor}
+
+Returns an array ref of border color indexes as follows:
+
+    [ $left, $right, $top, $bottom ]
+
+=head2 $format->{BdrDiag}
+
+Returns an array ref of diagonal border kind, style and color index as follows:
+
+    [$kind, $style, $color ]
+
+Where kind is:
+
+    0 => None
+    1 => Right-Down
+    2 => Right-Up
+    3 => Both
+
+=head2 $format->{Fill}
+
+Returns an array ref of fill pattern and color indexes as follows:
+
+    [ $pattern, $front_color, $back_color ]
+
+=head2 $format->{Lock}
+
+Returns true if the cell is locked.
+
+=head2 $format->{Hidden}
+
+Returns true if the cell is Hidden.
+
+=head2 $format->{Style}
+
+Returns true if the format is a Style format.
+
+
+
+
+=head1 Font
 
 I<Spreadsheet::ParseExcel::Font>
 
 Format class has these properties:
 
-=over 4
+=head1 Font Properties
 
-=item Name
+    $font->{Name}
+    $font->{Bold}
+    $font->{Italic}
+    $font->{Height}
+    $font->{Underline}
+    $font->{UnderlineStyle}
+    $font->{Color}
+    $font->{Strikeout}
+    $font->{Super}
 
-Name of that font.
+=head2 $font->{Name}
 
-=item Bold
+Returns the name of the font, for example 'Arial'.
 
-Bold (or not).
+=head2 $font->{Bold}
 
-=item Italic
+Returns true if the font is bold.
 
-Italic (or not).
+=head2 $font->{Italic}
 
-=item Height
+Returns true if the font is italic.
 
-Size (height) of that font.
+=head2 $font->{Height}
 
-=item Underline
+Returns the size (height) of the font.
 
-Underline (or not).
+=head2 $font->{Underline}
 
-=item UnderlineStyle
+Returns true if the font in underlined.
 
-0: None, 1: Single, 2: Double, 0x21: Single(Account), 0x22: Double(Account)
+=head2 $font->{UnderlineStyle}
 
-=item Color
+Returns the style of an underlined font where the value has the following meaning:
 
-Color index for that font.
+     0 => None
+     1 => Single
+     2 => Double
+    33 => Single accounting
+    34 => Double accounting
 
-=item Strikeout
+=head2 $font->{Color}
 
-Strikeout (or not).
+Returns the color index for the font. The index can be converted to a RGB string using the C<ColorIdxToRGB()> Parser method.
 
-=item Super
+=head2 $font->{Strikeout}
 
-0: None, 1: Upper, 2: Lower
+Returns true if the font has the strikeout property set.
 
-=back
+=head2 $font->{Super}
+
+Returns one of the following values if the superscript or subscript property of the font is set:
+
+    0 => None
+    1 => Superscript
+    2 => Subscript
 
 =head1 Formatter class
 
@@ -2326,129 +2464,291 @@ I<Spreadsheet::ParseExcel::Fmt*>
 
 Formatter class will convert cell data.
 
-Spreadsheet::ParseExcel includes 2 formatter classes: FmtDefault and FmtJapanese.
-You can create your own FmtClass as you like.
+Spreadsheet::ParseExcel includes 2 formatter classes. C<FmtDefault> and C<FmtJapanese>. It is also possible to create a user defined formatting class.
 
-Formatter class(Spreadsheet::ParseExcel::Fmt*) should provide these functions:
+The formatter class C<Spreadsheet::ParseExcel::Fmt*> should provide the following functions:
 
-=over 4
 
-=item ChkType($oSelf, $iNumeric, $iFmtIdx)
+=head2 ChkType($self, $is_numeric, $format_index)
 
-tells type of the cell that has specified value.
+Method to check the the type of data in the cell. Should return C<Date>, C<Numeric> or C<Text>. It is passed the following parameters:
 
-=over 8
+=over
 
-=item $oSelf
+=item $self
 
-Formatter itself
+A scalar reference to the Formatter object.
 
-=item $iNumeric
+=item $is_numeric
 
-If on, the value seems to be number
+If true, the value seems to be number.
 
-=item $iFmtIdx
+=item $format_index
 
-Format index number of that cell
+The index number for the cell Format object.
 
 =back
 
-=item TextFmt($oSelf, $sText, $sCode)
+=head2 TextFmt($self, $string_data, $string_encoding)
 
-converts original text into applicatable for Value.
+Converts the string data in the cell into the correct encoding.  It is passed the following parameters:
 
-=over 8
+=over
 
-=item $oSelf
+=item $self
 
-Formatter itself
+A scalar reference to the Formatter object.
 
-=item $sText
+=item $string_data
 
-Original text
+The original string/text data.
 
-=item $sCode
+=item $string_encoding
 
-Character code of Original text
-
-=back
-
-=item ValFmt($oSelf, $oCell, $oBook)
-
-converts original value into applicatable for Value.
-
-=over 8
-
-=item $oSelf
-
-Formatter itself
-
-=item $oCell
-
-Cell object
-
-=item $oBook
-
-Workbook object
+The character encoding of original string/text.
 
 =back
 
-=item FmtString($oSelf, $oCell, $oBook)
+=head2 ValFmt($self, $cell, $workbook)
 
-get format string for the I<$oCell>.
+Convert the original unformatted cell value into the appropriate formatted value. For instance turn a number into a formatted date.  It is passed the following parameters:
 
-=over 8
+=over
 
-=item $oSelf
+=item $self
 
-Formatter itself
+A scalar reference to the Formatter object.
 
-=item $oCell
+=item $cell
 
-Cell object
+A scalar reference to the Cell object.
 
-=item $oBook
+=item $workbook
 
-WorkBook object contains that cell
+A scalar reference to the Workbook object.
+
+=back
+
+
+=head2 FmtString($self, $cell, $workbook)
+
+Get the format string for the Cell.  It is passed the following parameters:
+
+=over
+
+=item $self
+
+A scalar reference to the Formatter object.
+
+=item $cell
+
+A scalar reference to the Cell object.
+
+=item $workbook
+
+A scalar reference to the Workbook object.
 
 =back
 
-=back
+
+=head1 Reducing the memory usage of Spreadsheet::ParseExcel
+
+In some cases a C<Spreadsheet::ParseExcel> application may consume a lot of memory when processing a large Excel file and, as a result, may fail to complete. The following explains why this can occur and how to resolve it.
+
+C<Spreadsheet::ParseExcel> processes an Excel file in two stages. In the first stage it extracts the Excel binary stream from the OLE container file using C<OLE::Storage_Lite>. In the second stage it parses the binary stream to read workbook, worksheet and cell data which it then stores in memory. The majority of the memory usage is required for storing cell data.
+
+The reason for this is that as the Excel file is parsed and each cell is encountered a cell handling function creates a relatively large nested cell object that contains the cell value and all of the data that relates to the cell formatting. For large files (a 10MB Excel file on a 256MB system) this overhead can cause the system to grind to a halt.
+
+However, in a lot of cases when an Excel file is being processed the only information that is required are the cell values. In these cases it is possible to avoid most of the memory overhead by specifying your own cell handling function and by telling Spreadsheet::ParseExcel not to store the parsed cell data. This is achieved by passing a cell handler function to C<new()> when creating the parse object. Here is an example.
+
+    #!/usr/bin/perl -w
+
+    use strict;
+    use Spreadsheet::ParseExcel;
+
+    my $parser = Spreadsheet::ParseExcel->new(
+        CellHandler => \&cell_handler,
+        NotSetCell  => 1
+    );
+
+    my $workbook = $parser->Parse('file.xls');
+
+    sub cell_handler {
+
+        my $workbook    = $_[0];
+        my $sheet_index = $_[1];
+        my $row         = $_[2];
+        my $col         = $_[3];
+        my $cell        = $_[4];
+
+        # Do something useful with the formatted cell value
+        print $cell->Value(), "\n";
+
+    }
+
+
+The user specified cell handler is passed as a code reference to C<new()> along with the parameter C<NotSetCell> which tells Spreadsheet::ParseExcel not to store the parsed cell. Note, you don't have to iterate over the rows and columns, this happens automatically as part of the parsing.
+
+The cell handler is passed 5 arguments. The first, C<$workbook>, is a reference to the C<Spreadsheet::ParseExcel::Workbook> object that represent the parsed workbook. This can be used to access any of the C<Spreadsheet::ParseExcel::Workbook> methods, see L<"Workbook">. The second C<$sheet_index> is the zero-based index of the worksheet being parsed. The third and fourth, C<$row> and C<$col>, are the zero-based row and column number of the cell. The fifth, C<$cell>, is a reference to the C<Spreadsheet::ParseExcel::Cell> object. This is used to extract the data from the cell. See L<"Cell"> for more information.
+
+This technique can be useful if you are writing an Excel to database filter since you can put your DB calls in the cell handler.
+
+If you don't want all of the data in the spreadsheet you can add some control logic to the cell handler. For example we can extend the previous example so that it only prints the first 10 rows of the first two worksheets in the parsed workbook by adding some C<if()> statements to the cell handler:
+
+    #!/usr/bin/perl -w
+
+    use strict;
+    use Spreadsheet::ParseExcel;
+
+    my $parser = Spreadsheet::ParseExcel->new(
+        CellHandler => \&cell_handler,
+        NotSetCell  => 1
+    );
+
+    my $workbook = $parser->Parse('file.xls');
+
+    sub cell_handler {
+
+        my $workbook    = $_[0];
+        my $sheet_index = $_[1];
+        my $row         = $_[2];
+        my $col         = $_[3];
+        my $cell        = $_[4];
+
+        # Skip some worksheets and rows (inefficiently).
+        return if $sheet_index >= 3;
+        return if $row >= 10;
+
+        # Do something with the formatted cell value
+        print $cell->Value(), "\n";
+
+    }
+
+
+However, this still processes the entire workbook. If you wish to save some additional processing time you can abort the parsing after you have read the data that you want, using the workbook C<ParseAbort> method:
+
+    #!/usr/bin/perl -w
+
+    use strict;
+    use Spreadsheet::ParseExcel;
+
+    my $parser = Spreadsheet::ParseExcel->new(
+        CellHandler => \&cell_handler,
+        NotSetCell  => 1
+    );
+
+    my $workbook = $parser->Parse('file.xls');
+
+    sub cell_handler {
+
+        my $workbook    = $_[0];
+        my $sheet_index = $_[1];
+        my $row         = $_[2];
+        my $col         = $_[3];
+        my $cell        = $_[4];
+
+        # Skip some worksheets and rows (more efficiently).
+        if ( $sheet_index >= 1 and $row >= 10 ) {
+            $workbook->ParseAbort(1);
+            return;
+        }
+
+        # Do something with the formatted cell value
+        print $cell->Value(), "\n";
+
+    }
 
 =head1 KNOWN PROBLEMS
 
-=over 4
+=over
 
-=item *
+=item * This module cannot read the values of formulas from files created with Spreadsheet::WriteExcel unless the user specified the values when creating the file (which is generally not the case). The reason for this is that Spreadsheet::WriteExcel writes the formula but not the formula result since it isn't in a position to calculate arbitrary Excel formulas without access to Excel's formula engine.
 
-This module can not get the values of formulas in Excel files made with
-Spreadsheet::WriteExcel.
-Normaly (ie. By Excel application), formula has the result with it, but
-Spreadsheet::WriteExcel writes formula with no result.
-If you set your Excel application "Auto Calculation" off, (maybe
-[Tool]-[Option]-[Calculation] or something) You will see the same result.
-
-=item *
-
-If Excel has date fields where the specified format is equal to what
-happens to be the system-default for the short-date locale setting for
-the current user, Excel does not store the format, but uses the internal
-format number 14, which defaults to "m-d-yy" on every other system.
-
-If Date fields have a format specified, and the date-separation character
-is the same as what happens to be the current date separation character
-for the user's regional setting, that character will change when the user
-changes the character from '/' to '-' or vice-versa. All date formats in
-the sheet will change. This means that if the author of the sheet used
-the date format 'dd-mm-yyyy', and his separation character was '-', the
-fields might be formatted like 'dd/mm/yyyy' on a system where the user
-set his separation character to '/', causing inconsistent date displays.
+=item * If Excel has date fields where the specified format is equal to what happens to be the system-default for the short-date locale setting for the current user, Excel does not store the format, but uses the internal format number 14, which defaults to "m-d-yy" on every other system. If Date fields have a format specified, and the date-separation character is the same as what happens to be the current date separation character for the user's regional setting, that character will change when the user changes the character from '/' to '-' or vice-versa. All date formats in the sheet will change. This means that if the author of the sheet used the date format 'dd-mm-yyyy', and his separation character was '-', the fields might be formatted like 'dd/mm/yyyy' on a system where the user set his separation character to '/', causing inconsistent date displays.
 
 =back
 
+
+
+=head1 SEE ALSO
+
+=over
+
+=item * excel2txt by Ken Youens-Clark, (http://search.cpan.org/~kclark/excel2txt/excel2txt). This is an excellent example of an Excel filter using Spreadsheet::ParseExcel. It can produce CSV, Tab delimited, Html, Xml and Yaml.
+
+=item * XLSperl by Jon Allen (http://search.cpan.org/~jonallen/XLSperl/bin/XLSperl). This application allows you to use Perl "one-liners" with Microsoft Excel files.
+
+=item * Spreadsheet::WriteExcel (http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel/lib/Spreadsheet/WriteExcel.pm). A perl module for creating new Excel files.
+
+=item * Spreadsheet::ParseExcel::SaveParser (http://search.cpan.org/~jmcnamara/Spreadsheet-ParseExcel/lib/Spreadsheet/ParseExcel/SaveParser.pm). This is a combination of Spreadsheet::ParseExcel and Spreadsheet::WriteExcel and it allows you to "rewrite" an Excel file. See the following example (http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel/lib/Spreadsheet/WriteExcel.pm#MODIFYING_AND_REWRITING_EXCEL_FILES). It is part of the Spreadsheet::ParseExcel distro.
+
+=back
+
+
+
+
+=head1 MAILING LIST
+
+There is a Google group for discussing and asking questions about Spreadsheet::ParseExcel. This is a good place to search to see if your question has been asked before:  http://groups-beta.google.com/group/spreadsheet-parseexcel/
+
+
+
+
+=head1 DONATIONS
+
+If you'd care to donate to the Spreadsheet::ParseExcel project, you can do so via PayPal: http://tinyurl.com/7ayes
+
+
+
+
+=head1 TODO
+
+=over
+
+=item * The current maintenance work is directed towards making the documentation more useful, improving and simplifying the API, and improving the maintainability of the code base. After that new features will be added.
+
+=item * Add more tests.
+
+=item * Add Formula support, Hyperlink support, Named Range support.
+
+=item * Improve Spreadsheet::ParseExcel::SaveParser compatibility with Spreadsheet::WriteExcel.
+
+=back
+
+
+
+=head1 ACKNOWLEDGEMENTS
+
+From Kawai Takanori:
+
+First of all, I would like to acknowledge the following valuable programs and modules:
+XHTML, OLE::Storage and Spreadsheet::WriteExcel.
+
+In no particular order: Yamaji Haruna, Simamoto Takesi, Noguchi Harumi, Ikezawa Kazuhiro, Suwazono Shugo, Hirofumi Morisada, Michael Edwards, Kim Namusk, Slaven Rezić, Grant Stevens, H.Merijn Brand and many many people + Kawai Mikako.
+
+
+
+=head1 DISCLAIMER OF WARRANTY
+
+Because this software is licensed free of charge, there is no warranty for the software, to the extent permitted by applicable law. Except when otherwise stated in writing the copyright holders and/or other parties provide the software "as is" without warranty of any kind, either expressed or implied, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose. The entire risk as to the quality and performance of the software is with you. Should the software prove defective, you assume the cost of all necessary servicing, repair, or correction.
+
+In no event unless required by applicable law or agreed to in writing will any copyright holder, or any other party who may modify and/or redistribute the software as permitted by the above licence, be liable to you for damages, including any general, special, incidental, or consequential damages arising out of the use or inability to use the software (including but not limited to loss of data or data being rendered inaccurate or losses sustained by you or third parties or a failure of the software to operate with any other software), even if such holder or other party has been advised of the possibility of such damages.
+
+
+
+
+=head1 LICENSE
+
+Either the Perl Artistic Licence http://dev.perl.org/licenses/artistic.html or the GPL http://www.opensource.org/licenses/gpl-license.php
+
+
+
+
 =head1 AUTHOR
 
-Current maintainer: John McNamara jmcnamara@cpan.org
+Current maintainer 0.40+: John McNamara jmcnamara@cpan.org
+
+    http://search.cpan.org/~jmcnamara/
 
 Maintainer 0.27-0.33: Gabor Szabo szabgab@cpan.org
 
@@ -2459,53 +2759,17 @@ Original author: Kawai Takanori (Hippo2000) kwitknr@cpan.org
     http://member.nifty.ne.jp/hippo2000/            (Japanese)
     http://member.nifty.ne.jp/hippo2000/index_e.htm (English)
 
-=head1 SEE ALSO
 
-XLHTML, OLE::Storage, Spreadsheet::WriteExcel, OLE::Storage_Lite
-
-This module is based on herbert within OLE::Storage and XLHTML.
-
-XLSTools: http://perl.jonallen.info/projects/xlstools
-
-=head1 TODO
-
-- Add tests, and more tests
-
-- Spreadsheet::ParseExcel :
- Password protected data, Formulas support, HyperLink support,
- Named Range support
-
-- Spreadsheet::ParseExcel::SaveParser :
- Catch up Spreadsheet::WriteExce feature, Create new Excel fle
-
-See also:
-
- L<http://www.cpanforum.com/dist/Spreadsheet-ParseExcel>
-
- and
-
- http://www.perlmonks.org/index.pl?node_id=490656
- http://www.perlmonks.org/index.pl?node_id=379743
- http://www.perlmonks.org/index.pl?node_id=433192
- http://www.perlmonks.org/index.pl?node_id=422147
 
 =head1 COPYRIGHT
 
+Copyright (c) 2009 John McNamara
+
 Copyright (c) 2006-2008 Gabor Szabo
+
 Copyright (c) 2000-2006 Kawai Takanori
-All rights reserved.
 
-You may distribute under the terms of either the GNU General Public
-License or the Artistic License, as specified in the Perl README file.
+All rights reserved. This is free software. You may distribute under the terms of either the GNU General Public License or the Artistic License.
 
-=head1 ACKNOWLEDGEMENTS
-
-First of all, I would like to acknowledge valuable program and modules:
-XHTML, OLE::Storage and Spreadsheet::WriteExcel.
-
-In no particular order: Yamaji Haruna, Simamoto Takesi, Noguchi Harumi,
-Ikezawa Kazuhiro, Suwazono Shugo, Hirofumi Morisada, Michael Edwards,
-Kim Namusk, Slaven Rezić, Grant Stevens, H.Merijn Brand
-and many many people + Kawai Mikako.
 
 =cut
