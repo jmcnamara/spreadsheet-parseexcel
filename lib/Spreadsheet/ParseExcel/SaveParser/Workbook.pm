@@ -45,6 +45,7 @@ sub SaveAs {
     my ($oBook, $sName)=@_;
     # Create a new Excel workbook
     my $oWrEx = Spreadsheet::WriteExcel->new($sName);
+    $oWrEx->compatibility_mode();
     my %hFmt;
 
     my $iNo = 0;
