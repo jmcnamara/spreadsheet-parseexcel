@@ -72,15 +72,9 @@ sub SaveAs {
 
             $oFmt->set_align($aAlH[$pFmt->{AlignH}]);
             $oFmt->set_align($aAlV[$pFmt->{AlignV}]);
-            if($pFmt->{Rotate}==0) {
-                $oFmt->set_rotation(0);
-            }
-            elsif($pFmt->{Rotate}> 0) {  # Mainly ==90
-                $oFmt->set_rotation(3);
-            }
-            elsif($pFmt->{Rotate} < 0) {  # Mainly == -90
-                $oFmt->set_rotation(2);
-            }
+
+            $oFmt->set_rotation($pFmt->{Rotate});
+
             $oFmt->set_num_format($oBook->{FmtClass}->FmtStringDef($pFmt->{FmtIdx}, $oBook));
 
             $oFmt->set_text_wrap($pFmt->{Wrap});
