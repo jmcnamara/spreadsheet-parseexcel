@@ -12,10 +12,18 @@ sub new {
     bless $self, $sPkg;
 }
 
-sub Value {
+sub value {
     my($self)=@_;
     return $self->{_Value};
 }
+
+sub unformatted {
+    my($self)=@_;
+    return $self->{Val};
+}
+
+*Value = *value;
+
 #DESTROY {
 #    my ($self) = @_;
 #    warn "DESTROY $self called\n"
