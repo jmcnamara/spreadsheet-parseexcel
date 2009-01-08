@@ -29,7 +29,7 @@ sub sheetNo {
 #------------------------------------------------------------------------------
 # Spreadsheet::ParseExcel::Worksheet->Cell
 #------------------------------------------------------------------------------
-sub Cell {
+sub get_cell {
     my($oSelf, $iR, $iC) = @_;
 
     # return undef if no arguments are given or if no cells are defined
@@ -43,10 +43,12 @@ sub Cell {
     # return the Cell object
     return $oSelf->{Cells}[$iR][$iC];
 }
+*Cell = *get_cell;
+
 #------------------------------------------------------------------------------
 # Spreadsheet::ParseExcel::Worksheet->RowRange
 #------------------------------------------------------------------------------
-sub RowRange {
+sub row_range {
     my($oSelf) = @_;
     my $iMin = $oSelf->{MinRow} || 0;
     my $iMax = defined($oSelf->{MaxRow}) ? $oSelf->{MaxRow} : ($iMin-1);
@@ -54,10 +56,11 @@ sub RowRange {
     # return the range
     return($iMin, $iMax);
 }
+*RowRange = *row_range;
 #------------------------------------------------------------------------------
 # Spreadsheet::ParseExcel::Worksheet->ColRange
 #------------------------------------------------------------------------------
-sub ColRange {
+sub col_range {
     my($oSelf) = @_;
     my $iMin = $oSelf->{MinCol} || 0;
     my $iMax = defined($oSelf->{MaxCol}) ? $oSelf->{MaxCol} : ($iMin-1);
@@ -65,6 +68,7 @@ sub ColRange {
     # return the range
     return($iMin, $iMax);
 }
+*ColRange = *col_range;
 
 #DESTROY {
 #    my ($self) = @_;
