@@ -1,5 +1,34 @@
 Revision history for Perl extension Spreadsheet::ParseExcel.
 
+0.44 8 January 2009
+
+    ! Fix for OpenOffice.org GENERAL format.
+      http://rt.cpan.org/Public/Bug/Display.html?id=7206
+      Thanks to Niko Tyni and the Debian Perl team
+
+    + Perltidyed source and added standard headers and Pod sections
+      to all modules.
+
+0.43 7 January 2009
+
+    + Restructured and rewrote the main documentation. This is the start of
+      a general refactoring. If you would like to keep up to date with it
+      keep an eye on the Spreadsheet::ParseExcel Google Group.
+      http://groups.google.com/group/spreadsheet-parseexcel
+
+    + Added worksheets() Workbook method to iterate over the Worksheet objects.
+
+    + Added unformatted() method to get a Cell's unformatted value.
+
+    + Renamed public methods RowRange(), ColRange() and Cell() to row_range(),
+      col_range() and get_cell(). Old methods are still available.
+
+    ! Turned on compatibility_mode() by default in SaveParser to avoid SP3
+      problems.
+
+    ! Fixed minor SaveParser bug with font rotation.
+      http://rt.cpan.org/Public/Bug/Display.html?id=41626
+
 
 0.42 1 January 2009
     + Fix for world writeable files in distro to allow PAUSE indexing.

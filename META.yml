@@ -2,8 +2,6 @@
 name:                Spreadsheet-ParseExcel
 version:             0.33
 abstract:            ~
-license:             ~
-author:              ~
 generated_by:        ExtUtils::MakeMaker version 6.44
 distribution_type:   module
 requires:     
