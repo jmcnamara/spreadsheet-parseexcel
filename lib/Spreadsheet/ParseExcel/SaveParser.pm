@@ -1,14 +1,20 @@
-# Spreadsheet::ParseExcel::SaveParser
-#  by Kawai, Takanori (Hippo2000) 2001.5.1
-# This Program is ALPHA version.
-#//////////////////////////////////////////////////////////////////////////////
-# Spreadsheet::ParseExcel:.SaveParser Objects
-#//////////////////////////////////////////////////////////////////////////////
-
-#==============================================================================
-# Spreadsheet::ParseExcel::SaveParser
-#==============================================================================
 package Spreadsheet::ParseExcel::SaveParser;
+
+###############################################################################
+#
+# Spreadsheet::ParseExcel::SaveParser - Rewrite an existing Excel file.
+#
+# Used in conjunction with Spreadsheet::ParseExcel.
+#
+# Copyright (c) 2009      John McNamara
+# Copyright (c) 2006-2008 Gabor Szabo
+# Copyright (c) 2000-2006 Kawai Takanori
+#
+# perltidy with standard settings.
+#
+# Documentation after __END__
+#
+
 use strict;
 use warnings;
 
@@ -17,7 +23,8 @@ use Spreadsheet::ParseExcel::SaveParser::Workbook;
 use Spreadsheet::ParseExcel::SaveParser::Worksheet;
 use Spreadsheet::WriteExcel;
 use base 'Spreadsheet::ParseExcel';
-our $VERSION = '0.42';
+
+our $VERSION = '0.44';
 
 use constant MagicCol => 1.14;
 
@@ -72,7 +79,7 @@ __END__
 
 =head1 NAME
 
-Spreadsheet::ParseExcel::SaveParser - Expand of Spreadsheet::ParseExcel with Spreadsheet::WriteExcel
+Spreadsheet::ParseExcel::SaveParser - Rewrite an existing Excel file.
 
 =head1 SYNOPSIS
 
@@ -405,11 +412,15 @@ This module is based on herbert within OLE::Storage and XLHTML.
 
 =head1 COPYRIGHT
 
+Copyright (c) 2009 John McNamara
+
+Copyright (c) 2006-2008 Gabor Szabo
+
 Copyright (c) 2000-2002 Kawai Takanori and Nippon-RAD Co. OP Division
+
 All rights reserved.
 
-You may distribute under the terms of either the GNU General Public
-License or the Artistic License, as specified in the Perl README file.
+You may distribute under the terms of either the GNU General Public License or the Artistic License, as specified in the Perl README file.
 
 =head1 ACKNOWLEDGEMENTS
 

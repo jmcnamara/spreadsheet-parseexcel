@@ -4,6 +4,8 @@
 #
 # Copyright 2000-2008, Takanori Kawai
 #
+# perltidy with standard settings.
+#
 # Documentation after __END__
 #
 package Spreadsheet::ParseExcel;
@@ -13,7 +15,7 @@ use warnings;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.43';
+our $VERSION = '0.44';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;

@@ -1,10 +1,20 @@
-# Spreadsheet::ParseExcel::Utility
-#  by Kawai, Takanori (Hippo2000) 2001.2.2
-# This Program is ALPHA version.
-#==============================================================================
-# Spreadsheet::ParseExcel::Utility;
-#==============================================================================
 package Spreadsheet::ParseExcel::Utility;
+
+###############################################################################
+#
+# Spreadsheet::ParseExcel::Utility - Utility functions for ParseExcel.
+#
+# Used in conjunction with Spreadsheet::ParseExcel.
+#
+# Copyright (c) 2009      John McNamara
+# Copyright (c) 2006-2008 Gabor Szabo
+# Copyright (c) 2000-2006 Kawai Takanori
+#
+# perltidy with standard settings.
+#
+# Documentation after __END__
+#
+
 use strict;
 use warnings;
 
@@ -13,7 +23,8 @@ use vars qw(@ISA @EXPORT_OK);
 @ISA       = qw(Exporter);
 @EXPORT_OK = qw(ExcelFmt LocaltimeExcel ExcelLocaltime
   col2int int2col sheetRef xls2csv);
-our $VERSION = '0.42';
+
+our $VERSION = '0.44';
 
 #my $sNUMEXP = '^[+-]?\d+(\.\d+)?$';
 #my $sNUMEXP = '(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d\.*(\d+)[eE][+-](\d+))$';
@@ -1142,16 +1153,18 @@ sub xls2csv {
 }
 
 1;
+
 __END__
+
+=pod
 
 =head1 NAME
 
-Spreadsheet::ParseExcel::Utility - Utility function for Spreadsheet::ParseExcel
+Spreadsheet::ParseExcel::Utility - Utility functions for Spreadsheet::ParseExcel.
 
 =head1 SYNOPSIS
 
     use strict;
-    #Declare
     use Spreadsheet::ParseExcel::Utility qw(ExcelFmt ExcelLocaltime LocaltimeExcel);
     
     #Convert localtime ->Excel Time
@@ -1169,7 +1182,7 @@ Spreadsheet::ParseExcel::Utility - Utility function for Spreadsheet::ParseExcel
     print ExcelFmt('#,##0', $iBirth), "\n";      # 23,460
     print ExcelFmt('#,##0.00', $iBirth), "\n";   # 23,459.51
     print ExcelFmt('"My Birthday is (m/d):" m/d', $iBirth), "\n";
-                                      # My Birthday is (m/d): 3/23
+                   # My Birthday is (m/d): 3/23
 
 =head1 DESCRIPTION
 
@@ -1250,19 +1263,26 @@ $iRotate  = 0 or 1 (output should be rotated or not)
 
 This function was contributed by Kevin Mulholland.
 
+B<Deprecated>.
+
 =head1 AUTHOR
 
-Kawai Takanori (Hippo2000) kwitknr@cpan.org
+Maintainer 0.40+: John McNamara jmcnamara@cpan.org
 
-    http://member.nifty.ne.jp/hippo2000/            (Japanese)
-    http://member.nifty.ne.jp/hippo2000/index_e.htm (English)
+Maintainer 0.27-0.33: Gabor Szabo szabgab@cpan.org
 
-=head1 SEE ALSO
-
-Spreadsheet::ParseExcel, Spreadsheet::WriteExcel
+Original author: Kawai Takanori kwitknr@cpan.org
 
 =head1 COPYRIGHT
 
-This module is part of the Spreadsheet::ParseExcel distribution.
+Copyright (c) 2009 John McNamara
+
+Copyright (c) 2006-2008 Gabor Szabo
+
+Copyright (c) 2000-2006 Kawai Takanori
+
+All rights reserved.
+
+You may distribute under the terms of either the GNU General Public License or the Artistic License, as specified in the Perl README file.
 
 =cut
