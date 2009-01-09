@@ -39,6 +39,9 @@ sub ExcelFmt {
     my $sWkF = '';
     my $sRes = '';
 
+    # Workaround for OpenOffice.org GENERAL format.
+    $sFmt = '@' if ( $sFmt eq "GENERAL" );
+    
     #1. Get Condition
     if ( $sFmt =~ /^\[([<>=][^\]]+)\](.*)$/ ) {
         $sCond = $1;

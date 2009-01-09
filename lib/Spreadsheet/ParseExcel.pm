@@ -624,7 +624,7 @@ sub _subFormula {
               : DecodeBoolErr( $iVal, 1 );
             _NewCell(
                 $oBook, $iR, $iC,
-                Kind     => 'Formulra Bool',
+                Kind     => 'Formula Bool',
                 Val      => $sTxt,
                 FormatNo => $iF,
                 Format   => $oBook->{Format}[$iF],
@@ -2881,9 +2881,15 @@ However, this still processes the entire workbook. If you wish to save some addi
 
 =item * XLSperl by Jon Allen (http://search.cpan.org/~jonallen/XLSperl/bin/XLSperl). This application allows you to use Perl "one-liners" with Microsoft Excel files.
 
+=item * Spreadsheet::XLSX (http://search.cpan.org/~dmow/Spreadsheet-XLSX/lib/Spreadsheet/XLSX.pm) by Dmitry Ovsyanko. A module with a similar interface to Spreadsheet::ParseExcel for parsing Excel 2007 XLSX OpenXML files. 
+
+=item * Spreadsheet::Read (http://search.cpan.org/~hmbrand/Spreadsheet-Read/Read.pm) by H.Merijn Brand. A single interface for reading several different spreadsheet formats.
+
 =item * Spreadsheet::WriteExcel (http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel/lib/Spreadsheet/WriteExcel.pm). A perl module for creating new Excel files.
 
 =item * Spreadsheet::ParseExcel::SaveParser (http://search.cpan.org/~jmcnamara/Spreadsheet-ParseExcel/lib/Spreadsheet/ParseExcel/SaveParser.pm). This is a combination of Spreadsheet::ParseExcel and Spreadsheet::WriteExcel and it allows you to "rewrite" an Excel file. See the following example (http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel/lib/Spreadsheet/WriteExcel.pm#MODIFYING_AND_REWRITING_EXCEL_FILES). It is part of the Spreadsheet::ParseExcel distro.
+
+=item * Text::CSV_XS (http://search.cpan.org/~hmbrand/Text-CSV_XS/CSV_XS.pm) by H.Merijn Brand. A fast and rigorous module for reading and writing CSV data. Don't condiser rolling your own CSV handling, use this module instead.
 
 =back
 
@@ -2951,16 +2957,10 @@ Either the Perl Artistic Licence http://dev.perl.org/licenses/artistic.html or t
 
 Current maintainer 0.40+: John McNamara jmcnamara@cpan.org
 
-    http://search.cpan.org/~jmcnamara/
-
 Maintainer 0.27-0.33: Gabor Szabo szabgab@cpan.org
-
-    http://www.szabgab.com/
 
 Original author: Kawai Takanori (Hippo2000) kwitknr@cpan.org
 
-    http://member.nifty.ne.jp/hippo2000/            (Japanese)
-    http://member.nifty.ne.jp/hippo2000/index_e.htm (English)
 
 
 
