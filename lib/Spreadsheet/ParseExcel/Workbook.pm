@@ -14,29 +14,31 @@ sub new {
 # Spreadsheet::ParseExcel::Workbook->ParseAbort
 #------------------------------------------------------------------------------
 sub ParseAbort {
-    my($self, $val) =@_;
+    my ( $self, $val ) = @_;
     $self->{_ParseAbort} = $val;
 }
+
 #------------------------------------------------------------------------------
 # Spreadsheet::ParseExcel::Workbook->Parse
 #------------------------------------------------------------------------------
 sub Parse {
-    my($class, $source, $oFmt) =@_;
+    my ( $class, $source, $oFmt ) = @_;
     my $excel = Spreadsheet::ParseExcel->new;
-    my $workbook = $excel->Parse($source, $oFmt);
+    my $workbook = $excel->Parse( $source, $oFmt );
     $workbook->{_Excel} = $excel;
     return $workbook;
 }
+
 #------------------------------------------------------------------------------
 # Spreadsheet::ParseExcel::Workbook Worksheet
 #------------------------------------------------------------------------------
 sub Worksheet {
-    my($oBook, $sName) =@_;
+    my ( $oBook, $sName ) = @_;
     my $oWkS;
-    foreach $oWkS (@{$oBook->{Worksheet}}) {
-        return $oWkS if($oWkS->{Name} eq $sName);
+    foreach $oWkS ( @{ $oBook->{Worksheet} } ) {
+        return $oWkS if ( $oWkS->{Name} eq $sName );
     }
-    if($sName =~ /^\d+$/) {
+    if ( $sName =~ /^\d+$/ ) {
         return $oBook->{Worksheet}->[$sName];
     }
     return undef;
@@ -50,9 +52,6 @@ sub worksheets {
 
     return @{ $self->{Worksheet} };
 }
-
-
-
 
 #DESTROY {
 #    my ($self) = @_;

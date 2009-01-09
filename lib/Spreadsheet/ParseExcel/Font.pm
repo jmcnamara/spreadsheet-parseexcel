@@ -5,7 +5,7 @@ use warnings;
 our $VERSION = '0.42';
 
 sub new {
-    my($class, %rhIni) = @_;
+    my ( $class, %rhIni ) = @_;
     my $self = \%rhIni;
 
     bless $self, $class;
@@ -15,6 +15,5 @@ sub new {
 #    my ($self) = @_;
 #    warn "DESTROY $self called\n"
 #}
-
 
 1;

@@ -5,20 +5,20 @@ use warnings;
 our $VERSION = '0.42';
 
 sub new {
-    my($sPkg, %rhKey)=@_;
-    my($sWk, $iLen);
+    my ( $sPkg, %rhKey ) = @_;
+    my ( $sWk, $iLen );
     my $self = \%rhKey;
 
     bless $self, $sPkg;
 }
 
 sub value {
-    my($self)=@_;
+    my ($self) = @_;
     return $self->{_Value};
 }
 
 sub unformatted {
-    my($self)=@_;
+    my ($self) = @_;
     return $self->{Val};
 }
 

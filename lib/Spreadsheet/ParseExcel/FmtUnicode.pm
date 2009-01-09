@@ -16,34 +16,36 @@ our $VERSION = '0.42';
 # new (for Spreadsheet::ParseExcel::FmtUnicode)
 #------------------------------------------------------------------------------
 sub new {
-    my($sPkg, %hKey) = @_;
+    my ( $sPkg, %hKey ) = @_;
     my $sMap = $hKey{Unicode_Map};
     my $oMap;
     $oMap = Unicode::Map->new($sMap) if $sMap;
-    my $oThis={ 
+    my $oThis = {
         Unicode_Map => $sMap,
-        _UniMap => $oMap,
+        _UniMap     => $oMap,
     };
     bless $oThis;
     return $oThis;
 }
+
 #------------------------------------------------------------------------------
 # TextFmt (for Spreadsheet::ParseExcel::FmtUnicode)
 #------------------------------------------------------------------------------
 sub TextFmt {
-    my($oThis, $sTxt, $sCode) =@_;
-    if($oThis->{_UniMap}) {
-        if(! defined($sCode)) {
+    my ( $oThis, $sTxt, $sCode ) = @_;
+    if ( $oThis->{_UniMap} ) {
+        if ( !defined($sCode) ) {
             my $sSv = $sTxt;
             $sTxt =~ s/(.)/\x00$1/sg;
             $sTxt = $oThis->{_UniMap}->from_unicode($sTxt);
-            $sTxt = $sSv unless($sTxt);
+            $sTxt = $sSv unless ($sTxt);
         }
-        elsif($sCode eq 'ucs2') {
+        elsif ( $sCode eq 'ucs2' ) {
             $sTxt = $oThis->{_UniMap}->from_unicode($sTxt);
         }
-#        $sTxt = $oThis->{_UniMap}->from_unicode($sTxt)
-#                     if(defined($sCode) && $sCode eq 'ucs2');
+
+        #        $sTxt = $oThis->{_UniMap}->from_unicode($sTxt)
+        #                     if(defined($sCode) && $sCode eq 'ucs2');
         return $sTxt;
     }
     else {

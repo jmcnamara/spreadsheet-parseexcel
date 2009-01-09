@@ -5,7 +5,6 @@
 # Spreadsheet::ParseExcel:.SaveParser Objects
 #//////////////////////////////////////////////////////////////////////////////
 
-
 #==============================================================================
 # Spreadsheet::ParseExcel::SaveParser
 #==============================================================================
@@ -21,22 +20,26 @@ use base 'Spreadsheet::ParseExcel';
 our $VERSION = '0.42';
 
 use constant MagicCol => 1.14;
+
 #------------------------------------------------------------------------------
 # new (for Spreadsheet::ParseExcel::SaveParser)
 #------------------------------------------------------------------------------
 sub new {
-    my($sPkg, %hKey) = @_;
+    my ( $sPkg, %hKey ) = @_;
     $sPkg->SUPER::new(%hKey);
 }
+
 #------------------------------------------------------------------------------
 # Create
 #------------------------------------------------------------------------------
 sub Create {
-    my($oThis, $oWkFmt)=@_;
-#0. New $oBook
+    my ( $oThis, $oWkFmt ) = @_;
+
+    #0. New $oBook
     my $oBook = Spreadsheet::ParseExcel::Workbook->new;
     $oBook->{SheetCount} = 0;
-#2. Ready for format
+
+    #2. Ready for format
     if ($oWkFmt) {
         $oBook->{FmtClass} = $oWkFmt;
     }
@@ -45,20 +48,22 @@ sub Create {
     }
     return Spreadsheet::ParseExcel::SaveParser::Workbook->new($oBook);
 }
+
 #------------------------------------------------------------------------------
 # Parse (for Spreadsheet::ParseExcel::SaveParser)
 #------------------------------------------------------------------------------
 sub Parse {
-    my($oThis, $sFile, $oWkFmt)=@_;
-    my $oBook = $oThis->SUPER::Parse($sFile, $oWkFmt);
-    return undef unless(defined $oBook);
+    my ( $oThis, $sFile, $oWkFmt ) = @_;
+    my $oBook = $oThis->SUPER::Parse( $sFile, $oWkFmt );
+    return undef unless ( defined $oBook );
     return Spreadsheet::ParseExcel::SaveParser::Workbook->new($oBook);
 }
+
 #------------------------------------------------------------------------------
 # SaveAs (for Spreadsheet::ParseExcel::SaveParser)
 #------------------------------------------------------------------------------
 sub SaveAs {
-    my ($oThis, $oBook, $sName)=@_;
+    my ( $oThis, $oBook, $sName ) = @_;
     $oBook->SaveAs($sName);
 }
 1;
