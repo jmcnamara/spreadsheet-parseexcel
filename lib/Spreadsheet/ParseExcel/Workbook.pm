@@ -59,6 +59,7 @@ sub Worksheet {
     }
     return undef;
 }
+*worksheet = *Worksheet;
 
 #------------------------------------------------------------------------------
 # Spreadsheet::ParseExcel::Workbook worksheets
