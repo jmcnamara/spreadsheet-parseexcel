@@ -1,5 +1,14 @@
 Revision history for Perl extension Spreadsheet::ParseExcel.
 
+0.45 11 January 2009
+
+    ! Fixed "substr outside of string" bug with large (8-16k)
+      Unicode strings.
+      Reported by Graham Stead and Moka.
+      http://rt.cpan.org/Public/Bug/Display.html?id=41813
+      http://rt.cpan.org/Public/Bug/Display.html?id=35678
+
+
 0.44 8 January 2009
 
     ! Fix for OpenOffice.org GENERAL format.
