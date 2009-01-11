@@ -2,7 +2,7 @@ package Spreadsheet::ParseExcel::Format;
 
 ###############################################################################
 #
-# Spreadsheet::ParseExcel::Font - A class for Cell fonts.
+# Spreadsheet::ParseExcel::Format - A class for Cell formats.
 #
 # Used in conjunction with Spreadsheet::ParseExcel.
 #
@@ -35,7 +35,7 @@ __END__
 
 =head1 NAME
 
-Spreadsheet::ParseExcel::Font - A class for Cell fonts.
+Spreadsheet::ParseExcel::Format - A class for Cell formats.
 
 =head1 SYNOPSIS
 
