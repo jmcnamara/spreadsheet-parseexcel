@@ -15,7 +15,7 @@ use warnings;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.44';
+our $VERSION = '0.45';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -224,8 +224,10 @@ sub Parse {
             $lPos += $bLen;
         }
 
-#printf STDERR "%4X:%s\n", $bOp, 'UNDEFINED---:' . unpack("H*", $sWk) unless($NameTbl{$bOp});
-#Check EF, EOF
+        # printf "%04X\n", $bOp;
+        # printf STDERR "%4X:%s\n", $bOp, 'UNDEFINED---:'
+        #. unpack("H*", $sWk) unless($NameTbl{$bOp});
+        #Check EF, EOF
         if ( $bOp == 0xEF ) {    #EF
             $iEfFlg = $bOp;
         }
@@ -1796,108 +1798,137 @@ sub _UnpackRKRec {
     }
 }
 
-#------------------------------------------------------------------------------
-# _subStrWk (for Spreadsheet::ParseExcel)     DK:P280 ..
-#------------------------------------------------------------------------------
+###############################################################################
+#
+# _subStrWk()
+#
+# Extract the workbook strings from the SST (Shared String Table) record and
+# any following CONTINUE records.
+#
+# The workbook strings are initially contained in the SST block but may also
+# occupy one or more CONTINUE blocks. Reading the CONTINUE blocks is made a 
+# little tricky by the fact that they can contain an additional initial byte
+# if a string is continued from a previous block.
+#
+# Parsing is further complicated by the fact that the continued section of the
+# string may have a different encoding (ASCII or UTF-8) from the previous
+# section. Excel does this to save space.
+#
 sub _subStrWk {
-    my ( $oBook, $sWk, $fCnt ) = @_;
 
-    #1. Continue
-    if ( defined($fCnt) ) {
+    my ( $self, $biff_data, $is_continue ) = @_;
 
-        #1.1 Before No Data No
-        if ( $oBook->{StrBuff} eq '' ) {    #
+    if ($is_continue) {
 
- #print "CONT NO DATA\n";
- #print "DATA:", unpack('H30', $oBook->{StrBuff}), " PRE:$oBook->{_PrevCond}\n";
-            $oBook->{StrBuff} .= $sWk;
+        # We are reading a CONTINUE record.
+
+        if ( $self->{_buffer} eq '' ) {
+print "Here 01\n";
+            # A CONTINUE block with no previous SST.
+            $self->{_buffer} .= $biff_data;
         }
+        elsif ( !$self->{_string_continued} ) {
+print "Here 02\n";
+            # The CONTINUE block starts with a new (non-continued) string.
 
-        #1.1 No PrevCond
-        elsif ( !( defined( $oBook->{_PrevCond} ) ) ) {
-
-            #print "NO PREVCOND\n";
-            $oBook->{StrBuff} .= substr( $sWk, 1 );
+            # Strip the Grbit byte and store the string data.
+            $self->{_buffer} .= substr $biff_data, 1;
         }
         else {
+print "Here 03\n";
+            # A CONTINUE block that starts with a continued string.
 
-            #print "CONT\n";
-            my $iCnt1st = ord($sWk);    # 1st byte of Continue may be a GR byte
-            my ( $iStP, $iLenS ) = @{ $oBook->{_PrevInfo} };
-            my $iLenB = length( $oBook->{StrBuff} );
+            # The first byte (Grbit) of the CONTINUE record indicates if (0)
+            # the continued string section is single bytes or (1) double bytes.
+            my $grbit = ord $biff_data;
+print "Here 1\n";
+            my ( $str_position, $str_length ) = @{ $self->{_previous_info} };
+            my $buff_length = length $self->{_buffer};
 
-            #1.1 Not in String
-            if ( $iLenB >= ( $iStP + $iLenS ) ) {
-
-                #print "NOT STR\n";
-                $oBook->{StrBuff} .= $sWk;
-
-                #                $oBook->{StrBuff} .= substr($sWk, 1);
+            if ( $buff_length >= ( $str_position + $str_length ) ) {
+print "Here 2\n";
+                # Not in a string.
+                $self->{_buffer} .= $biff_data;
             }
-
-            #1.2 Same code (Unicode or ASCII)
-            elsif ( ( $oBook->{_PrevCond} & 0x01 ) == ( $iCnt1st & 0x01 ) ) {
-
-                #print "SAME\n";
-                $oBook->{StrBuff} .= substr( $sWk, 1 );
+            elsif ( ( $self->{_string_continued} & 0x01 ) == ( $grbit & 0x01 ) )
+            {
+print "Here 3\n";
+                # Same encoding as the previous block of the string.
+                $self->{_buffer} .= substr( $biff_data, 1 );
             }
             else {
 
-                #1.3 Diff code (Unicode or ASCII)
-                my $iDiff = ( $iStP + $iLenS ) - $iLenB;
-                if ( $iCnt1st & 0x01 ) {
+                # Different encoding to the previous block of the string.
+                if ( $grbit & 0x01 ) {
+print "Here 4\n";
+                    # Current block is UTF-16, previous was ASCII.
+                    my ( undef, $cch ) = unpack 'vc', $self->{_buffer};
+                    substr( $self->{_buffer}, 2, 1 ) = pack( 'C', $cch | 0x01 );
 
-                    #print "DIFF ASC $iStP $iLenS $iLenB DIFF:$iDiff\n";
-                    #print "BEF:", unpack("H6", $oBook->{StrBuff}), "\n";
-                    my ( $iDum, $iGr ) = unpack( 'vc', $oBook->{StrBuff} );
-                    substr( $oBook->{StrBuff}, 2, 1 ) =
-                      pack( 'c', $iGr | 0x01 );
-
-                    #print "AFT:", unpack("H6", $oBook->{StrBuff}), "\n";
-                    for ( my $i = ( $iLenB - $iStP ) ; $i >= 1 ; $i-- ) {
-                        substr( $oBook->{StrBuff}, $iStP + $i, 0 ) = "\x00";
+                    # Convert the previous ASCII, single character, portion of
+                    # the string into a double character UTF-16 string by
+                    # inserting zero bytes.
+                    for (
+                        my $i = ( $buff_length - $str_position ) ;
+                        $i >= 1 ;
+                        $i--
+                      )
+                    {
+                        substr( $self->{_buffer}, $str_position + $i, 0 ) =
+                          "\x00";
                     }
+
+                    # Remove the Grbit byte.
+                    $self->{_buffer} .= substr $biff_data, 1;
                 }
                 else {
 
-       #print "DIFF UNI:", $oBook->{_PrevCond}, ":", $iCnt1st, " DIFF:$iDiff\n";
-                    for ( my $i = ( $iDiff / 2 ) ; $i >= 1 ; $i-- ) {
-                        substr( $sWk, $i + 1, 0 ) = "\x00";
-                    }
+                    # Current block is ASCII, previous was UTF-16.
+print "Here 5\n";
+                    # Remove the Grbit byte.
+                    $biff_data = substr $biff_data, 1;
+
+                    # Convert the current ASCII, single character, portion of
+                    # the string into a double character UTF-16 string by
+                    # inserting zero bytes.
+                    $biff_data = pack 'v*', unpack 'C*', $biff_data;
+
+                    $self->{_buffer} .= $biff_data;
                 }
-                $oBook->{StrBuff} .= substr( $sWk, 1 );
+
             }
         }
     }
     else {
 
-        #2. Saisho
-        $oBook->{StrBuff} .= $sWk;
+        # Not a CONTINUE block therefore an SST block.
+        $self->{_buffer} .= $biff_data;
     }
 
-    #print " AFT2:", unpack("H60", $oBook->{StrBuff}), "\n";
+    # Reset the state variables.
+    $self->{_string_continued} = 0;
+    $self->{_previous_info}    = undef;
 
-    $oBook->{_PrevCond} = undef;
-    $oBook->{_PrevInfo} = undef;
+    # Extract out any full strings from the current buffer leaving behind a
+    # partial string that is continued into the next block, or an empty
+    # buffer is no string is continued.
+    while ( length $self->{_buffer} >= 4 ) {
+        my ( $str_info, $length, $str_position, $str_length ) =
+          _convBIFF8String( $self, $self->{_buffer}, 1 );
 
-    while ( length( $oBook->{StrBuff} ) >= 4 ) {
-        my ( $raBuff, $iLen, $iStPos, $iLenS ) =
-          _convBIFF8String( $oBook, $oBook->{StrBuff}, 1 );
-
-        #No Code Convert
-        if ( defined( $raBuff->[0] ) ) {
-            push @{ $oBook->{PkgStr} },
+        if ( defined $str_info->[0] ) {
+            push @{ $self->{PkgStr} },
               {
-                Text    => $raBuff->[0],
-                Unicode => $raBuff->[1],
-                Rich    => $raBuff->[2],
-                Ext     => $raBuff->[3],
+                Text    => $str_info->[0],
+                Unicode => $str_info->[1],
+                Rich    => $str_info->[2],
+                Ext     => $str_info->[3],
               };
-            $oBook->{StrBuff} = substr( $oBook->{StrBuff}, $iLen );
+            $self->{_buffer} = substr( $self->{_buffer}, $length );
         }
         else {
-            $oBook->{_PrevCond} = $raBuff->[1];
-            $oBook->{_PrevInfo} = [ $iStPos, $iLenS ];
+            $self->{_string_continued} = $str_info->[1];
+            $self->{_previous_info} = [ $str_position, $str_length ];
             last;
         }
     }
@@ -2889,7 +2920,7 @@ However, this still processes the entire workbook. If you wish to save some addi
 
 =item * Spreadsheet::ParseExcel::SaveParser (http://search.cpan.org/~jmcnamara/Spreadsheet-ParseExcel/lib/Spreadsheet/ParseExcel/SaveParser.pm). This is a combination of Spreadsheet::ParseExcel and Spreadsheet::WriteExcel and it allows you to "rewrite" an Excel file. See the following example (http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel/lib/Spreadsheet/WriteExcel.pm#MODIFYING_AND_REWRITING_EXCEL_FILES). It is part of the Spreadsheet::ParseExcel distro.
 
-=item * Text::CSV_XS (http://search.cpan.org/~hmbrand/Text-CSV_XS/CSV_XS.pm) by H.Merijn Brand. A fast and rigorous module for reading and writing CSV data. Don't condiser rolling your own CSV handling, use this module instead.
+=item * Text::CSV_XS (http://search.cpan.org/~hmbrand/Text-CSV_XS/CSV_XS.pm) by H.Merijn Brand. A fast and rigorous module for reading and writing CSV data. Don't consider rolling your own CSV handling, use this module instead.
 
 =back
 
