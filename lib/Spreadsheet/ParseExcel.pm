@@ -1820,13 +1820,13 @@ sub _subStrWk {
         # We are reading a CONTINUE record.
 
         if ( $self->{_buffer} eq '' ) {
-            print "\nHere 01\n";
+            # print "\nHere 01\n";
 
             # A CONTINUE block with no previous SST.
             $self->{_buffer} .= $biff_data;
         }
         elsif ( ! defined $self->{_string_continued} ) {
-            print "\nHere 02\n";
+            # print "\nHere 02\n";
 
             # The CONTINUE block starts with a new (non-continued) string.
 
@@ -1834,7 +1834,7 @@ sub _subStrWk {
             $self->{_buffer} .= substr $biff_data, 1;
         }
         else {
-            print "\nHere 03\n";
+            # print "\nHere 03\n";
 
             # A CONTINUE block that starts with a continued string.
 
@@ -1844,17 +1844,17 @@ sub _subStrWk {
 
             my ( $str_position, $str_length ) = @{ $self->{_previous_info} };
             my $buff_length = length $self->{_buffer};
-            print "Here 1  $str_position, $str_length,  $buff_length\n";
+            # print "Here 1  $str_position, $str_length,  $buff_length\n";
 
             if ( $buff_length >= ( $str_position + $str_length ) ) {
-                print "Here 2\n";
+                # print "Here 2\n";
 
                 # Not in a string.
                 $self->{_buffer} .= $biff_data;
             }
             elsif ( ( $self->{_string_continued} & 0x01 ) == ( $grbit & 0x01 ) )
             {
-                print "Here 3\n";
+                # print "Here 3\n";
 
                 # Same encoding as the previous block of the string.
                 $self->{_buffer} .= substr( $biff_data, 1 );
@@ -1863,7 +1863,7 @@ sub _subStrWk {
 
                 # Different encoding to the previous block of the string.
                 if ( $grbit & 0x01 ) {
-                    print "Here 4 Grbit 1\n";
+                    # print "Here 4 Grbit 1\n";
 
                     # Current block is UTF-16, previous was ASCII.
                     my ( undef, $cch ) = unpack 'vc', $self->{_buffer};
@@ -1882,25 +1882,45 @@ sub _subStrWk {
                           "\x00";
                     }
 
-                    # Remove the Grbit byte and store data.
-                    $self->{_buffer} .= substr $biff_data, 1;
+
                 }
                 else {
 
                     # Current block is ASCII, previous was UTF-16.
-                    print "Here 5 Grbit 0\n";
+                    # print "Here 5 Grbit 0\n";
 
                     # Remove the Grbit byte.
-                    $biff_data = substr $biff_data, 1;
+                    #$biff_data = substr $biff_data, 1;
+                    my $diff = ( $str_position + $str_length ) - $buff_length;
+                    my $biff_length = length $biff_data;
+
+                    if ($diff > ($biff_length-1) *2) {
+                        $diff = ($biff_length-1) *2;
+                    }
+
+                    # print "Here 5 ", join " ", "\n",
+                    #  '$str_length =', $str_length, "\n",
+                    #  '$buff_length =', $buff_length, "\n",
+                    #  '$str_length - $buff_length =', $str_length - $buff_length, "\n",
+                    #  '$biff_length =', $biff_length, "\n",
+                    #  '2 * $biff_length =',2 * $biff_length, "\n",
+                    #  '$diff =', $diff, "\n",
+                    #  "\n";
 
                     # Convert the current ASCII, single character, portion of
                     # the string into a double character UTF-16 string by
                     # inserting zero bytes.
-                    $biff_data = pack 'v*', unpack 'C*', $biff_data;
+                    #$biff_data = pack 'v*', unpack 'C*', $biff_data;
 
-                    $self->{_buffer} .= $biff_data;
+                    #$self->{_buffer} .= $biff_data;
+
+                    for ( my $i = ( $diff / 2 ) ; $i >= 1 ; $i-- ) {
+                        substr( $biff_data, $i + 1, 0 ) = "\x00";
+                    }
+
                 }
-
+                # Remove the Grbit byte and store data.
+                $self->{_buffer} .= substr $biff_data, 1;
             }
         }
     }
