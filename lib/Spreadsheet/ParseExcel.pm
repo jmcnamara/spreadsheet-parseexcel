@@ -224,9 +224,6 @@ sub Parse {
             $lPos += $bLen;
         }
 
-        # printf "%04X\n", $bOp;
-        # printf STDERR "%4X:%s\n", $bOp, 'UNDEFINED---:'
-        #. unpack("H*", $sWk) unless($NameTbl{$bOp});
         #Check EF, EOF
         if ( $bOp == 0xEF ) {    #EF
             $iEfFlg = $bOp;
@@ -1823,36 +1820,42 @@ sub _subStrWk {
         # We are reading a CONTINUE record.
 
         if ( $self->{_buffer} eq '' ) {
-print "Here 01\n";
+            print "\nHere 01\n";
+
             # A CONTINUE block with no previous SST.
             $self->{_buffer} .= $biff_data;
         }
-        elsif ( !$self->{_string_continued} ) {
-print "Here 02\n";
+        elsif ( ! defined $self->{_string_continued} ) {
+            print "\nHere 02\n";
+
             # The CONTINUE block starts with a new (non-continued) string.
 
             # Strip the Grbit byte and store the string data.
             $self->{_buffer} .= substr $biff_data, 1;
         }
         else {
-print "Here 03\n";
+            print "\nHere 03\n";
+
             # A CONTINUE block that starts with a continued string.
 
             # The first byte (Grbit) of the CONTINUE record indicates if (0)
             # the continued string section is single bytes or (1) double bytes.
             my $grbit = ord $biff_data;
-print "Here 1\n";
+
             my ( $str_position, $str_length ) = @{ $self->{_previous_info} };
             my $buff_length = length $self->{_buffer};
+            print "Here 1  $str_position, $str_length,  $buff_length\n";
 
             if ( $buff_length >= ( $str_position + $str_length ) ) {
-print "Here 2\n";
+                print "Here 2\n";
+
                 # Not in a string.
                 $self->{_buffer} .= $biff_data;
             }
             elsif ( ( $self->{_string_continued} & 0x01 ) == ( $grbit & 0x01 ) )
             {
-print "Here 3\n";
+                print "Here 3\n";
+
                 # Same encoding as the previous block of the string.
                 $self->{_buffer} .= substr( $biff_data, 1 );
             }
@@ -1860,7 +1863,8 @@ print "Here 3\n";
 
                 # Different encoding to the previous block of the string.
                 if ( $grbit & 0x01 ) {
-print "Here 4\n";
+                    print "Here 4 Grbit 1\n";
+
                     # Current block is UTF-16, previous was ASCII.
                     my ( undef, $cch ) = unpack 'vc', $self->{_buffer};
                     substr( $self->{_buffer}, 2, 1 ) = pack( 'C', $cch | 0x01 );
@@ -1878,13 +1882,14 @@ print "Here 4\n";
                           "\x00";
                     }
 
-                    # Remove the Grbit byte.
+                    # Remove the Grbit byte and store data.
                     $self->{_buffer} .= substr $biff_data, 1;
                 }
                 else {
 
                     # Current block is ASCII, previous was UTF-16.
-print "Here 5\n";
+                    print "Here 5 Grbit 0\n";
+
                     # Remove the Grbit byte.
                     $biff_data = substr $biff_data, 1;
 
@@ -1906,7 +1911,7 @@ print "Here 5\n";
     }
 
     # Reset the state variables.
-    $self->{_string_continued} = 0;
+    $self->{_string_continued} = undef;
     $self->{_previous_info}    = undef;
 
     # Extract out any full strings from the current buffer leaving behind a
