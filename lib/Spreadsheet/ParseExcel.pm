@@ -216,50 +216,45 @@ sub Parse {
     my $lPos = 0;
     my $sWk = substr( $sBIFF, $lPos, 4 );
     $lPos += 4;
-    my $iEfFlg = 0;
+
     while ( $lPos <= $iLen ) {
         my ( $bOp, $bLen ) = unpack( "v2", $sWk );
+
         if ($bLen) {
             $sWk = substr( $sBIFF, $lPos, $bLen );
             $lPos += $bLen;
         }
 
-        #Check EF, EOF
-        if ( $bOp == 0xEF ) {    #EF
-            $iEfFlg = $bOp;
-        }
-        elsif ( $bOp == 0x0A ) {    #EOF
-            undef $iEfFlg;
+        #1. Formula String with No String
+        if (   $oBook->{_PrevPos}
+            && ( defined $self->{FuncTbl}->{$bOp} )
+            && ( $bOp != 0x207 ) )
+        {
+            my $iPos = $oBook->{_PrevPos};
+            $oBook->{_PrevPos} = undef;
+            my ( $iR, $iC, $iF ) = @$iPos;
+            _NewCell(
+                $oBook, $iR, $iC,
+                Kind     => 'Formula String',
+                Val      => '',
+                FormatNo => $iF,
+                Format   => $oBook->{Format}[$iF],
+                Numeric  => 0,
+                Code     => undef,
+                Book     => $oBook,
+            );
         }
 
-        #1. Formula String with No String
-        if ( not $iEfFlg ) {
-            if (   $oBook->{_PrevPos}
-                && ( defined $self->{FuncTbl}->{$bOp} )
-                && ( $bOp != 0x207 ) )
-            {
-                my $iPos = $oBook->{_PrevPos};
-                $oBook->{_PrevPos} = undef;
-                my ( $iR, $iC, $iF ) = @$iPos;
-                _NewCell(
-                    $oBook, $iR, $iC,
-                    Kind     => 'Formula String',
-                    Val      => '',
-                    FormatNo => $iF,
-                    Format   => $oBook->{Format}[$iF],
-                    Numeric  => 0,
-                    Code     => undef,
-                    Book     => $oBook,
-                );
-            }
-            if ( defined $self->{FuncTbl}->{$bOp} ) {
-                $self->{FuncTbl}->{$bOp}->( $oBook, $bOp, $bLen, $sWk );
-            }
-            $PREFUNC = $bOp if ( $bOp != 0x3C );    #Not Continue
+        if ( defined $self->{FuncTbl}->{$bOp} ) {
+            $self->{FuncTbl}->{$bOp}->( $oBook, $bOp, $bLen, $sWk );
         }
+
+        $PREFUNC = $bOp if ( $bOp != 0x3C );    #Not Continue
+
         if ( ( $lPos + 4 ) <= $iLen ) {
             $sWk = substr( $sBIFF, $lPos, 4 );
         }
+
         $lPos += 4;
         return $oBook if defined $oBook->{_ParseAbort};
     }
@@ -1820,13 +1815,11 @@ sub _subStrWk {
         # We are reading a CONTINUE record.
 
         if ( $self->{_buffer} eq '' ) {
-            # print "\nHere 01\n";
 
             # A CONTINUE block with no previous SST.
             $self->{_buffer} .= $biff_data;
         }
-        elsif ( ! defined $self->{_string_continued} ) {
-            # print "\nHere 02\n";
+        elsif ( !defined $self->{_string_continued} ) {
 
             # The CONTINUE block starts with a new (non-continued) string.
 
@@ -1834,7 +1827,6 @@ sub _subStrWk {
             $self->{_buffer} .= substr $biff_data, 1;
         }
         else {
-            # print "\nHere 03\n";
 
             # A CONTINUE block that starts with a continued string.
 
@@ -1844,17 +1836,14 @@ sub _subStrWk {
 
             my ( $str_position, $str_length ) = @{ $self->{_previous_info} };
             my $buff_length = length $self->{_buffer};
-            # print "Here 1  $str_position, $str_length,  $buff_length\n";
 
             if ( $buff_length >= ( $str_position + $str_length ) ) {
-                # print "Here 2\n";
 
                 # Not in a string.
                 $self->{_buffer} .= $biff_data;
             }
             elsif ( ( $self->{_string_continued} & 0x01 ) == ( $grbit & 0x01 ) )
             {
-                # print "Here 3\n";
 
                 # Same encoding as the previous block of the string.
                 $self->{_buffer} .= substr( $biff_data, 1 );
@@ -1863,7 +1852,6 @@ sub _subStrWk {
 
                 # Different encoding to the previous block of the string.
                 if ( $grbit & 0x01 ) {
-                    # print "Here 4 Grbit 1\n";
 
                     # Current block is UTF-16, previous was ASCII.
                     my ( undef, $cch ) = unpack 'vc', $self->{_buffer};
@@ -1882,44 +1870,34 @@ sub _subStrWk {
                           "\x00";
                     }
 
-
                 }
                 else {
 
                     # Current block is ASCII, previous was UTF-16.
-                    # print "Here 5 Grbit 0\n";
-
-                    # Remove the Grbit byte.
-                    #$biff_data = substr $biff_data, 1;
-                    my $diff = ( $str_position + $str_length ) - $buff_length;
-                    my $biff_length = length $biff_data;
-
-                    if ($diff > ($biff_length-1) *2) {
-                        $diff = ($biff_length-1) *2;
-                    }
-
-                    # print "Here 5 ", join " ", "\n",
-                    #  '$str_length =', $str_length, "\n",
-                    #  '$buff_length =', $buff_length, "\n",
-                    #  '$str_length - $buff_length =', $str_length - $buff_length, "\n",
-                    #  '$biff_length =', $biff_length, "\n",
-                    #  '2 * $biff_length =',2 * $biff_length, "\n",
-                    #  '$diff =', $diff, "\n",
-                    #  "\n";
 
                     # Convert the current ASCII, single character, portion of
                     # the string into a double character UTF-16 string by
-                    # inserting zero bytes.
-                    #$biff_data = pack 'v*', unpack 'C*', $biff_data;
+                    # inserting null bytes.
+                    my $change_length =
+                      ( $str_position + $str_length ) - $buff_length;
 
-                    #$self->{_buffer} .= $biff_data;
+                    # Length of the current CONTINTUE record data.
+                    my $biff_length = length $biff_data;
 
-                    for ( my $i = ( $diff / 2 ) ; $i >= 1 ; $i-- ) {
+                    # Restrict the portion to be changed to the current block
+                    # if the string extends over more than one block.
+                    if ( $change_length > ( $biff_length - 1 ) * 2 ) {
+                        $change_length = ( $biff_length - 1 ) * 2;
+                    }
+
+                    # Insert the null bytes.
+                    for ( my $i = ( $change_length / 2 ) ; $i >= 1 ; $i-- ) {
                         substr( $biff_data, $i + 1, 0 ) = "\x00";
                     }
 
                 }
-                # Remove the Grbit byte and store data.
+
+                # Strip the Grbit byte and store the string data.
                 $self->{_buffer} .= substr $biff_data, 1;
             }
         }
