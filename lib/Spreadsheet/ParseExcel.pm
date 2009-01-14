@@ -1881,7 +1881,7 @@ sub _subStrWk {
                     my $change_length =
                       ( $str_position + $str_length ) - $buff_length;
 
-                    # Length of the current CONTINTUE record data.
+                    # Length of the current CONTINUE record data.
                     my $biff_length = length $biff_data;
 
                     # Restrict the portion to be changed to the current block
