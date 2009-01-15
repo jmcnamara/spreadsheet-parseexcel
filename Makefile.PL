@@ -22,7 +22,5 @@ WriteMakefile(
           'EXE_FILES'    => [],
           'VERSION_FROM' => 'lib/Spreadsheet/ParseExcel.pm',
           'PREREQ_PM'    => \%deps,
-
-           test          => {TESTS => 't/*.t t/examples/*t'}
-
+           test          => {TESTS => 't/*.t'}
 );
