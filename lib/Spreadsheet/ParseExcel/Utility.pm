@@ -530,7 +530,7 @@ sub ExcelFmt {
         my $replacement;
         for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
             my $placeholder = $placeholders[$i];
-            if ( @$placeholder  >= 4 ) {
+            if ( @$placeholder >= 4 ) {
 
                 # Minutes.
                 if ( $placeholder->[0] eq 'mm' ) {
@@ -541,52 +541,65 @@ sub ExcelFmt {
                 }
             }
             elsif ( $placeholder->[0] eq 'yyyy' ) {
+
                 # 4 digit Year. 2000 -> 2000.
                 $replacement = sprintf( '%04d', $year );
             }
             elsif ( $placeholder->[0] eq 'yy' ) {
+
                 # 2 digit Year. 2000 -> 00.
                 $replacement = sprintf( '%02d', $year % 100 );
             }
             elsif ( $placeholder->[0] eq 'mmmmm' ) {
+
                 # First character of the month name. 1 -> J.
                 $replacement = substr( $short_month_name[$month], 0, 1 );
             }
             elsif ( $placeholder->[0] eq 'mmmm' ) {
+
                 # Full month name. 1 -> January.
                 $replacement = $full_month_name[$month];
             }
             elsif ( $placeholder->[0] eq 'mmm' ) {
+
                 # Short month name. 1 -> Jan.
                 $replacement = $short_month_name[$month];
             }
             elsif ( $placeholder->[0] eq 'mm' ) {
+
                 # 2 digit month. 1 -> 01.
                 $replacement = sprintf( '%02d', $month );
             }
             elsif ( $placeholder->[0] eq 'm' ) {
+
                 # 1 digit month. 1 -> 1.
                 $replacement = sprintf( '%d', $month );
             }
             elsif ( $placeholder->[0] eq 'dddd' ) {
+
                 # Full day name. 1 -> Wednesday (for example.)
                 $replacement = $full_day_name[$msec];
             }
             elsif ( $placeholder->[0] eq 'ddd' ) {
+
                 # Short day name. 1 -> Wednesday (for example.)
                 $replacement = $short_day_name[$msec];
             }
             elsif ( $placeholder->[0] eq 'dd' ) {
+
                 # 2 digit day. 1 -> 01.
                 $replacement = sprintf( '%02d', $day );
             }
             elsif ( $placeholder->[0] eq 'd' ) {
+
                 # 1 digit day. 1 -> 1.
                 $replacement = sprintf( '%d', $day );
             }
             elsif ( $placeholder->[0] eq 'hh' ) {
+
                 # 2 digit hour.
                 if ($is_12_hour) {
+
                     # TODO. This is wrong. 12 -> 0!!!
                     $replacement = sprintf( '%02d', $hour % 12 );
                 }
@@ -595,8 +608,10 @@ sub ExcelFmt {
                 }
             }
             elsif ( $placeholder->[0] eq 'h' ) {
+
                 # 1 digit hour.
                 if ($is_12_hour) {
+
                     # TODO. This is wrong. 12 -> 0!!!
                     $replacement = sprintf( '%d', $hour % 12 );
                 }
@@ -605,69 +620,80 @@ sub ExcelFmt {
                 }
             }
             elsif ( $placeholder->[0] eq 'ss' ) {
+
                 # 2 digit seconds.
                 $replacement = sprintf( '%02d', $sec );
             }
             elsif ( $placeholder->[0] eq 's' ) {
+
                 # 1 digit seconds.
                 $replacement = sprintf( '%d', $sec );
             }
             elsif ( $placeholder->[0] eq 'am/pm' ) {
+
                 # AM/PM.
                 # TODO. This is wrong. Hour not month.
                 $replacement = ( $month > 12 ) ? 'pm' : 'am';
             }
             elsif ( $placeholder->[0] eq 'a/p' ) {
+
                 # AM/PM.
                 # TODO. This is wrong. Hour not month.
                 $replacement = ( $month > 12 ) ? 'p' : 'a';
             }
             elsif ( $placeholder->[0] eq '.' ) {
+
                 # Decimal point for seconds.
                 $replacement = '.';
             }
             elsif ( $placeholder->[0] =~ /(^0+$)/ ) {
+
                 # Milliseconds. For example h:ss.000.
                 my $length = length($1);
                 $replacement =
                   substr( sprintf( "%.${length}f", $msec / 1000 ), 2, $length );
             }
             elsif ( $placeholder->[0] eq '[h]' ) {
+
                 # Hours not modulus 24. 25 displays as 25 not as 1.
                 # TODO. Check that this is correct.
                 $replacement = sprintf( '%d', int($number) * 24 + $hour );
             }
             elsif ( $placeholder->[0] eq '[mm]' ) {
+
                 # Mins not modulus 60. 72 displays as 72 not as 12.
                 # TODO. Check that this is correct.
                 $replacement =
                   sprintf( '%d', ( int($number) * 24 + $hour ) * 60 + $min );
             }
             elsif ( $placeholder->[0] eq 'ge' ) {
+
                 # NENGO (Japanese)
                 $replacement =
                   Spreadsheet::ParseExcel::FmtJapan::CnvNengo( 1, @time );
             }
             elsif ( $placeholder->[0] eq 'ggge' ) {
+
                 # NENGO (Japanese)
                 $replacement =
                   Spreadsheet::ParseExcel::FmtJapan::CnvNengo( 2, @time );
             }
             elsif ( $placeholder->[0] eq '@' ) {
+
                 # Text format.
                 $replacement = $number;
             }
 
             # Substitute the replacement string back into the template.
-            substr( $result, $placeholder->[1], $placeholder->[2] ) =
-              $replacement;
+            substr( $result, $placeholder->[1], $placeholder->[2],
+                $replacement );
         }
     }
 
 ################################################################
 
-
     elsif ( ( $format_mode eq 'number' ) && ( $number =~ $qrNUMBER ) ) {
+
         # Format non date numbers.
         if (@placeholders) {
             while ( $placeholders[-1]->[0] eq ',' ) {
@@ -675,8 +701,8 @@ sub ExcelFmt {
                 substr(
                     $result,
                     $placeholders[-1]->[1],
-                    $placeholders[-1]->[2],
-                    '');
+                    $placeholders[-1]->[2], ''
+                );
                 $number /= 1000;
                 pop @placeholders;
             }
@@ -736,8 +762,8 @@ sub ExcelFmt {
 
             $number_result = AddComma($number_result) if $comma_count > 0;
 
-            my $number_length  = length($number_result);
-            my $decimal_pos = -1;
+            my $number_length = length($number_result);
+            my $decimal_pos   = -1;
             my $replacement;
 
             for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
@@ -746,50 +772,60 @@ sub ExcelFmt {
                 if ( $placeholder->[0] =~
                     /([#0]*)([\.]?)([0#]*)([eE])([\+\-])([0#]+)/ )
                 {
-                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
-                      MakeE( $placeholder->[0], $number );
+                    substr( $result, $placeholder->[1], $placeholder->[2],
+                        MakeE( $placeholder->[0], $number ) );
                 }
                 elsif ( $placeholder->[0] =~ /\// ) {
-                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
-                      MakeFraction( $placeholder->[0], $number, $is_integer );
+                    substr( $result, $placeholder->[1], $placeholder->[2],
+                        MakeFraction( $placeholder->[0], $number, $is_integer )
+                    );
                 }
                 elsif ( $placeholder->[0] eq '.' ) {
                     $number_length--;
                     $decimal_pos = $number_length;
                 }
                 elsif ( $placeholder->[0] eq '+' ) {
-                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
-                      ( $number > 0 ) ? '+' : ( ( $number == 0 ) ? '+' : '-' );
+                    substr( $result, $placeholder->[1], $placeholder->[2],
+                        ( $number > 0 )
+                        ? '+'
+                        : ( ( $number == 0 ) ? '+' : '-' ) );
                 }
                 elsif ( $placeholder->[0] eq '-' ) {
-                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
-                      ( $number > 0 ) ? '' : ( ( $number == 0 ) ? '' : '-' );
+                    substr( $result, $placeholder->[1], $placeholder->[2],
+                        ( $number > 0 )
+                        ? ''
+                        : ( ( $number == 0 ) ? '' : '-' ) );
                 }
                 elsif ( $placeholder->[0] eq '@' ) {
-                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
-                      $number;
+                    substr( $result, $placeholder->[1], $placeholder->[2],
+                        $number );
                 }
                 elsif ( $placeholder->[0] eq '*' ) {
-                    substr( $result, $placeholder->[1], $placeholder->[2] ) = '';
+                    substr( $result, $placeholder->[1], $placeholder->[2], '' );
                 }
                 elsif (( $placeholder->[0] eq "\xA2\xA4" )
                     or ( $placeholder->[0] eq "\xA2\xA5" )
                     or ( $placeholder->[0] eq "\x81\xA2" )
                     or ( $placeholder->[0] eq "\x81\xA3" ) )
                 {
-                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
-                      $placeholder->[0];
+                    substr(
+                        $result,           $placeholder->[1],
+                        $placeholder->[2], $placeholder->[0]
+                    );
                 }
                 elsif (( $placeholder->[0] eq '(' )
                     or ( $placeholder->[0] eq ')' ) )
                 {
-                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
-                      $placeholder->[0];
+                    substr(
+                        $result,           $placeholder->[1],
+                        $placeholder->[2], $placeholder->[0]
+                    );
                 }
                 else {
                     if ( $number_length > 0 ) {
                         if ( $i <= 0 ) {
-                            $replacement = substr( $number_result, 0, $number_length );
+                            $replacement =
+                              substr( $number_result, 0, $number_length );
                             $number_length = 0;
                         }
                         else {
@@ -798,40 +834,52 @@ sub ExcelFmt {
                                 my $format = $placeholder->[0];
                                 $format =~ s/^#+//;
                                 $real_part_length = length $format;
-                                $real_part_length = ( $number_length <= $real_part_length ) ? $number_length : $real_part_length;
+                                $real_part_length =
+                                  ( $number_length <= $real_part_length )
+                                  ? $number_length
+                                  : $real_part_length;
                             }
                             else {
-                                $real_part_length = ( $number_length <= $real_part_length ) ? $number_length : $real_part_length;
+                                $real_part_length =
+                                  ( $number_length <= $real_part_length )
+                                  ? $number_length
+                                  : $real_part_length;
                             }
                             $replacement =
-                              substr( $number_result, $number_length - $real_part_length, $real_part_length );
+                              substr( $number_result,
+                                $number_length - $real_part_length,
+                                $real_part_length );
                             $number_length -= $real_part_length;
                         }
                     }
                     else {
                         $replacement = '';
                     }
-                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
-                      "\x00" . $replacement;
+                    substr( $result, $placeholder->[1], $placeholder->[2],
+                        "\x00" . $replacement );
                 }
             }
-            $replacement = ( $number_length > 0 ) ? substr( $number_result, 0, $number_length ) : '';
+            $replacement =
+              ( $number_length > 0 )
+              ? substr( $number_result, 0, $number_length )
+              : '';
             $result =~ s/\x00/$replacement/;
             $result =~ s/\x00//g;
         }
     }
     else {
+
         # Text format with "@"
         my $is_text = 0;
         for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
             my $placeholder = $placeholders[$i];
             if ( $placeholder->[0] eq '@' ) {
-                substr( $result, $placeholder->[1], $placeholder->[2] ) =
-                  $number;
+                substr( $result, $placeholder->[1], $placeholder->[2],
+                    $number );
                 $is_text++;
             }
             else {
-                substr( $result, $placeholder->[1], $placeholder->[2] ) = '';
+                substr( $result, $placeholder->[1], $placeholder->[2], '' );
             }
         }
 
@@ -859,7 +907,7 @@ sub AddComma {
     if ( $sNum =~ /^([^\d]*)(\d\d\d\d+)(\.*.*)$/ ) {
         my ( $sPre, $sObj, $sAft ) = ( $1, $2, $3 );
         for ( my $i = length($sObj) - 3 ; $i > 0 ; $i -= 3 ) {
-            substr( $sObj, $i, 0 ) = ',';
+            substr( $sObj, $i, 0, ',' );
         }
         return $sPre . $sObj . $sAft;
     }
