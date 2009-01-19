@@ -496,8 +496,6 @@ sub ExcelFmt {
     #print "====\n", scalar(@placeholders), "\n";
     #print Dumper \@placeholders if !$debug;
 
-################################################################
-
     # Process date formats.
     if ( ( defined $number_type && $number_type eq 'Text' ) ) {
 
@@ -665,86 +663,86 @@ sub ExcelFmt {
               $replacement;
         }
     }
+
+################################################################
+
+
     elsif ( ( $format_mode eq 'number' ) && ( $number =~ $qrNUMBER ) ) {
+        # Format non date numbers.
         if (@placeholders) {
             while ( $placeholders[-1]->[0] eq ',' ) {
                 $comma_count--;
                 substr(
                     $result,
                     $placeholders[-1]->[1],
-                    $placeholders[-1]->[2]
-                ) = '';
+                    $placeholders[-1]->[2],
+                    '');
                 $number /= 1000;
                 pop @placeholders;
             }
 
-            my $sNumFmt = join( '', map { $_->[0] } @placeholders );
-            my $sNumRes;
-            my $iTtl  = 0;
-            my $iE    = 0;
-            my $iP    = 0;
-            my $iInt  = 0;
-            my $iAftP = undef;
-            foreach my $sItem ( split //, $sNumFmt ) {
-                if ( $sItem eq '.' ) {
-                    $iTtl++;
-                    $iP = 1;
-                }
-                elsif ( ( $sItem eq 'E' ) || ( $sItem eq 'e' ) ) {
-                    $iE = 1;
-                }
-                elsif ( $sItem eq '0' ) {
-                    $iTtl++;
-                    $iAftP++ if ($iP);
-                    $iInt = 1;
-                }
-                elsif ( $sItem eq '#' ) {
+            my $number_format = join( '', map { $_->[0] } @placeholders );
+            my $number_result;
+            my $str_length    = 0;
+            my $engineering   = 0;
+            my $is_decimal    = 0;
+            my $is_integer    = 0;
+            my $after_decimal = undef;
 
-                    #$iTtl++;
-                    $iAftP++ if ($iP);
-                    $iInt = 1;
+            for my $token ( split //, $number_format ) {
+                if ( $token eq '.' ) {
+                    $str_length++;
+                    $is_decimal = 1;
                 }
-                elsif ( $sItem eq '?' ) {
-
-                    #$iTtl++;
-                    $iAftP++ if ($iP);
+                elsif ( ( $token eq 'E' ) || ( $token eq 'e' ) ) {
+                    $engineering = 1;
+                }
+                elsif ( $token eq '0' ) {
+                    $str_length++;
+                    $after_decimal++ if $is_decimal;
+                    $is_integer = 1;
+                }
+                elsif ( $token eq '#' ) {
+                    $after_decimal++ if $is_decimal;
+                    $is_integer = 1;
+                }
+                elsif ( $token eq '?' ) {
+                    $after_decimal++ if $is_decimal;
                 }
             }
 
-            #print "DATA:$number\n";
             $number *= 100.0 if $is_percent;
-            my $iDData = ($is_currency) ? abs($number) : $number + 0;
+
+            my $data = ($is_currency) ? abs($number) : $number + 0;
+
             if ($is_fraction) {
-                $sNumRes = sprintf( "%0${iTtl}d", int($iDData) );
+                $number_result = sprintf( "%0${str_length}d", int($data) );
             }
             else {
-                if ($iP) {
-                    $sNumRes = sprintf(
+                if ($is_decimal) {
+                    $number_result = sprintf(
                         (
-                            defined($iAftP)
-                            ? "%0${iTtl}.${iAftP}f"
-                            : "%0${iTtl}f"
+                            defined($after_decimal)
+                            ? "%0${str_length}.${after_decimal}f"
+                            : "%0${str_length}f"
                         ),
-                        $iDData
+                        $data
                     );
                 }
                 else {
-                    $sNumRes = sprintf( "%0${iTtl}.0f", $iDData );
+                    $number_result = sprintf( "%0${str_length}.0f", $data );
                 }
             }
 
-            #print "sNum:$sNumRes\n";
-            $sNumRes = AddComma($sNumRes) if ( $comma_count > 0 );
+            $number_result = AddComma($number_result) if $comma_count > 0;
 
-            #print "RES:$sNumRes\n";
-            my $iLen  = length($sNumRes);
-            my $iPPos = -1;
+            my $number_length  = length($number_result);
+            my $decimal_pos = -1;
             my $replacement;
 
             for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
                 my $placeholder = $placeholders[$i];
 
-                #print "Rep:", unpack("H*", $placeholder->[0]), "\n";
                 if ( $placeholder->[0] =~
                     /([#0]*)([\.]?)([0#]*)([eE])([\+\-])([0#]+)/ )
                 {
@@ -753,11 +751,11 @@ sub ExcelFmt {
                 }
                 elsif ( $placeholder->[0] =~ /\// ) {
                     substr( $result, $placeholder->[1], $placeholder->[2] ) =
-                      MakeFraction( $placeholder->[0], $number, $iInt );
+                      MakeFraction( $placeholder->[0], $number, $is_integer );
                 }
                 elsif ( $placeholder->[0] eq '.' ) {
-                    $iLen--;
-                    $iPPos = $iLen;
+                    $number_length--;
+                    $decimal_pos = $number_length;
                 }
                 elsif ( $placeholder->[0] eq '+' ) {
                     substr( $result, $placeholder->[1], $placeholder->[2] ) =
@@ -772,8 +770,7 @@ sub ExcelFmt {
                       $number;
                 }
                 elsif ( $placeholder->[0] eq '*' ) {
-                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
-                      '';    #REMOVE
+                    substr( $result, $placeholder->[1], $placeholder->[2] ) = '';
                 }
                 elsif (( $placeholder->[0] eq "\xA2\xA4" )
                     or ( $placeholder->[0] eq "\xA2\xA5" )
@@ -782,37 +779,33 @@ sub ExcelFmt {
                 {
                     substr( $result, $placeholder->[1], $placeholder->[2] ) =
                       $placeholder->[0];
-
-                    # ($number > 0)? '': (($number==0)? '':$placeholder->[0]);
                 }
                 elsif (( $placeholder->[0] eq '(' )
                     or ( $placeholder->[0] eq ')' ) )
                 {
                     substr( $result, $placeholder->[1], $placeholder->[2] ) =
                       $placeholder->[0];
-
-                    # ($number > 0)? '': (($number==0)? '':$placeholder->[0]);
                 }
                 else {
-                    if ( $iLen > 0 ) {
+                    if ( $number_length > 0 ) {
                         if ( $i <= 0 ) {
-                            $replacement = substr( $sNumRes, 0, $iLen );
-                            $iLen = 0;
+                            $replacement = substr( $number_result, 0, $number_length );
+                            $number_length = 0;
                         }
                         else {
-                            my $iReal = length( $placeholder->[0] );
-                            if ( $iPPos >= 0 ) {
-                                my $sWkF = $placeholder->[0];
-                                $sWkF =~ s/^#+//;
-                                $iReal = length($sWkF);
-                                $iReal = ( $iLen <= $iReal ) ? $iLen : $iReal;
+                            my $real_part_length = length( $placeholder->[0] );
+                            if ( $decimal_pos >= 0 ) {
+                                my $format = $placeholder->[0];
+                                $format =~ s/^#+//;
+                                $real_part_length = length $format;
+                                $real_part_length = ( $number_length <= $real_part_length ) ? $number_length : $real_part_length;
                             }
                             else {
-                                $iReal = ( $iLen <= $iReal ) ? $iLen : $iReal;
+                                $real_part_length = ( $number_length <= $real_part_length ) ? $number_length : $real_part_length;
                             }
                             $replacement =
-                              substr( $sNumRes, $iLen - $iReal, $iReal );
-                            $iLen -= $iReal;
+                              substr( $number_result, $number_length - $real_part_length, $real_part_length );
+                            $number_length -= $real_part_length;
                         }
                     }
                     else {
@@ -822,25 +815,27 @@ sub ExcelFmt {
                       "\x00" . $replacement;
                 }
             }
-            $replacement = ( $iLen > 0 ) ? substr( $sNumRes, 0, $iLen ) : '';
+            $replacement = ( $number_length > 0 ) ? substr( $number_result, 0, $number_length ) : '';
             $result =~ s/\x00/$replacement/;
             $result =~ s/\x00//g;
         }
     }
     else {
-        my $iAtMk = 0;
+        # Text format with "@"
+        my $is_text = 0;
         for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
             my $placeholder = $placeholders[$i];
             if ( $placeholder->[0] eq '@' ) {
                 substr( $result, $placeholder->[1], $placeholder->[2] ) =
                   $number;
-                $iAtMk++;
+                $is_text++;
             }
             else {
                 substr( $result, $placeholder->[1], $placeholder->[2] ) = '';
             }
         }
-        $result = $number unless ($iAtMk);
+
+        $result = $number unless $is_text;
     }
 
     # Trim the leading and trailing whitespace from the results.
