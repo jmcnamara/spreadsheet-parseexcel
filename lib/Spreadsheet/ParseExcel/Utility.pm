@@ -24,41 +24,58 @@ use vars qw(@ISA @EXPORT_OK);
 @EXPORT_OK = qw(ExcelFmt LocaltimeExcel ExcelLocaltime
   col2int int2col sheetRef xls2csv);
 
-our $VERSION = '0.44';
+our $VERSION = '0.46';
 
-#my $sNUMEXP = '^[+-]?\d+(\.\d+)?$';
-#my $sNUMEXP = '(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d\.*(\d+)[eE][+-](\d+))$';
 my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
-
-my $debug = 0;
 
 ###############################################################################
 #
 # ExcelFmt()
 #
+# This function takes an Excel style number format and converts a number into
+# that format. for example: 'hh:mm:ss AM/PM' + 0.01023148 = '12:14:44 AM'.
+#
+# It does this with a type of templating mechanism. The format string is parsed
+# to identify tokens that need to be replaced and their position within the
+# string is recorded. These can be thought of as placeholders. The number is
+# then converted to the required formats and substituted into the placeholders.
+#
+# Interested parties should refer to the Excel documentation on cell formats for
+# more information. The Microsoft documentation for the Excel Binary File
+# Format, [MS-XLS], also contains a ABNF grammar for number format strings.
+#
+# Maintainers notes:
+# ==================
+#
+# Note on format subsections:
+# A format string can contain 4 possible sub-sections separated by semi-colons:
+# Positive numbers, negative numbers, zero values, and text.
+# For example: _(* #,##0_);_(* (#,##0);_(* "-"_);_(@_)
+#
+# Note on conditional formats.
+# A number format in Excel can have a conditional expression such as:
+#     [>9999999](000)000-0000;000-0000
+# This is equivalent to the following in Perl:
+#     $format = $number > 9999999 ? '(000)000-0000' : '000-0000';
+# Nested conditionals are also possible but we don't support them.
+#
+# Efficiency: The excessive use of substr() isn't very efficient. However,
+# it probably doesn't merit rewriting this function with a parser or regular
+# expressions and \G.
+#
+# TODO: I think the single quote handling may not be required. Check.
+#
 sub ExcelFmt {
 
     my ( $format_str, $number, $is_1904, $number_type ) = @_;
 
+    # Return text strings without further formatting.
     return $number unless $number =~ $qrNUMBER;
-
-    my $sWkF = '';
-    my $sRes = '';
-
-    print "\n============\n>>$format_str\n" if $debug;
 
     # Handle OpenOffice.org GENERAL format.
     $format_str = '@' if uc($format_str) eq "GENERAL";
 
-    # Note on conditional formats.
-    # A number format in Excel can have a conditional expression such as:
-    #     [>9999999](000)000-0000;000-0000
-    # This is equivalent to the following in Perl:
-    #     $format = $number > 9999999 ? '(000)000-0000' : '000-0000';
-    # It is also possible to have further nested conditionals but we don't
-    # handle that.
-
-    # Check for a conditional at the start of the format. See note above..
+    # Check for a conditional at the start of the format. See notes above.
     my $conditional;
     if ( $format_str =~ /^\[([<>=][^\]]+)\](.*)$/ ) {
         $conditional = $1;
@@ -69,14 +86,14 @@ sub ExcelFmt {
     $format_str =~ s/_/ /g;
 
     # Split the format string into 4 possible sub-sections: positive numbers,
-    # negative numbers, zero values, and text.
-    # The sections are separated by semicolons.
-    #
+    # negative numbers, zero values, and text. See notes above.
     my @formats;
     my $section      = 0;
     my $double_quote = 0;
     my $single_quote = 0;
 
+    # Initial parsing of the format string to remove escape characters. This
+    # also handles quoted strings. See note about single quotes above.
   CHARACTER:
     for my $char ( split //, $format_str ) {
 
@@ -109,8 +126,6 @@ sub ExcelFmt {
 
         $formats[$section] .= $char;
     }
-
-    #print "> ", join( '|', @formats), "\n" if $debug;
 
     # Select the appropriate format from the 4 4 possible sub-sections:
     # positive numbers, negative numbers, zero values, and text.
@@ -165,12 +180,18 @@ sub ExcelFmt {
         $color = $1;
     }
 
-    #3.Build Data
-    my $format_mode  = '';    # '', 'number', 'date'
+    # Remove leading # from '# ?/?', '# ??/??' fraction formats.
+    $format =~ s{# \?}{?}g;
+
+    # Parse the format string and create an AoA of placeholders that contain
+    # the parts of the string to be replaced. The format of the information
+    # stored is: [ $token, $start_pos, $end_pos, $option_info ].
+    #
+    my $format_mode  = '';    # Either: '', 'number', 'date'
     my $pos          = 0;     # Character position within format string.
     my @placeholders = ();    # Arefs with parts of the format to be replaced.
     my $token        = '';    # The actual format extracted from the total str.
-    my $start_pos;            # A position variable. Inital parser position.
+    my $start_pos;            # A position variable. Initial parser position.
     my $token_start = -1;     # A position variable.
     my $decimal_pos = -1;     # Position of the punctuation char "." or ",".
     my $comma_count = 0;      # Count of the commas in the format.
@@ -179,8 +200,7 @@ sub ExcelFmt {
     my $is_percent  = 0;      # Number format is a percentage.
     my $is_12_hour  = 0;      # Time format is using 12 hour clock.
 
-    # $token, $start_pos, $end_pos
-
+    # Parse the format.
   PARSER:
     while ( $pos < length $format ) {
         $start_pos = $pos;
@@ -197,7 +217,7 @@ sub ExcelFmt {
             }
         }
 
-        # Processing for quoted strings within the format.
+        # Processing for quoted strings within the format. See notes above.
         if ( $char eq '"' ) {
             $double_quote = $double_quote ? 0 : 1;
             $pos++;
@@ -228,6 +248,8 @@ sub ExcelFmt {
                     || ( substr( $format, $pos, 2 ) eq "\xA2\xA5" ) )
               )
             {
+
+                # The above matches are currency symbols.
                 push @placeholders,
                   [ substr( $format, $pos, 2 ), length($token), 2 ];
                 $is_currency = 1;
@@ -244,7 +266,7 @@ sub ExcelFmt {
             )
           )
         {
-            $format_mode = 'number' unless ($format_mode);
+            $format_mode = 'number' unless $format_mode;
             if ( substr( $format, $pos, 1 ) =~ /[#0]/ ) {
                 if (
                     substr( $format, $pos ) =~
@@ -290,7 +312,7 @@ sub ExcelFmt {
                             && ( substr( $format, $pos, 1 ) =~ /[0-9]/ ) )
                         {
 
-                            # TODO: Could invert logic and remove.
+                            # TODO: Could invert if() logic and remove this.
                             $pos++;
                             next FRACTION;
                         }
@@ -352,8 +374,8 @@ sub ExcelFmt {
             }
             $pos++;
         }
-        elsif ( $char =~ /[ymdhsapg]/ ) {
-            $format_mode = 'date' unless ($format_mode);
+        elsif ( $char =~ /[ymdhsapg]/i ) {
+            $format_mode = 'date' unless $format_mode;
             if ( substr( $format, $pos, 5 ) =~ /am\/pm/i ) {
                 push @placeholders, [ 'am/pm', length($token), 5 ];
                 $is_12_hour = 1;
@@ -399,7 +421,9 @@ sub ExcelFmt {
                         or ( $placeholders[-1]->[0] eq 'hh' ) )
                   )
                 {
-                    push @placeholders, [ 'mm', length($token), 2, 'min' ];
+
+                    # For this case 'm' is minutes not months.
+                    push @placeholders, [ 'mm', length($token), 2, 'minutes' ];
                 }
                 else {
                     push @placeholders,
@@ -408,10 +432,12 @@ sub ExcelFmt {
                 if (   ( substr( $format, $pos, 2 ) eq 'ss' )
                     && ( @placeholders > 1 ) )
                 {
-                    if (   ( $placeholders[ -1 - 1 ]->[0] eq 'm' )
-                        || ( $placeholders[ -1 - 1 ]->[0] eq 'mm' ) )
+                    if (   ( $placeholders[-2]->[0] eq 'm' )
+                        || ( $placeholders[-2]->[0] eq 'mm' ) )
                     {
-                        push( @{ $placeholders[ -1 - 1 ] }, 'min' );
+
+                        # For this case 'm' is minutes not months.
+                        push( @{ $placeholders[-2] }, 'minutes' );
                     }
                 }
                 $pos += 2;
@@ -428,7 +454,9 @@ sub ExcelFmt {
                         or ( $placeholders[-1]->[0] eq 'hh' ) )
                   )
                 {
-                    push @placeholders, [ 'm', length($token), 1, 'min' ];
+
+                    # For this case 'm' is minutes not months.
+                    push @placeholders, [ 'm', length($token), 1, 'minutes' ];
                 }
                 else {
                     push @placeholders,
@@ -437,10 +465,12 @@ sub ExcelFmt {
                 if (   ( substr( $format, $pos, 1 ) eq 's' )
                     && ( @placeholders > 1 ) )
                 {
-                    if (   ( $placeholders[ -1 - 1 ]->[0] eq 'm' )
-                        || ( $placeholders[ -1 - 1 ]->[0] eq 'mm' ) )
+                    if (   ( $placeholders[-2]->[0] eq 'm' )
+                        || ( $placeholders[-2]->[0] eq 'mm' ) )
                     {
-                        push( @{ $placeholders[ -1 - 1 ] }, 'min' );
+
+                        # For this case 'm' is minutes not months.
+                        push( @{ $placeholders[-2] }, 'minutes' );
                     }
                 }
                 $pos += 1;
@@ -468,23 +498,13 @@ sub ExcelFmt {
         $pos++ if ( $pos == $start_pos );    #No Format match
         $token .= substr( $format, $start_pos, $pos - $start_pos );
 
-        print "Fmt remainimg $token\n" if $debug;
+    }    # End of parsing.
 
-    }
-
-    use Data::Dumper;
-
-    #print "====\n", scalar(@placeholders), "\n";
-    #print Dumper \@placeholders if !$debug;
-    print "Final token <$token>\n" if $debug;
-
-############
-
+    # Copy the located format string to a result string that we will perform
+    # the substitutions on and return to the user.
     my $result = $token;
 
-    print "decimal_pos: $decimal_pos Result |$result|\n" if $debug;
-
-    # Add placeholder between the decimal/comma and end of the token, if any.
+    # Add a placeholder between the decimal/comma and end of the token, if any.
     if ( $token_start != -1 ) {
         push @placeholders,
           [
@@ -493,22 +513,18 @@ sub ExcelFmt {
           ];
     }
 
-    #print "====\n", scalar(@placeholders), "\n";
-    #print Dumper \@placeholders if !$debug;
-
-    # Process date formats.
-    if ( ( defined $number_type && $number_type eq 'Text' ) ) {
-
-        #Not Convert Non Numeric
-        $format_mode = '';
-    }
-
+    #
+    # In the next sections we process date, number and text formats. We take a
+    # format such as yyyy/mm/dd and replace it with something like 2008/12/25.
+    #
     if ( ( $format_mode eq 'date' ) && ( $number =~ $qrNUMBER ) ) {
+
+        # Process date formats.
         my @time = ExcelLocaltime( $number, $is_1904 );
         $time[4]++;
         $time[5] += 1900;
 
-        #     0     1     2      3     4       5      6      7
+        #    0     1     2      3     4       5      6      7
         my ( $sec, $min, $hour, $day, $month, $year, $wday, $msec ) = @time;
 
         my @full_month_name = qw(
@@ -530,9 +546,10 @@ sub ExcelFmt {
         my $replacement;
         for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
             my $placeholder = $placeholders[$i];
-            if ( @$placeholder >= 4 ) {
 
-                # Minutes.
+            if ( $placeholder->[-1] eq 'minutes' ) {
+
+                # For this case 'm/mm' is minutes not months.
                 if ( $placeholder->[0] eq 'mm' ) {
                     $replacement = sprintf( "%02d", $min );
                 }
@@ -599,9 +616,9 @@ sub ExcelFmt {
 
                 # 2 digit hour.
                 if ($is_12_hour) {
-
-                    # TODO. This is wrong. 12 -> 0!!!
-                    $replacement = sprintf( '%02d', $hour % 12 );
+                    my $hour_tmp = $hour % 12;
+                    $hour_tmp = 12 if $hour % 12 == 0;
+                    $replacement = sprintf( '%d', $hour_tmp );
                 }
                 else {
                     $replacement = sprintf( '%02d', $hour );
@@ -611,9 +628,9 @@ sub ExcelFmt {
 
                 # 1 digit hour.
                 if ($is_12_hour) {
-
-                    # TODO. This is wrong. 12 -> 0!!!
-                    $replacement = sprintf( '%d', $hour % 12 );
+                    my $hour_tmp = $hour % 12;
+                    $hour_tmp = 12 if $hour % 12 == 0;
+                    $replacement = sprintf( '%2d', $hour_tmp );
                 }
                 else {
                     $replacement = sprintf( '%d', $hour );
@@ -632,14 +649,12 @@ sub ExcelFmt {
             elsif ( $placeholder->[0] eq 'am/pm' ) {
 
                 # AM/PM.
-                # TODO. This is wrong. Hour not month.
-                $replacement = ( $month > 12 ) ? 'pm' : 'am';
+                $replacement = ( $hour >= 12 ) ? 'PM' : 'AM';
             }
             elsif ( $placeholder->[0] eq 'a/p' ) {
 
                 # AM/PM.
-                # TODO. This is wrong. Hour not month.
-                $replacement = ( $month > 12 ) ? 'p' : 'a';
+                $replacement = ( $hour >= 12 ) ? 'P' : 'A';
             }
             elsif ( $placeholder->[0] eq '.' ) {
 
@@ -689,12 +704,9 @@ sub ExcelFmt {
                 $replacement );
         }
     }
-
-################################################################
-
     elsif ( ( $format_mode eq 'number' ) && ( $number =~ $qrNUMBER ) ) {
 
-        # Format non date numbers.
+        # Process non date formats.
         if (@placeholders) {
             while ( $placeholders[-1]->[0] eq ',' ) {
                 $comma_count--;
@@ -869,7 +881,7 @@ sub ExcelFmt {
     }
     else {
 
-        # Text format with "@"
+        # Process text formats
         my $is_text = 0;
         for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
             my $placeholder = $placeholders[$i];
@@ -884,14 +896,14 @@ sub ExcelFmt {
         }
 
         $result = $number unless $is_text;
-    }
+
+    }    # End of placeholder substitutions.
 
     # Trim the leading and trailing whitespace from the results.
     $result =~ s/^\s+//;
     $result =~ s/\s+$//;
 
     # Fix for negative currency.
-    #$result =~ s/\$\s+/\$/;
     $result =~ s/^\$\-/\-\$/;
     $result =~ s/^\$ \-/\-\$ /;
 
@@ -925,7 +937,7 @@ sub MakeFraction {
     my $iShou;
 
     #1. Init
-    print "FLG: $iFlg\n";
+    # print "FLG: $iFlg\n";
     if ($iFlg) {
         $iShou = $iData - int($iData);
         return '' if ( $iShou == 0 );
