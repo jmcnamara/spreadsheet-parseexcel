@@ -28,549 +28,657 @@ our $VERSION = '0.44';
 
 #my $sNUMEXP = '^[+-]?\d+(\.\d+)?$';
 #my $sNUMEXP = '(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d\.*(\d+)[eE][+-](\d+))$';
-my $sNUMEXP = '(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$';
+my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 
-#------------------------------------------------------------------------------
-# ExcelFmt (for Spreadsheet::ParseExcel::Utility)
-#------------------------------------------------------------------------------
+my $debug = 0;
+
+###############################################################################
+#
+# ExcelFmt()
+#
 sub ExcelFmt {
-    my ( $sFmt, $iData, $i1904, $sType ) = @_;
-    my $sCond;
+
+    my ( $format_str, $number, $is_1904, $number_type ) = @_;
+
+    return $number unless $number =~ $qrNUMBER;
+
     my $sWkF = '';
     my $sRes = '';
 
-    # Workaround for OpenOffice.org GENERAL format.
-    $sFmt = '@' if ( $sFmt eq "GENERAL" );
-    
-    #1. Get Condition
-    if ( $sFmt =~ /^\[([<>=][^\]]+)\](.*)$/ ) {
-        $sCond = $1;
-        $sFmt  = $2;
-    }
-    $sFmt =~ s/_/ /g;
+    print "\n============\n>>$format_str\n" if $debug;
 
-    my @sFmtWk;
-    my $sFmtObj;
-    my $iFmtPos = 0;
-    my $iDblQ   = 0;
-    my $iQ      = 0;
-    foreach my $sWk ( split //, $sFmt ) {
-        if ( $iDblQ or $iQ ) {
-            $sFmtWk[$iFmtPos] .= $sWk;
-            $iDblQ = 0 if ( $sWk eq '"' );
-            $iQ = 0;
-            next;
-        }
+    # Handle OpenOffice.org GENERAL format.
+    $format_str = '@' if uc($format_str) eq "GENERAL";
 
-        if ( $sWk eq ';' ) {
-            $iFmtPos++;
-            next;
-        }
-        elsif ( $sWk eq '"' ) {
-            $iDblQ = 1;
-        }
-        elsif ( $sWk eq '!' ) {
-            $iQ = 1;
-        }
-        elsif ( $sWk eq '\\' ) {
-            $iQ = 1;
+    # Note on conditional formats.
+    # A number format in Excel can have a conditional expression such as:
+    #     [>9999999](000)000-0000;000-0000
+    # This is equivalent to the following in Perl:
+    #     $format = $number > 9999999 ? '(000)000-0000' : '000-0000';
+    # It is also possible to have further nested conditionals but we don't
+    # handle that.
 
-            #            next;
-        }
-        elsif ( $sWk eq '(' ) {    #Skip?
-            next;
-        }
-        elsif ( $sWk eq ')' ) {    #Skip?
-            next;
-        }
-        $sFmtWk[$iFmtPos] .= $sWk;
+    # Check for a conditional at the start of the format. See note above..
+    my $conditional;
+    if ( $format_str =~ /^\[([<>=][^\]]+)\](.*)$/ ) {
+        $conditional = $1;
+        $format_str  = $2;
     }
 
-    #Get FmtString
-    if ( scalar(@sFmtWk) > 1 ) {
-        if ($sCond) {
-            $sFmtObj = $sFmtWk[ ( ( eval(qq/"$iData" $sCond/) ) ? 0 : 1 ) ];
+    # Ignore the underscore token which is used to indicate a padding space.
+    $format_str =~ s/_/ /g;
+
+    # Split the format string into 4 possible sub-sections: positive numbers,
+    # negative numbers, zero values, and text.
+    # The sections are separated by semicolons.
+    #
+    my @formats;
+    my $section      = 0;
+    my $double_quote = 0;
+    my $single_quote = 0;
+
+  CHARACTER:
+    for my $char ( split //, $format_str ) {
+
+        if ( $double_quote or $single_quote ) {
+            $formats[$section] .= $char;
+            $double_quote = 0 if $char eq '"';
+            $single_quote = 0;
+            next CHARACTER;
+        }
+
+        if ( $char eq ';' ) {
+            $section++;
+            next CHARACTER;
+        }
+        elsif ( $char eq '"' ) {
+            $double_quote = 1;
+        }
+        elsif ( $char eq '!' ) {
+            $single_quote = 1;
+        }
+        elsif ( $char eq '\\' ) {
+            $single_quote = 1;
+        }
+        elsif ( $char eq '(' ) {
+            next CHARACTER;    # Ignore.
+        }
+        elsif ( $char eq ')' ) {
+            next CHARACTER;    # Ignore.
+        }
+
+        $formats[$section] .= $char;
+    }
+
+    #print "> ", join( '|', @formats), "\n" if $debug;
+
+    # Select the appropriate format from the 4 4 possible sub-sections:
+    # positive numbers, negative numbers, zero values, and text.
+    # We ingore the Text section since non-numeric values are returned
+    # unformatted at the start of the function.
+    my $format;
+    $section = 0;
+
+    if ( @formats == 1 ) {
+        $section = 0;
+    }
+    elsif ( @formats == 2 ) {
+        if ( $number < 0 ) {
+            $section = 1;
         }
         else {
-            my $iWk = ( $iData =~ /$sNUMEXP/ ) ? $iData : 0;
-
-            # $iData = abs($iData) if($iWk !=0);
-            if ( scalar(@sFmtWk) == 2 ) {
-                $sFmtObj = $sFmtWk[ ( ( $iWk >= 0 ) ? 0 : 1 ) ];
-            }
-            elsif ( scalar(@sFmtWk) == 3 ) {
-                $sFmtObj =
-                  $sFmtWk[ ( ( $iWk > 0 ) ? 0 : ( ( $iWk < 0 ) ? 1 : 2 ) ) ];
-            }
-            else {
-                if ( $iData =~ /$sNUMEXP/ ) {
-                    $sFmtObj =
-                      $sFmtWk[ ( ( $iWk > 0 ) ? 0 : ( ( $iWk < 0 ) ? 1 : 2 ) )
-                      ];
-                }
-                else {
-                    $sFmtObj = $sFmtWk[3];
-                }
-            }
+            $section = 0;
+        }
+    }
+    elsif ( @formats == 3 ) {
+        if ( $number == 0 ) {
+            $section = 3;
+        }
+        elsif ( $number < 0 ) {
+            $section = 2;
+        }
+        else {
+            $section = 1;
         }
     }
     else {
-        $sFmtObj = $sFmtWk[0];
+        $section = 0;
     }
 
-    my $sColor;
-    if ( $sFmtObj =~ /^(\[[^hm\[\]]*\])/ ) {
-        $sColor = $1;
-        $sFmtObj = substr( $sFmtObj, length($sColor) );
-        chop($sColor);
-        $sColor = substr( $sColor, 1 );
+    # Override the previous choice if the format is conditional.
+    if ($conditional) {
+
+        # TODO. Replace string eval with a function.
+        $section = eval "$number $conditional" ? 0 : 1;
     }
 
-    #print "FMT:$sFmtObj Co:$sColor\n";
+    # We now have the required format.
+    $format = $formats[$section];
+
+    # The format string can contain one of the following colours:
+    # [Black] [Blue] [Cyan] [Green] [Magenta] [Red] [White] [Yellow]
+    # or the string [ColorX] where x is a colour index from 1 to 56.
+    # We don't use the colour but we return it to the caller.
+    #
+    my $color = '';
+    if ( $format =~ s/^(\[[A-Z][a-z]{2,}(\d{1,2})?\])// ) {
+        $color = $1;
+    }
 
     #3.Build Data
-    my $iFmtMode = 0;    #1:Number, 2:Date
-    my $i        = 0;
-    my $ir       = 0;
-    my $sFmtWk;
-    my @aRep    = ();
-    my $sFmtRes = '';
+    my $format_mode  = '';    # '', 'number', 'date'
+    my $pos          = 0;     # Character position within format string.
+    my @placeholders = ();    # Arefs with parts of the format to be replaced.
+    my $token        = '';    # The actual format extracted from the total str.
+    my $start_pos;            # A position variable. Inital parser position.
+    my $token_start = -1;     # A position variable.
+    my $decimal_pos = -1;     # Position of the punctuation char "." or ",".
+    my $comma_count = 0;      # Count of the commas in the format.
+    my $is_fraction = 0;      # Number format is a fraction.
+    my $is_currency = 0;      # Number format is a currency.
+    my $is_percent  = 0;      # Number format is a percentage.
+    my $is_12_hour  = 0;      # Time format is using 12 hour clock.
 
-    my $iFflg     = -1;
-    my $iRpos     = -1;
-    my $iCmmCnt   = 0;
-    my $iBunFlg   = 0;
-    my $iFugouFlg = 0;
-    my $iPer      = 0;
-    my $iAm       = 0;
-    my $iSt;
+    # $token, $start_pos, $end_pos
 
-    while ( $i < length($sFmtObj) ) {
-        $iSt = $i;
-        my $sWk = substr( $sFmtObj, $i, 1 );
+  PARSER:
+    while ( $pos < length $format ) {
+        $start_pos = $pos;
+        my $char = substr( $format, $pos, 1 );
 
-        if ( $sWk !~ /[#0\+\-\.\?eE\,\%]/ ) {
-            if ( $iFflg != -1 ) {
-                push @aRep,
+        if ( $char !~ /[#0\+\-\.\?eE\,\%]/ ) {
+            if ( $token_start != -1 ) {
+                push @placeholders,
                   [
-                    substr( $sFmtObj, $iFflg, $i - $iFflg ),
-                    $iRpos, $i - $iFflg
+                    substr( $format, $token_start, $pos - $token_start ),
+                    $decimal_pos, $pos - $token_start
                   ];
-                $iFflg = -1;
+                $token_start = -1;
             }
         }
 
-        if ( $sWk eq '"' ) {
-            $iDblQ = $iDblQ ? 0 : 1;
-            $i++;
-            next;
+        # Processing for quoted strings within the format.
+        if ( $char eq '"' ) {
+            $double_quote = $double_quote ? 0 : 1;
+            $pos++;
+            next PARSER;
         }
-        elsif ( $sWk eq '!' ) {
-            $iQ = 1;
-            $i++;
-            next;
+        elsif ( $char eq '!' ) {
+            $single_quote = 1;
+            $pos++;
+            next PARSER;
         }
-        elsif ( $sWk eq '\\' ) {
-            if ( $iQ == 1 ) {
-            }
-            else {
-                $iQ = 1;
-                $i++;
-                next;
+        elsif ( $char eq '\\' ) {
+            if ( $single_quote != 1 ) {
+                $single_quote = 1;
+                $pos++;
+                next PARSER;
             }
         }
 
-        #print "WK:", ord($sWk), " $iFmtMode \n";
-        #print "DEF1: $iDblQ DEF2: $iQ\n";
-        if ( ( defined($iDblQ) and ($iDblQ) ) or ( defined($iQ) and ($iQ) ) ) {
-            $iQ = 0;
+        if (   ( defined($double_quote) and ($double_quote) )
+            or ( defined($single_quote) and ($single_quote) ) )
+        {
+            $single_quote = 0;
             if (
-                ( $iFmtMode != 2 )
-                and (  ( substr( $sFmtObj, $i, 2 ) eq "\x81\xA2" )
-                    || ( substr( $sFmtObj, $i, 2 ) eq "\x81\xA3" )
-                    || ( substr( $sFmtObj, $i, 2 ) eq "\xA2\xA4" )
-                    || ( substr( $sFmtObj, $i, 2 ) eq "\xA2\xA5" ) )
+                ( $format_mode ne 'date' )
+                and (  ( substr( $format, $pos, 2 ) eq "\x81\xA2" )
+                    || ( substr( $format, $pos, 2 ) eq "\x81\xA3" )
+                    || ( substr( $format, $pos, 2 ) eq "\xA2\xA4" )
+                    || ( substr( $format, $pos, 2 ) eq "\xA2\xA5" ) )
               )
             {
-
-                #print "PUSH:", unpack("H*", substr($sFmtObj, $i, 2)), "\n";
-                push @aRep, [ substr( $sFmtObj, $i, 2 ), length($sFmtRes), 2 ];
-                $iFugouFlg = 1;
-                $i += 2;
+                push @placeholders,
+                  [ substr( $format, $pos, 2 ), length($token), 2 ];
+                $is_currency = 1;
+                $pos += 2;
             }
             else {
-                $i++;
+                $pos++;
             }
         }
         elsif (
-            ( $sWk =~ /[#0\+\.\?eE\,\%]/ )
-            || (    ( $iFmtMode != 2 )
-                and ( ( $sWk eq '-' ) || ( $sWk eq '(' ) || ( $sWk eq ')' ) ) )
+            ( $char =~ /[#0\+\.\?eE\,\%]/ )
+            || (    ( $format_mode ne 'date' )
+                and ( ( $char eq '-' ) || ( $char eq '(' ) || ( $char eq ')' ) )
+            )
           )
         {
-            $iFmtMode = 1 unless ($iFmtMode);
-            if ( substr( $sFmtObj, $i, 1 ) =~ /[#0]/ ) {
+            $format_mode = 'number' unless ($format_mode);
+            if ( substr( $format, $pos, 1 ) =~ /[#0]/ ) {
                 if (
-                    substr( $sFmtObj, $i ) =~
-                    /^([#0]+)([\.]?)([0#]*)([eE])([\+\-])([0#]+)/ )
+                    substr( $format, $pos ) =~
+                    /^([#0]+[\.]?[0#]*[eE][\+\-][0#]+)/ )
                 {
-                    push @aRep,
-                      [ substr( $sFmtObj, $i, length($&) ), $i, length($&) ];
-                    $i += length($&);
+                    push @placeholders, [ $1, $pos, length($1) ];
+                    $pos += length($1);
                 }
                 else {
-                    if ( $iFflg == -1 ) {
-                        $iFflg = $i;
-                        $iRpos = length($sFmtRes);
+                    if ( $token_start == -1 ) {
+                        $token_start = $pos;
+                        $decimal_pos = length($token);
                     }
                 }
             }
-            elsif ( substr( $sFmtObj, $i, 1 ) eq '?' ) {
-                if ( $iFflg != -1 ) {
-                    push @aRep,
+            elsif ( substr( $format, $pos, 1 ) eq '?' ) {
+
+                # Look for a fraction format like ?/? or ??/??
+                if ( $token_start != -1 ) {
+                    push @placeholders,
                       [
-                        substr( $sFmtObj, $iFflg, $i - $iFflg + 1 ),
-                        $iRpos, $i - $iFflg + 1
+                        substr(
+                            $format, $token_start, $pos - $token_start + 1
+                        ),
+                        $decimal_pos,
+                        $pos - $token_start + 1
                       ];
                 }
-                $iFflg = $i;
-                while ( $i < length($sFmtObj) ) {
-                    if ( substr( $sFmtObj, $i, 1 ) eq '/' ) {
-                        $iBunFlg = 1;
+                $token_start = $pos;
+
+                # Find the end of the fraction format.
+              FRACTION:
+                while ( $pos < length($format) ) {
+                    if ( substr( $format, $pos, 1 ) eq '/' ) {
+                        $is_fraction = 1;
                     }
-                    elsif ( substr( $sFmtObj, $i, 1 ) eq '?' ) {
-                        ;
+                    elsif ( substr( $format, $pos, 1 ) eq '?' ) {
+                        $pos++;
+                        next FRACTION;
                     }
                     else {
-                        if (   ($iBunFlg)
-                            && ( substr( $sFmtObj, $i, 1 ) =~ /[0-9]/ ) )
+                        if ( $is_fraction
+                            && ( substr( $format, $pos, 1 ) =~ /[0-9]/ ) )
                         {
-                            ;
+
+                            # TODO: Could invert logic and remove.
+                            $pos++;
+                            next FRACTION;
                         }
                         else {
-                            last;
+                            last FRACTION;
                         }
                     }
-                    $i++;
+                    $pos++;
                 }
-                $i--;
-                push @aRep,
+                $pos--;
+
+                push @placeholders,
                   [
-                    substr( $sFmtObj, $iFflg, $i - $iFflg + 1 ),
-                    length($sFmtRes),
-                    $i - $iFflg + 1
+                    substr( $format, $token_start, $pos - $token_start + 1 ),
+                    length($token), $pos - $token_start + 1
                   ];
-                $iFflg = -1;
+                $token_start = -1;
             }
-            elsif ( substr( $sFmtObj, $i, 3 ) =~ /^[eE][\+\-][0#]$/ ) {
-                if ( substr( $sFmtObj, $i ) =~ /([eE])([\+\-])([0#]+)/ ) {
-                    push @aRep,
-                      [ substr( $sFmtObj, $i, length($&) ), $i, length($&) ];
-                    $i += length($&);
+            elsif ( substr( $format, $pos, 3 ) =~ /^[eE][\+\-][0#]$/ ) {
+                if ( substr( $format, $pos ) =~ /([eE][\+\-][0#]+)/ ) {
+                    push @placeholders, [ $1, $pos, length($1) ];
+                    $pos += length($1);
                 }
-                $iFflg = -1;
+                $token_start = -1;
             }
             else {
-                if ( $iFflg != -1 ) {
-                    push @aRep,
+                if ( $token_start != -1 ) {
+                    push @placeholders,
                       [
-                        substr( $sFmtObj, $iFflg, $i - $iFflg ),
-                        $iRpos, $i - $iFflg
+                        substr( $format, $token_start, $pos - $token_start ),
+                        $decimal_pos, $pos - $token_start
                       ];
-                    $iFflg = -1;
+                    $token_start = -1;
                 }
-                if ( substr( $sFmtObj, $i, 1 ) =~ /[\+\-]/ ) {
-                    push @aRep,
-                      [ substr( $sFmtObj, $i, 1 ), length($sFmtRes), 1 ];
-                    $iFugouFlg = 1;
+                if ( substr( $format, $pos, 1 ) =~ /[\+\-]/ ) {
+                    push @placeholders,
+                      [ substr( $format, $pos, 1 ), length($token), 1 ];
+                    $is_currency = 1;
                 }
-                elsif ( substr( $sFmtObj, $i, 1 ) eq '.' ) {
-                    push @aRep,
-                      [ substr( $sFmtObj, $i, 1 ), length($sFmtRes), 1 ];
+                elsif ( substr( $format, $pos, 1 ) eq '.' ) {
+                    push @placeholders,
+                      [ substr( $format, $pos, 1 ), length($token), 1 ];
                 }
-                elsif ( substr( $sFmtObj, $i, 1 ) eq ',' ) {
-                    $iCmmCnt++;
-                    push @aRep,
-                      [ substr( $sFmtObj, $i, 1 ), length($sFmtRes), 1 ];
+                elsif ( substr( $format, $pos, 1 ) eq ',' ) {
+                    $comma_count++;
+                    push @placeholders,
+                      [ substr( $format, $pos, 1 ), length($token), 1 ];
                 }
-                elsif ( substr( $sFmtObj, $i, 1 ) eq '%' ) {
-                    $iPer = 1;
+                elsif ( substr( $format, $pos, 1 ) eq '%' ) {
+                    $is_percent = 1;
                 }
-                elsif (( substr( $sFmtObj, $i, 1 ) eq '(' )
-                    || ( substr( $sFmtObj, $i, 1 ) eq ')' ) )
+                elsif (( substr( $format, $pos, 1 ) eq '(' )
+                    || ( substr( $format, $pos, 1 ) eq ')' ) )
                 {
-                    push @aRep,
-                      [ substr( $sFmtObj, $i, 1 ), length($sFmtRes), 1 ];
-                    $iFugouFlg = 1;
+                    push @placeholders,
+                      [ substr( $format, $pos, 1 ), length($token), 1 ];
+                    $is_currency = 1;
                 }
             }
-            $i++;
+            $pos++;
         }
-        elsif ( $sWk =~ /[ymdhsapg]/ ) {
-            $iFmtMode = 2 unless ($iFmtMode);
-            if ( substr( $sFmtObj, $i, 5 ) =~ /am\/pm/i ) {
-                push @aRep, [ 'am/pm', length($sFmtRes), 5 ];
-                $iAm = 1;
-                $i += 5;
+        elsif ( $char =~ /[ymdhsapg]/ ) {
+            $format_mode = 'date' unless ($format_mode);
+            if ( substr( $format, $pos, 5 ) =~ /am\/pm/i ) {
+                push @placeholders, [ 'am/pm', length($token), 5 ];
+                $is_12_hour = 1;
+                $pos += 5;
             }
-            elsif ( substr( $sFmtObj, $i, 3 ) =~ /a\/p/i ) {
-                push @aRep, [ 'a/p', length($sFmtRes), 3 ];
-                $iAm = 1;
-                $i += 3;
+            elsif ( substr( $format, $pos, 3 ) =~ /a\/p/i ) {
+                push @placeholders, [ 'a/p', length($token), 3 ];
+                $is_12_hour = 1;
+                $pos += 3;
             }
-            elsif ( substr( $sFmtObj, $i, 5 ) eq 'mmmmm' ) {
-                push @aRep, [ 'mmmmm', length($sFmtRes), 5 ];
-                $i += 5;
+            elsif ( substr( $format, $pos, 5 ) eq 'mmmmm' ) {
+                push @placeholders, [ 'mmmmm', length($token), 5 ];
+                $pos += 5;
             }
-            elsif (( substr( $sFmtObj, $i, 4 ) eq 'mmmm' )
-                || ( substr( $sFmtObj, $i, 4 ) eq 'dddd' )
-                || ( substr( $sFmtObj, $i, 4 ) eq 'yyyy' )
-                || ( substr( $sFmtObj, $i, 4 ) eq 'ggge' ) )
+            elsif (( substr( $format, $pos, 4 ) eq 'mmmm' )
+                || ( substr( $format, $pos, 4 ) eq 'dddd' )
+                || ( substr( $format, $pos, 4 ) eq 'yyyy' )
+                || ( substr( $format, $pos, 4 ) eq 'ggge' ) )
             {
-                push @aRep, [ substr( $sFmtObj, $i, 4 ), length($sFmtRes), 4 ];
-                $i += 4;
+                push @placeholders,
+                  [ substr( $format, $pos, 4 ), length($token), 4 ];
+                $pos += 4;
             }
-            elsif (( substr( $sFmtObj, $i, 3 ) eq 'ddd' )
-                || ( substr( $sFmtObj, $i, 3 ) eq 'mmm' )
-                || ( substr( $sFmtObj, $i, 3 ) eq 'yyy' ) )
+            elsif (( substr( $format, $pos, 3 ) eq 'ddd' )
+                || ( substr( $format, $pos, 3 ) eq 'mmm' )
+                || ( substr( $format, $pos, 3 ) eq 'yyy' ) )
             {
-                push @aRep, [ substr( $sFmtObj, $i, 3 ), length($sFmtRes), 3 ];
-                $i += 3;
+                push @placeholders,
+                  [ substr( $format, $pos, 3 ), length($token), 3 ];
+                $pos += 3;
             }
-            elsif (( substr( $sFmtObj, $i, 2 ) eq 'yy' )
-                || ( substr( $sFmtObj, $i, 2 ) eq 'mm' )
-                || ( substr( $sFmtObj, $i, 2 ) eq 'dd' )
-                || ( substr( $sFmtObj, $i, 2 ) eq 'hh' )
-                || ( substr( $sFmtObj, $i, 2 ) eq 'ss' )
-                || ( substr( $sFmtObj, $i, 2 ) eq 'ge' ) )
+            elsif (( substr( $format, $pos, 2 ) eq 'yy' )
+                || ( substr( $format, $pos, 2 ) eq 'mm' )
+                || ( substr( $format, $pos, 2 ) eq 'dd' )
+                || ( substr( $format, $pos, 2 ) eq 'hh' )
+                || ( substr( $format, $pos, 2 ) eq 'ss' )
+                || ( substr( $format, $pos, 2 ) eq 'ge' ) )
             {
                 if (
-                       ( substr( $sFmtObj, $i, 2 ) eq 'mm' )
-                    && ( $#aRep >= 0 )
-                    && (   ( $aRep[$#aRep]->[0] eq 'h' )
-                        or ( $aRep[$#aRep]->[0] eq 'hh' ) )
+                       ( substr( $format, $pos, 2 ) eq 'mm' )
+                    && (@placeholders)
+                    && (   ( $placeholders[-1]->[0] eq 'h' )
+                        or ( $placeholders[-1]->[0] eq 'hh' ) )
                   )
                 {
-                    push @aRep, [ 'mm', length($sFmtRes), 2, 'min' ];
+                    push @placeholders, [ 'mm', length($token), 2, 'min' ];
                 }
                 else {
-                    push @aRep,
-                      [ substr( $sFmtObj, $i, 2 ), length($sFmtRes), 2 ];
+                    push @placeholders,
+                      [ substr( $format, $pos, 2 ), length($token), 2 ];
                 }
-                if ( ( substr( $sFmtObj, $i, 2 ) eq 'ss' ) && ( $#aRep > 0 ) ) {
-                    if (   ( $aRep[ $#aRep - 1 ]->[0] eq 'm' )
-                        || ( $aRep[ $#aRep - 1 ]->[0] eq 'mm' ) )
+                if (   ( substr( $format, $pos, 2 ) eq 'ss' )
+                    && ( @placeholders > 1 ) )
+                {
+                    if (   ( $placeholders[ -1 - 1 ]->[0] eq 'm' )
+                        || ( $placeholders[ -1 - 1 ]->[0] eq 'mm' ) )
                     {
-                        push( @{ $aRep[ $#aRep - 1 ] }, 'min' );
+                        push( @{ $placeholders[ -1 - 1 ] }, 'min' );
                     }
                 }
-                $i += 2;
+                $pos += 2;
             }
-            elsif (( substr( $sFmtObj, $i, 1 ) eq 'm' )
-                || ( substr( $sFmtObj, $i, 1 ) eq 'd' )
-                || ( substr( $sFmtObj, $i, 1 ) eq 'h' )
-                || ( substr( $sFmtObj, $i, 1 ) eq 's' ) )
+            elsif (( substr( $format, $pos, 1 ) eq 'm' )
+                || ( substr( $format, $pos, 1 ) eq 'd' )
+                || ( substr( $format, $pos, 1 ) eq 'h' )
+                || ( substr( $format, $pos, 1 ) eq 's' ) )
             {
                 if (
-                       ( substr( $sFmtObj, $i, 1 ) eq 'm' )
-                    && ( $#aRep >= 0 )
-                    && (   ( $aRep[$#aRep]->[0] eq 'h' )
-                        or ( $aRep[$#aRep]->[0] eq 'hh' ) )
+                       ( substr( $format, $pos, 1 ) eq 'm' )
+                    && (@placeholders)
+                    && (   ( $placeholders[-1]->[0] eq 'h' )
+                        or ( $placeholders[-1]->[0] eq 'hh' ) )
                   )
                 {
-                    push @aRep, [ 'm', length($sFmtRes), 1, 'min' ];
+                    push @placeholders, [ 'm', length($token), 1, 'min' ];
                 }
                 else {
-                    push @aRep,
-                      [ substr( $sFmtObj, $i, 1 ), length($sFmtRes), 1 ];
+                    push @placeholders,
+                      [ substr( $format, $pos, 1 ), length($token), 1 ];
                 }
-                if ( ( substr( $sFmtObj, $i, 1 ) eq 's' ) && ( $#aRep > 0 ) ) {
-                    if (   ( $aRep[ $#aRep - 1 ]->[0] eq 'm' )
-                        || ( $aRep[ $#aRep - 1 ]->[0] eq 'mm' ) )
+                if (   ( substr( $format, $pos, 1 ) eq 's' )
+                    && ( @placeholders > 1 ) )
+                {
+                    if (   ( $placeholders[ -1 - 1 ]->[0] eq 'm' )
+                        || ( $placeholders[ -1 - 1 ]->[0] eq 'mm' ) )
                     {
-                        push( @{ $aRep[ $#aRep - 1 ] }, 'min' );
+                        push( @{ $placeholders[ -1 - 1 ] }, 'min' );
                     }
                 }
-                $i += 1;
+                $pos += 1;
             }
         }
-        elsif ( ( substr( $sFmtObj, $i, 3 ) eq '[h]' ) ) {
-            push @aRep, [ '[h]', length($sFmtRes), 3 ];
-            $i += 3;
+        elsif ( ( substr( $format, $pos, 3 ) eq '[h]' ) ) {
+            push @placeholders, [ '[h]', length($token), 3 ];
+            $pos += 3;
         }
-        elsif ( ( substr( $sFmtObj, $i, 4 ) eq '[mm]' ) ) {
-            push @aRep, [ '[mm]', length($sFmtRes), 4 ];
-            $i += 4;
+        elsif ( ( substr( $format, $pos, 4 ) eq '[mm]' ) ) {
+            push @placeholders, [ '[mm]', length($token), 4 ];
+            $pos += 4;
         }
-        elsif ( $sWk eq '@' ) {
-            push @aRep, [ '@', length($sFmtRes), 1 ];
-            $i++;
+        elsif ( $char eq '@' ) {
+            push @placeholders, [ '@', length($token), 1 ];
+            $pos++;
         }
-        elsif ( $sWk eq '*' ) {
-            push @aRep, [ substr( $sFmtObj, $i, 1 ), length($sFmtRes), 1 ];
+        elsif ( $char eq '*' ) {
+            push @placeholders,
+              [ substr( $format, $pos, 1 ), length($token), 1 ];
         }
         else {
-            $i++;
+            $pos++;
         }
-        $i++ if ( $i == $iSt );    #No Format match
-        $sFmtRes .= substr( $sFmtObj, $iSt, $i - $iSt );
+        $pos++ if ( $pos == $start_pos );    #No Format match
+        $token .= substr( $format, $start_pos, $pos - $start_pos );
+
+        print "Fmt remainimg $token\n" if $debug;
+
     }
 
-    #print "FMT: $iRpos ",$sFmtRes, "\n";
-    if ( $iFflg != -1 ) {
-        push @aRep,
+    use Data::Dumper;
+
+    #print "====\n", scalar(@placeholders), "\n";
+    #print Dumper \@placeholders if !$debug;
+    print "Final token <$token>\n" if $debug;
+
+############
+
+    my $result = $token;
+
+    print "decimal_pos: $decimal_pos Result |$result|\n" if $debug;
+
+    # Add placeholder between the decimal/comma and end of the token, if any.
+    if ( $token_start != -1 ) {
+        push @placeholders,
           [
-            substr( $sFmtObj, $iFflg, $i - $iFflg + 1 ),
-            $iRpos,, $i - $iFflg + 1
+            substr( $format, $token_start, $pos - $token_start + 1 ),
+            $decimal_pos, $pos - $token_start + 1
           ];
-        $iFflg = 0;
     }
 
-    #For Date format
-    $iFmtMode = 0
-      if ( defined $sType && $sType eq 'Text' );    #Not Convert Non Numeric
-    if ( ( $iFmtMode == 2 ) && ( $iData =~ /$sNUMEXP/ ) ) {
-        my @aTime = ExcelLocaltime( $iData, $i1904 );
-        $aTime[4]++;
-        $aTime[5] += 1900;
+    #print "====\n", scalar(@placeholders), "\n";
+    #print Dumper \@placeholders if !$debug;
 
-        my @aMonL = qw (dum January February March April May June July
-          August September October November December );
-        my @aMonNm  = qw (dum Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
-        my @aWeekNm = qw (Mon Tue Wed Thu Fri Sat Sun);
-        my @aWeekL =
-          qw (Monday Tuesday Wednesday Thursday Friday Saturday Sunday);
-        my $sRep;
-        for ( my $iIt = $#aRep ; $iIt >= 0 ; $iIt-- ) {
-            my $rItem = $aRep[$iIt];
-            if ( ( scalar @$rItem ) >= 4 ) {
+################################################################
 
-                #Min
-                if ( $rItem->[0] eq 'mm' ) {
-                    $sRep = sprintf( "%02d", $aTime[1] );
+    # Process date formats.
+    if ( ( defined $number_type && $number_type eq 'Text' ) ) {
+
+        #Not Convert Non Numeric
+        $format_mode = '';
+    }
+
+    if ( ( $format_mode eq 'date' ) && ( $number =~ $qrNUMBER ) ) {
+        my @time = ExcelLocaltime( $number, $is_1904 );
+        $time[4]++;
+        $time[5] += 1900;
+
+        #     0     1     2      3     4       5      6      7
+        my ( $sec, $min, $hour, $day, $month, $year, $wday, $msec ) = @time;
+
+        my @full_month_name = qw(
+          None January February March April May June July
+          August September October November December
+        );
+        my @short_month_name = qw(
+          None Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+        );
+        my @full_day_name = qw(
+          Monday Tuesday Wednesday Thursday Friday Saturday Sunday
+        );
+        my @short_day_name = qw(
+          Mon Tue Wed Thu Fri Sat Sun
+        );
+
+        # Replace the placeholders in the template such as yyyy mm dd with
+        # actual numbers or strings.
+        my $replacement;
+        for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
+            my $placeholder = $placeholders[$i];
+            if ( @$placeholder  >= 4 ) {
+
+                # Minutes.
+                if ( $placeholder->[0] eq 'mm' ) {
+                    $replacement = sprintf( "%02d", $min );
                 }
                 else {
-                    $sRep = sprintf( "%d", $aTime[1] );
+                    $replacement = sprintf( "%d", $min );
                 }
             }
-
-            #Year
-            elsif ( $rItem->[0] eq 'yyyy' ) {
-                $sRep = sprintf( '%04d', $aTime[5] );
+            elsif ( $placeholder->[0] eq 'yyyy' ) {
+                # 4 digit Year. 2000 -> 2000.
+                $replacement = sprintf( '%04d', $year );
             }
-            elsif ( $rItem->[0] eq 'yy' ) {
-                $sRep = sprintf( '%02d', $aTime[5] % 100 );
+            elsif ( $placeholder->[0] eq 'yy' ) {
+                # 2 digit Year. 2000 -> 00.
+                $replacement = sprintf( '%02d', $year % 100 );
             }
-
-            #Mon
-            elsif ( $rItem->[0] eq 'mmmmm' ) {
-                $sRep = substr( $aMonNm[ $aTime[4] ], 0, 1 );
+            elsif ( $placeholder->[0] eq 'mmmmm' ) {
+                # First character of the month name. 1 -> J.
+                $replacement = substr( $short_month_name[$month], 0, 1 );
             }
-            elsif ( $rItem->[0] eq 'mmmm' ) {
-                $sRep = $aMonL[ $aTime[4] ];
+            elsif ( $placeholder->[0] eq 'mmmm' ) {
+                # Full month name. 1 -> January.
+                $replacement = $full_month_name[$month];
             }
-            elsif ( $rItem->[0] eq 'mmm' ) {
-                $sRep = $aMonNm[ $aTime[4] ];
+            elsif ( $placeholder->[0] eq 'mmm' ) {
+                # Short month name. 1 -> Jan.
+                $replacement = $short_month_name[$month];
             }
-            elsif ( $rItem->[0] eq 'mm' ) {
-                $sRep = sprintf( '%02d', $aTime[4] );
+            elsif ( $placeholder->[0] eq 'mm' ) {
+                # 2 digit month. 1 -> 01.
+                $replacement = sprintf( '%02d', $month );
             }
-            elsif ( $rItem->[0] eq 'm' ) {
-                $sRep = sprintf( '%d', $aTime[4] );
+            elsif ( $placeholder->[0] eq 'm' ) {
+                # 1 digit month. 1 -> 1.
+                $replacement = sprintf( '%d', $month );
             }
-
-            #Day
-            elsif ( $rItem->[0] eq 'dddd' ) {
-                $sRep = $aWeekL[ $aTime[7] ];
+            elsif ( $placeholder->[0] eq 'dddd' ) {
+                # Full day name. 1 -> Wednesday (for example.)
+                $replacement = $full_day_name[$msec];
             }
-            elsif ( $rItem->[0] eq 'ddd' ) {
-                $sRep = $aWeekNm[ $aTime[7] ];
+            elsif ( $placeholder->[0] eq 'ddd' ) {
+                # Short day name. 1 -> Wednesday (for example.)
+                $replacement = $short_day_name[$msec];
             }
-            elsif ( $rItem->[0] eq 'dd' ) {
-                $sRep = sprintf( '%02d', $aTime[3] );
+            elsif ( $placeholder->[0] eq 'dd' ) {
+                # 2 digit day. 1 -> 01.
+                $replacement = sprintf( '%02d', $day );
             }
-            elsif ( $rItem->[0] eq 'd' ) {
-                $sRep = sprintf( '%d', $aTime[3] );
+            elsif ( $placeholder->[0] eq 'd' ) {
+                # 1 digit day. 1 -> 1.
+                $replacement = sprintf( '%d', $day );
             }
-
-            #Hour
-            elsif ( $rItem->[0] eq 'hh' ) {
-                if ($iAm) {
-                    $sRep = sprintf( '%02d', $aTime[2] % 12 );
-                }
-                else {
-                    $sRep = sprintf( '%02d', $aTime[2] );
-                }
-            }
-            elsif ( $rItem->[0] eq 'h' ) {
-                if ($iAm) {
-                    $sRep = sprintf( '%d', $aTime[2] % 12 );
+            elsif ( $placeholder->[0] eq 'hh' ) {
+                # 2 digit hour.
+                if ($is_12_hour) {
+                    # TODO. This is wrong. 12 -> 0!!!
+                    $replacement = sprintf( '%02d', $hour % 12 );
                 }
                 else {
-                    $sRep = sprintf( '%d', $aTime[2] );
+                    $replacement = sprintf( '%02d', $hour );
                 }
             }
+            elsif ( $placeholder->[0] eq 'h' ) {
+                # 1 digit hour.
+                if ($is_12_hour) {
+                    # TODO. This is wrong. 12 -> 0!!!
+                    $replacement = sprintf( '%d', $hour % 12 );
+                }
+                else {
+                    $replacement = sprintf( '%d', $hour );
+                }
+            }
+            elsif ( $placeholder->[0] eq 'ss' ) {
+                # 2 digit seconds.
+                $replacement = sprintf( '%02d', $sec );
+            }
+            elsif ( $placeholder->[0] eq 's' ) {
+                # 1 digit seconds.
+                $replacement = sprintf( '%d', $sec );
+            }
+            elsif ( $placeholder->[0] eq 'am/pm' ) {
+                # AM/PM.
+                # TODO. This is wrong. Hour not month.
+                $replacement = ( $month > 12 ) ? 'pm' : 'am';
+            }
+            elsif ( $placeholder->[0] eq 'a/p' ) {
+                # AM/PM.
+                # TODO. This is wrong. Hour not month.
+                $replacement = ( $month > 12 ) ? 'p' : 'a';
+            }
+            elsif ( $placeholder->[0] eq '.' ) {
+                # Decimal point for seconds.
+                $replacement = '.';
+            }
+            elsif ( $placeholder->[0] =~ /(^0+$)/ ) {
+                # Milliseconds. For example h:ss.000.
+                my $length = length($1);
+                $replacement =
+                  substr( sprintf( "%.${length}f", $msec / 1000 ), 2, $length );
+            }
+            elsif ( $placeholder->[0] eq '[h]' ) {
+                # Hours not modulus 24. 25 displays as 25 not as 1.
+                # TODO. Check that this is correct.
+                $replacement = sprintf( '%d', int($number) * 24 + $hour );
+            }
+            elsif ( $placeholder->[0] eq '[mm]' ) {
+                # Mins not modulus 60. 72 displays as 72 not as 12.
+                # TODO. Check that this is correct.
+                $replacement =
+                  sprintf( '%d', ( int($number) * 24 + $hour ) * 60 + $min );
+            }
+            elsif ( $placeholder->[0] eq 'ge' ) {
+                # NENGO (Japanese)
+                $replacement =
+                  Spreadsheet::ParseExcel::FmtJapan::CnvNengo( 1, @time );
+            }
+            elsif ( $placeholder->[0] eq 'ggge' ) {
+                # NENGO (Japanese)
+                $replacement =
+                  Spreadsheet::ParseExcel::FmtJapan::CnvNengo( 2, @time );
+            }
+            elsif ( $placeholder->[0] eq '@' ) {
+                # Text format.
+                $replacement = $number;
+            }
 
-            #SS
-            elsif ( $rItem->[0] eq 'ss' ) {
-                $sRep = sprintf( '%02d', $aTime[0] );
-            }
-            elsif ( $rItem->[0] eq 'S' ) {
-                $sRep = sprintf( '%d', $aTime[0] );
-            }
-
-            #am/pm
-            elsif ( $rItem->[0] eq 'am/pm' ) {
-                $sRep = ( $aTime[4] > 12 ) ? 'pm' : 'am';
-            }
-            elsif ( $rItem->[0] eq 'a/p' ) {
-                $sRep = ( $aTime[4] > 12 ) ? 'p' : 'a';
-            }
-            elsif ( $rItem->[0] eq '.' ) {
-                $sRep = '.';
-            }
-            elsif ( $rItem->[0] =~ /^0+$/ ) {
-                my $i0Len = length($&);
-
-                #print "SEC:", $aTime[7], "\n";
-                $sRep = substr( sprintf( "%.${i0Len}f", $aTime[7] / 1000.0 ),
-                    2, $i0Len );
-            }
-            elsif ( $rItem->[0] eq '[h]' ) {
-                $sRep = sprintf( '%d', int($iData) * 24 + $aTime[2] );
-            }
-            elsif ( $rItem->[0] eq '[mm]' ) {
-                $sRep = sprintf( '%d',
-                    ( int($iData) * 24 + $aTime[2] ) * 60 + $aTime[1] );
-            }
-
-            #NENGO(Japanese)
-            elsif ( $rItem->[0] eq 'ge' ) {
-                $sRep =
-                  Spreadsheet::ParseExcel::FmtJapan::CnvNengo( 1, @aTime );
-            }
-            elsif ( $rItem->[0] eq 'ggge' ) {
-                $sRep =
-                  Spreadsheet::ParseExcel::FmtJapan::CnvNengo( 2, @aTime );
-            }
-            elsif ( $rItem->[0] eq '@' ) {
-                $sRep = $iData;
-            }
-
-      #print "REP:$sRep ",$rItem->[0], ":", $rItem->[1], ":" ,$rItem->[2], "\n";
-            substr( $sFmtRes, $rItem->[1], $rItem->[2] ) = $sRep;
+            # Substitute the replacement string back into the template.
+            substr( $result, $placeholder->[1], $placeholder->[2] ) =
+              $replacement;
         }
     }
-    elsif ( ( $iFmtMode == 1 ) && ( $iData =~ /$sNUMEXP/ ) ) {
-        if ( $#aRep >= 0 ) {
-            while ( $aRep[$#aRep]->[0] eq ',' ) {
-                $iCmmCnt--;
-                substr( $sFmtRes, $aRep[$#aRep]->[1], $aRep[$#aRep]->[2] ) = '';
-                $iData /= 1000;
-                pop @aRep;
+    elsif ( ( $format_mode eq 'number' ) && ( $number =~ $qrNUMBER ) ) {
+        if (@placeholders) {
+            while ( $placeholders[-1]->[0] eq ',' ) {
+                $comma_count--;
+                substr(
+                    $result,
+                    $placeholders[-1]->[1],
+                    $placeholders[-1]->[2]
+                ) = '';
+                $number /= 1000;
+                pop @placeholders;
             }
 
-            my $sNumFmt = join( '', map { $_->[0] } @aRep );
+            my $sNumFmt = join( '', map { $_->[0] } @placeholders );
             my $sNumRes;
             my $iTtl  = 0;
             my $iE    = 0;
@@ -603,16 +711,14 @@ sub ExcelFmt {
                 }
             }
 
-            #print "DATA:$iData\n";
-            $iData *= 100.0 if ($iPer);
-            my $iDData = ($iFugouFlg) ? abs($iData) : $iData + 0;
-            if ($iBunFlg) {
+            #print "DATA:$number\n";
+            $number *= 100.0 if $is_percent;
+            my $iDData = ($is_currency) ? abs($number) : $number + 0;
+            if ($is_fraction) {
                 $sNumRes = sprintf( "%0${iTtl}d", int($iDData) );
             }
             else {
                 if ($iP) {
-
-        #                    $sNumRes = sprintf("%0${iTtl}.${iAftP}f", $iDData);
                     $sNumRes = sprintf(
                         (
                             defined($iAftP)
@@ -623,76 +729,80 @@ sub ExcelFmt {
                     );
                 }
                 else {
-
-                    #print "DATA:", $iDData, "\n";
                     $sNumRes = sprintf( "%0${iTtl}.0f", $iDData );
                 }
             }
 
             #print "sNum:$sNumRes\n";
-            $sNumRes = AddComma($sNumRes) if ( $iCmmCnt > 0 );
+            $sNumRes = AddComma($sNumRes) if ( $comma_count > 0 );
 
             #print "RES:$sNumRes\n";
             my $iLen  = length($sNumRes);
             my $iPPos = -1;
-            my $sRep;
+            my $replacement;
 
-            for ( my $iIt = $#aRep ; $iIt >= 0 ; $iIt-- ) {
-                my $rItem = $aRep[$iIt];
+            for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
+                my $placeholder = $placeholders[$i];
 
-                #print "Rep:", unpack("H*", $rItem->[0]), "\n";
-                if ( $rItem->[0] =~
+                #print "Rep:", unpack("H*", $placeholder->[0]), "\n";
+                if ( $placeholder->[0] =~
                     /([#0]*)([\.]?)([0#]*)([eE])([\+\-])([0#]+)/ )
                 {
-                    substr( $sFmtRes, $rItem->[1], $rItem->[2] ) =
-                      MakeE( $rItem->[0], $iData );
+                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
+                      MakeE( $placeholder->[0], $number );
                 }
-                elsif ( $rItem->[0] =~ /\// ) {
-                    substr( $sFmtRes, $rItem->[1], $rItem->[2] ) =
-                      MakeBun( $rItem->[0], $iData, $iInt );
+                elsif ( $placeholder->[0] =~ /\// ) {
+                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
+                      MakeFraction( $placeholder->[0], $number, $iInt );
                 }
-                elsif ( $rItem->[0] eq '.' ) {
+                elsif ( $placeholder->[0] eq '.' ) {
                     $iLen--;
                     $iPPos = $iLen;
                 }
-                elsif ( $rItem->[0] eq '+' ) {
-                    substr( $sFmtRes, $rItem->[1], $rItem->[2] ) =
-                      ( $iData > 0 ) ? '+' : ( ( $iData == 0 ) ? '+' : '-' );
+                elsif ( $placeholder->[0] eq '+' ) {
+                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
+                      ( $number > 0 ) ? '+' : ( ( $number == 0 ) ? '+' : '-' );
                 }
-                elsif ( $rItem->[0] eq '-' ) {
-                    substr( $sFmtRes, $rItem->[1], $rItem->[2] ) =
-                      ( $iData > 0 ) ? '' : ( ( $iData == 0 ) ? '' : '-' );
+                elsif ( $placeholder->[0] eq '-' ) {
+                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
+                      ( $number > 0 ) ? '' : ( ( $number == 0 ) ? '' : '-' );
                 }
-                elsif ( $rItem->[0] eq '@' ) {
-                    substr( $sFmtRes, $rItem->[1], $rItem->[2] ) = $iData;
+                elsif ( $placeholder->[0] eq '@' ) {
+                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
+                      $number;
                 }
-                elsif ( $rItem->[0] eq '*' ) {
-                    substr( $sFmtRes, $rItem->[1], $rItem->[2] ) = '';   #REMOVE
+                elsif ( $placeholder->[0] eq '*' ) {
+                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
+                      '';    #REMOVE
                 }
-                elsif (( $rItem->[0] eq "\xA2\xA4" )
-                    or ( $rItem->[0] eq "\xA2\xA5" )
-                    or ( $rItem->[0] eq "\x81\xA2" )
-                    or ( $rItem->[0] eq "\x81\xA3" ) )
+                elsif (( $placeholder->[0] eq "\xA2\xA4" )
+                    or ( $placeholder->[0] eq "\xA2\xA5" )
+                    or ( $placeholder->[0] eq "\x81\xA2" )
+                    or ( $placeholder->[0] eq "\x81\xA3" ) )
                 {
-                    substr( $sFmtRes, $rItem->[1], $rItem->[2] ) = $rItem->[0];
+                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
+                      $placeholder->[0];
 
-                    # ($iData > 0)? '': (($iData==0)? '':$rItem->[0]);
+                    # ($number > 0)? '': (($number==0)? '':$placeholder->[0]);
                 }
-                elsif ( ( $rItem->[0] eq '(' ) or ( $rItem->[0] eq ')' ) ) {
-                    substr( $sFmtRes, $rItem->[1], $rItem->[2] ) = $rItem->[0];
+                elsif (( $placeholder->[0] eq '(' )
+                    or ( $placeholder->[0] eq ')' ) )
+                {
+                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
+                      $placeholder->[0];
 
-                    # ($iData > 0)? '': (($iData==0)? '':$rItem->[0]);
+                    # ($number > 0)? '': (($number==0)? '':$placeholder->[0]);
                 }
                 else {
                     if ( $iLen > 0 ) {
-                        if ( $iIt <= 0 ) {
-                            $sRep = substr( $sNumRes, 0, $iLen );
+                        if ( $i <= 0 ) {
+                            $replacement = substr( $sNumRes, 0, $iLen );
                             $iLen = 0;
                         }
                         else {
-                            my $iReal = length( $rItem->[0] );
+                            my $iReal = length( $placeholder->[0] );
                             if ( $iPPos >= 0 ) {
-                                my $sWkF = $rItem->[0];
+                                my $sWkF = $placeholder->[0];
                                 $sWkF =~ s/^#+//;
                                 $iReal = length($sWkF);
                                 $iReal = ( $iLen <= $iReal ) ? $iLen : $iReal;
@@ -700,37 +810,49 @@ sub ExcelFmt {
                             else {
                                 $iReal = ( $iLen <= $iReal ) ? $iLen : $iReal;
                             }
-                            $sRep = substr( $sNumRes, $iLen - $iReal, $iReal );
+                            $replacement =
+                              substr( $sNumRes, $iLen - $iReal, $iReal );
                             $iLen -= $iReal;
                         }
                     }
                     else {
-                        $sRep = '';
+                        $replacement = '';
                     }
-                    substr( $sFmtRes, $rItem->[1], $rItem->[2] ) =
-                      "\x00" . $sRep;
+                    substr( $result, $placeholder->[1], $placeholder->[2] ) =
+                      "\x00" . $replacement;
                 }
             }
-            $sRep = ( $iLen > 0 ) ? substr( $sNumRes, 0, $iLen ) : '';
-            $sFmtRes =~ s/\x00/$sRep/;
-            $sFmtRes =~ s/\x00//g;
+            $replacement = ( $iLen > 0 ) ? substr( $sNumRes, 0, $iLen ) : '';
+            $result =~ s/\x00/$replacement/;
+            $result =~ s/\x00//g;
         }
     }
     else {
         my $iAtMk = 0;
-        for ( my $iIt = $#aRep ; $iIt >= 0 ; $iIt-- ) {
-            my $rItem = $aRep[$iIt];
-            if ( $rItem->[0] eq '@' ) {
-                substr( $sFmtRes, $rItem->[1], $rItem->[2] ) = $iData;
+        for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
+            my $placeholder = $placeholders[$i];
+            if ( $placeholder->[0] eq '@' ) {
+                substr( $result, $placeholder->[1], $placeholder->[2] ) =
+                  $number;
                 $iAtMk++;
             }
             else {
-                substr( $sFmtRes, $rItem->[1], $rItem->[2] ) = '';
+                substr( $result, $placeholder->[1], $placeholder->[2] ) = '';
             }
         }
-        $sFmtRes = $iData unless ($iAtMk);
+        $result = $number unless ($iAtMk);
     }
-    return wantarray() ? ( $sFmtRes, $sColor ) : $sFmtRes;
+
+    # Trim the leading and trailing whitespace from the results.
+    $result =~ s/^\s+//;
+    $result =~ s/\s+$//;
+
+    # Fix for negative currency.
+    #$result =~ s/\$\s+/\$/;
+    $result =~ s/^\$\-/\-\$/;
+    $result =~ s/^\$ \-/\-\$ /;
+
+    return wantarray() ? ( $result, $color ) : $result;
 }
 
 #------------------------------------------------------------------------------
@@ -752,15 +874,15 @@ sub AddComma {
 }
 
 #------------------------------------------------------------------------------
-# MakeBun (for Spreadsheet::ParseExcel::Utility)
+# MakeFraction (for Spreadsheet::ParseExcel::Utility)
 #------------------------------------------------------------------------------
-sub MakeBun {
+sub MakeFraction {
     my ( $sFmt, $iData, $iFlg ) = @_;
     my $iBunbo;
     my $iShou;
 
     #1. Init
-    #print "FLG: $iFlg\n";
+    print "FLG: $iFlg\n";
     if ($iFlg) {
         $iShou = $iData - int($iData);
         return '' if ( $iShou == 0 );
@@ -826,7 +948,9 @@ sub LeapYear {
     my ($iYear) = @_;
     return 1 if ( $iYear == 1900 );    #Special for Excel
     return ( ( ( $iYear % 4 ) == 0 )
-          && ( ( $iYear % 100 ) || ( $iYear % 400 ) == 0 ) ) ? 1 : 0;
+          && ( ( $iYear % 100 ) || ( $iYear % 400 ) == 0 ) )
+      ? 1
+      : 0;
 }
 
 #------------------------------------------------------------------------------
@@ -1169,16 +1293,16 @@ Spreadsheet::ParseExcel::Utility - Utility functions for Spreadsheet::ParseExcel
 
     use strict;
     use Spreadsheet::ParseExcel::Utility qw(ExcelFmt ExcelLocaltime LocaltimeExcel);
-    
+
     #Convert localtime ->Excel Time
     my $iBirth = LocaltimeExcel(11, 10, 12, 23, 2, 64);
                                # = 1964-3-23 12:10:11
     print $iBirth, "\n";       # 23459.5070717593
-    
+
     #Convert Excel Time -> localtime
     my @aBirth = ExcelLocaltime($iBirth, undef);
     print join(":", @aBirth), "\n";   # 11:10:12:23:2:64:1:0
-    
+
     #Formatting
     print ExcelFmt('yyyy-mm-dd', $iBirth), "\n"; #1964-3-23
     print ExcelFmt('m-d-yy', $iBirth), "\n";     # 3-23-64
@@ -1206,10 +1330,10 @@ I<$sTxt> is the result.
 For more detail and examples, please refer sample/chkFmt.pl in this distribution.
 
 ex.
-  
+
 =head2 ExcelLocaltime
 
-($iSec, $iMin, $iHour, $iDay, $iMon, $iYear, $iwDay, $iMSec) = 
+($iSec, $iMin, $iHour, $iDay, $iMon, $iYear, $iwDay, $iMSec) =
             ExcelLocaltime($iExTime [, $flg1904]);
 
 I<ExcelLocaltime> converts time information in Excel format into Perl localtime format.
@@ -1227,7 +1351,7 @@ I<LocaltimeExcel> converts time information in Perl localtime format into Excel 
 I<$iSec>, I<$iMin>, I<$iHour>, I<$iDay>, I<$iMon>, I<$iYear> are same as localtime.
 
 If I<$flg1904> is true, this functions assumes that epoch is 1904.
-I<$iExTime> is a time of Excel. 
+I<$iExTime> is a time of Excel.
 
 =head2 col2int
 
