@@ -11,7 +11,10 @@ t/basic.t
 t/parse.t
 t/parse-dates.t
 t/pod.t
-t/lib/Test/Example.pm
+t/20_number_format_default.t
+t/21_number_format_user.t
+t/22_number_format_datetime.t
+t/23_number_format_time.t
 
 lib/Spreadsheet/ParseExcel.pm
 lib/Spreadsheet/ParseExcel/Cell.pm

@@ -15,7 +15,7 @@ use warnings;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.45';
+our $VERSION = '0.46';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -2950,11 +2950,11 @@ If you'd care to donate to the Spreadsheet::ParseExcel project, you can do so vi
 
 =item * The current maintenance work is directed towards making the documentation more useful, improving and simplifying the API, and improving the maintainability of the code base. After that new features will be added.
 
-=item * Add more tests.
-
 =item * Add Formula support, Hyperlink support, Named Range support.
 
 =item * Improve Spreadsheet::ParseExcel::SaveParser compatibility with Spreadsheet::WriteExcel.
+
+=item * Improve Unicode and other encoding support. This will probably require dropping support for perls prior to 5.8+.
 
 =back
 

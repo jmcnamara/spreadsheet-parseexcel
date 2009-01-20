@@ -1,6 +1,24 @@
 Revision history for Perl extension Spreadsheet::ParseExcel.
 
-0.45 11 January 2009
+0.46 18 January 2009
+
+    ! Heavily refactored the ExcelFmt() function for maintainability and
+      fixed several bugs, in particular for 12 hour clock times.
+      Added test cases for above. 
+
+    ! Removed use of $& match variables from ExcelFmt.
+      Reported by Wigs.
+      http://rt.cpan.org/Public/Bug/Display.html?id=42425
+
+    ! Replaced lvalue substr() with 4-arg substr() for efficiency.
+      Reported by Goro Fuji.
+      http://rt.cpan.org/Public/Bug/Display.html?id=42518
+
+    ! Removed spurious t/examples dir from Makefile.PL and removed
+      unused t/lib dir. Reported by Peter (Stig) Edwards.
+      http://rt.cpan.org/Public/Bug/Display.html?id=42442
+
+0.45 13 January 2009
 
     ! Fixed failed parsing of large (8-16k) Unicode strings.
       Reported by Graham Stead and Moka.
