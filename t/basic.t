@@ -8,21 +8,6 @@ use_ok('Spreadsheet::ParseExcel');
 use_ok('Spreadsheet::ParseExcel::Dump');
 use_ok('Spreadsheet::ParseExcel::FmtDefault');
 use_ok('Spreadsheet::ParseExcel::Utility');
-foreach my $mod (
-            'OLE::Storage_Lite',
-            'IO::File',
-            'Scalar::Util',
-            'IO::Scalar',
-            ) {
-   (my $path = $mod) =~ s{::}{/}g;
-   my $str = sprintf("%-20s  ", $mod);
-   if ($INC{"$path.pm"}) {
-       $str .= sprintf("%s %s", $mod->VERSION, $INC{"$path.pm"});
-   } else {
-       $str .= "     not in memory";
-   }
-   diag $str;
-}
 
 
 eval "use  Jcode";
