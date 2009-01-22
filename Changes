@@ -1,5 +1,18 @@
 Revision history for Perl extension Spreadsheet::ParseExcel.
 
+0.48 23 January 2009
+
+    ! Fixed bug where numbers with uppercase formats such as MM/DD/YY
+      weren't formatted. Applies to files created by OpenOffice.org
+      and some international versions of Excel. Added tests for above.
+      http://rt.cpan.org/Public/Bug/Display.html?id=20526
+      http://rt.cpan.org/Public/Bug/Display.html?id=31206
+      http://rt.cpan.org/Public/Bug/Display.html?id=40307
+ 
+    ! Removed undocumented and counter-intuitive use of overload on SheetNo in
+      Worksheet.pm.
+      http://rt.cpan.org/Public/Bug/Display.html?id=14278
+
 0.47 22 January 2009
 
     ! Fixed bug where multiple embedded charts on a worksheet caused the
