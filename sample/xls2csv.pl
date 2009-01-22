@@ -1,10 +1,19 @@
 #!/usr/bin/perl -w
-# script to extract a range of colums/rows from an excel spreadsheet
+# script to extract a range of columns/rows from an excel spreadsheet
 # and present it as a csv, there is also the option to rotate the
 # output, 
 #
 # (c) kevin Mulholland 2002, kevin@moodfarm.demon.co.uk
 # this code is released under the Perl Artistic License
+
+#
+# Note: this utility doesn't currently handle embedded commas in extracted data.
+# Use Ken Prows' xls2cvs http://search.cpan.org/~ken/xls2csv-1.06/script/xls2csv
+# or H.Merijn Brand's xls2cvs (which is part of Spreadsheet::Read
+# http://search.cpan.org/~hmbrand/Spreadsheet-Read/) instead.
+# Both of these use Text::CSV_XS.
+#
+
 use strict ;
 use Spreadsheet::ParseExcel;
 use Spreadsheet::ParseExcel::Utility qw(xls2csv);
