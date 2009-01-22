@@ -18,12 +18,8 @@ package Spreadsheet::ParseExcel::Worksheet;
 use strict;
 use warnings;
 
-our $VERSION = '0.44';
+our $VERSION = '0.48';
 
-use overload
-  '0+'       => \&sheetNo,
-  'fallback' => 1,
-  ;
 use Scalar::Util qw(weaken);
 
 sub new {
