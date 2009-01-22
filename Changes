@@ -1,17 +1,24 @@
 Revision history for Perl extension Spreadsheet::ParseExcel.
 
+0.47 22 January 2009
+
+    ! Fixed bug where multiple embedded charts on a worksheet caused the
+      worksheet order to be lost and data to get overwritten.
+      Reported by Steven Martin and others.
+      http://rt.cpan.org/Public/Bug/Display.html?id=13365
+
 0.46 18 January 2009
 
     ! Heavily refactored the ExcelFmt() function for maintainability and
       fixed several bugs, in particular for 12 hour clock times.
-      Added test cases for above. 
+      Added test cases for above.
 
     ! Removed use of $& match variables from ExcelFmt.
-      Reported by Wigs.
+      Reported by Aaron Wigley.
       http://rt.cpan.org/Public/Bug/Display.html?id=42425
 
-    ! Replaced lvalue substr() with 4-arg substr() for efficiency.
-      Reported by Goro Fuji.
+    ! Replaced lvalue substr() in ExcelFmt () with 4-arg substr()
+      for efficiency. Reported by Goro Fuji.
       http://rt.cpan.org/Public/Bug/Display.html?id=42518
 
     ! Removed spurious t/examples dir from Makefile.PL and removed
