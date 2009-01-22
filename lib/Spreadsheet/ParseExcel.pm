@@ -15,7 +15,7 @@ use warnings;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.47';
+our $VERSION = '0.48';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -1967,11 +1967,19 @@ sub _NewCell {
     $rhKey{Type} =
       $FmtClass->ChkType( $rhKey{Numeric}, $rhKey{Format}{FmtIdx} );
     my $FmtStr = $oBook->{FormatStr}{ $rhKey{Format}{FmtIdx} };
-    defined $FmtStr
+
+    # Set "Date" type if required for numbers in a MulRK BIFF block.
+    if (   defined $FmtStr
       && $rhKey{Type} eq "Numeric"
-      && $rhKey{Kind} eq "MulRK"
-      && $FmtStr =~ m{^[dmy][-\\/dmy]*$}
-      and $rhKey{Type} = "Date";
+        && $rhKey{Kind} eq "MulRK" )
+    {
+        # Match a range of possible date formats. Note: this isn't important
+        # except for reporting. The number will still be converted to a date
+        # by ExcelFmt() even if 'Type' isn't set to 'Date'.
+        if ( $FmtStr =~ m{[dmy]+([^dmy]?)[dmy]+\1[dmy]+}i ) {
+            $rhKey{Type} = "Date";
+        }
+    }
 
     my $oCell = Spreadsheet::ParseExcel::Cell->new(
         Val      => $rhKey{Val},
@@ -2915,7 +2923,11 @@ However, this still processes the entire workbook. If you wish to save some addi
 
 =over
 
-=item * excel2txt by Ken Youens-Clark, (http://search.cpan.org/~kclark/excel2txt/excel2txt). This is an excellent example of an Excel filter using Spreadsheet::ParseExcel. It can produce CSV, Tab delimited, Html, Xml and Yaml.
+=item * xls2cvs by Ken Prows (http://search.cpan.org/~ken/xls2csv-1.06/script/xls2csv).
+
+=item * xls2cvs and xlscat by H.Merijn Brand (these utilities are part of Spreadsheet::Read, see below).
+
+=item * excel2txt by Ken Youens-Clark, (http://search.cpan.org/~kclark/excel2txt/excel2txt). This is an excellent example of an Excel filter using Spreadsheet::ParseExcel. It can produce CSV, Tab delimited, Html, XML and Yaml.
 
 =item * XLSperl by Jon Allen (http://search.cpan.org/~jonallen/XLSperl/bin/XLSperl). This application allows you to use Perl "one-liners" with Microsoft Excel files.
 

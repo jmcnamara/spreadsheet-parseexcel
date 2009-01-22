@@ -24,7 +24,7 @@ use vars qw(@ISA @EXPORT_OK);
 @EXPORT_OK = qw(ExcelFmt LocaltimeExcel ExcelLocaltime
   col2int int2col sheetRef xls2csv);
 
-our $VERSION = '0.46';
+our $VERSION = '0.48';
 
 my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 
@@ -41,8 +41,9 @@ my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 # then converted to the required formats and substituted into the placeholders.
 #
 # Interested parties should refer to the Excel documentation on cell formats for
-# more information. The Microsoft documentation for the Excel Binary File
-# Format, [MS-XLS], also contains a ABNF grammar for number format strings.
+# more information: http://office.microsoft.com/en-us/excel/HP051995001033.aspx
+# The Microsoft documentation for the Excel Binary File Format, [MS-XLS].pdf,
+# also contains a ABNF grammar for number format strings.
 #
 # Maintainers notes:
 # ==================
@@ -123,6 +124,9 @@ sub ExcelFmt {
         elsif ( $char eq ')' ) {
             next CHARACTER;    # Ignore.
         }
+
+        # Convert upper case OpenOffice.org date/time formats to lowercase..
+        $char = lc($char) if $char =~/[DMYHS]/;
 
         $formats[$section] .= $char;
     }
@@ -477,10 +481,12 @@ sub ExcelFmt {
             }
         }
         elsif ( ( substr( $format, $pos, 3 ) eq '[h]' ) ) {
+            $format_mode = 'date' unless $format_mode;
             push @placeholders, [ '[h]', length($token), 3 ];
             $pos += 3;
         }
         elsif ( ( substr( $format, $pos, 4 ) eq '[mm]' ) ) {
+            $format_mode = 'date' unless $format_mode;
             push @placeholders, [ '[mm]', length($token), 4 ];
             $pos += 4;
         }
@@ -670,14 +676,12 @@ sub ExcelFmt {
             }
             elsif ( $placeholder->[0] eq '[h]' ) {
 
-                # Hours not modulus 24. 25 displays as 25 not as 1.
-                # TODO. Check that this is correct.
+                # Hours modulus 24. 25 displays as 25 not as 1.
                 $replacement = sprintf( '%d', int($number) * 24 + $hour );
             }
             elsif ( $placeholder->[0] eq '[mm]' ) {
 
-                # Mins not modulus 60. 72 displays as 72 not as 12.
-                # TODO. Check that this is correct.
+                # Mins modulus 60. 72 displays as 72 not as 12.
                 $replacement =
                   sprintf( '%d', ( int($number) * 24 + $hour ) * 60 + $min );
             }
@@ -1437,6 +1441,8 @@ This function was contributed by Kevin Mulholland.
 
 =head2 xls2csv
 
+B<Note>: this function doesn't currently handle embedded commas in the extracted data. Use Ken Prows' xls2cvs (http://search.cpan.org/~ken/xls2csv-1.06/script/xls2csv) or H.Merijn Brand's xls2cvs (which is part of Spreadsheet::Read http://search.cpan.org/~hmbrand/Spreadsheet-Read/) instead. Both of these use Text::CSV_XS.
+
 $sCsvTxt = xls2csv($sFileName, $sRegion, $iRotate);
 
 convert a chunk of an excel file into csv text chunk
@@ -1444,8 +1450,6 @@ $sRegions = "sheet-colrow:colrow" (ex. '1-A1:B2' means 'A1:B2' for sheet 1)
 $iRotate  = 0 or 1 (output should be rotated or not)
 
 This function was contributed by Kevin Mulholland.
-
-B<Deprecated>.
 
 =head1 AUTHOR
 
