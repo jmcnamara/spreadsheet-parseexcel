@@ -15,7 +15,7 @@ use warnings;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.46';
+our $VERSION = '0.47';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -116,7 +116,7 @@ my %ProcTbl = (
     0x06  => \&_subFormula,                    # Formula
     0x406 => \&_subFormula,                    # Formula
 
-    0x09  => \&_subBOF,                        # BOF(BIFF2)
+    0x009 => \&_subBOF,                        # BOF(BIFF2)
     0x209 => \&_subBOF,                        # BOF(BIFF3)
     0x409 => \&_subBOF,                        # BOF(BIFF4)
     0x809 => \&_subBOF,                        # BOF(BIFF5-8)
@@ -245,7 +245,13 @@ sub Parse {
             );
         }
 
-        if ( defined $self->{FuncTbl}->{$bOp} ) {
+        # If the low byte of the BIFF record is 0x09 then it is a BOF record.
+        # We reset the _skip_chart flag to ensure we check the sheet type.
+        if ( ( $bOp & 0xFF ) == 0x09 ) {
+            $oBook->{_skip_chart} = 0;
+        }
+
+        if ( defined $self->{FuncTbl}->{$bOp} && !$oBook->{_skip_chart} ) {
             $self->{FuncTbl}->{$bOp}->( $oBook, $bOp, $bLen, $sWk );
         }
 
@@ -419,10 +425,8 @@ sub _subBOF {
         }
     }
     else {
-        ( $oBook->{_CurSheet_}, $oBook->{_CurSheet} ) = (
-            ( ( defined $oBook->{_CurSheet} ) ? $oBook->{_CurSheet} : -1 ),
-            undef
-        );
+        # Set flag to ignore all chart records until we reach another BOF.
+        $oBook->{_skip_chart} = 1;
     }
 }
 
