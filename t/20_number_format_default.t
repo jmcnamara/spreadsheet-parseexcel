@@ -6,7 +6,7 @@
 #
 # Tests for default number format handling using FmtExcel(). See note below.
 #
-# reverse('©'), January 2009, John McNamara, jmcnamara@cpan.org
+# reverse('ï¿½'), January 2009, John McNamara, jmcnamara@cpan.org
 #
 
 use strict;
@@ -59,7 +59,7 @@ my @testcases = (
     [ 36, 0x15, 37653.521, '12:30:14',     'h:mm:ss' ],
     [ 37, 0x16, 37653.521, '2/1/03 12:30', 'm/d/yy h:mm' ],
     [ 38, 0x2D, 37653.521, '30:14',        'mm:ss' ],
-    [ 39, 0x2E, 3.0141204, '72:22:02',     '[h]:mm:ss', 'TODO: Will fix in the next release.' ],
+    [ 39, 0x2E, 3.0141204, '72:20:20',     '[h]:mm:ss'],
     [ 40, 0x2F, 37653.521, '30:14.4',      'mm:ss.0' ],
     [ 41, 0x30, 1234.567,  '1.2E+3',       '##0.0E+0' ],
     [ 42, 0x31, 1234.567,  '1234.567',     '@' ],
