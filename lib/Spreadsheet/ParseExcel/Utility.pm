@@ -24,7 +24,7 @@ use vars qw(@ISA @EXPORT_OK);
 @EXPORT_OK = qw(ExcelFmt LocaltimeExcel ExcelLocaltime
   col2int int2col sheetRef xls2csv);
 
-our $VERSION = '0.48';
+our $VERSION = '0.49';
 
 my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 
@@ -68,7 +68,7 @@ my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 #
 sub ExcelFmt {
 
-    my ( $format_str, $number, $is_1904, $number_type ) = @_;
+    my ( $format_str, $number, $is_1904, $number_type, $want_color ) = @_;
 
     # Return text strings without further formatting.
     return $number unless $number =~ $qrNUMBER;
@@ -133,7 +133,7 @@ sub ExcelFmt {
 
     # Select the appropriate format from the 4 4 possible sub-sections:
     # positive numbers, negative numbers, zero values, and text.
-    # We ingore the Text section since non-numeric values are returned
+    # We ignore the Text section since non-numeric values are returned
     # unformatted at the start of the function.
     my $format;
     $section = 0;
@@ -527,11 +527,13 @@ sub ExcelFmt {
 
         # Process date formats.
         my @time = ExcelLocaltime( $number, $is_1904 );
-        $time[4]++;
-        $time[5] += 1900;
 
         #    0     1     2      3     4       5      6      7
         my ( $sec, $min, $hour, $day, $month, $year, $wday, $msec ) = @time;
+
+        $month++;       # localtime() zero indexed month.
+        $year += 1900;  # localtime() year.
+
 
         my @full_month_name = qw(
           None January February March April May June July
@@ -911,7 +913,14 @@ sub ExcelFmt {
     $result =~ s/^\$\-/\-\$/;
     $result =~ s/^\$ \-/\-\$ /;
 
-    return wantarray() ? ( $result, $color ) : $result;
+
+    # Return color string if required.
+    if ($want_color) {
+        return ( $result, $color );
+    }
+    else {
+        return $result;
+    }
 }
 
 #------------------------------------------------------------------------------
@@ -1225,7 +1234,10 @@ sub sheetRef {
 sub xls2csv {
     my ( $filename, $regions, $rotate ) = @_;
     my $sheet  = 0;
-    my $output = "";
+
+    # We need Text::CSV_XS for proper CSV handling.
+    require Text::CSV_XS;
+
 
     # extract any sheet number from the region string
     $regions =~ m/^(\d+)-(.*)/;
@@ -1275,20 +1287,20 @@ sub xls2csv {
     my $oWkS = $oBook->{Worksheet}[$sheet];
 
     # now check that the region exists in the file
-    # if not trucate to the possible region
+    # if not trucnate to the possible region
     # output a warning msg
     if ( $start[1] < $oWkS->{MinCol} ) {
         print STDERR int2col( $start[1] )
           . " < min col "
           . int2col( $oWkS->{MinCol} )
-          . " Reseting\n";
+          . " Resetting\n";
         $start[1] = $oWkS->{MinCol};
     }
     if ( $end[1] > $oWkS->{MaxCol} ) {
         print STDERR int2col( $end[1] )
           . " > max col "
           . int2col( $oWkS->{MaxCol} )
-          . " Reseting\n";
+          . " Resetting\n";
         $end[1] = $oWkS->{MaxCol};
     }
     if ( $start[0] < $oWkS->{MinRow} ) {
@@ -1296,7 +1308,7 @@ sub xls2csv {
           . ( $start[0] + 1 )
           . " < min row "
           . ( $oWkS->{MinRow} + 1 )
-          . " Reseting\n";
+          . " Resetting\n";
         $start[0] = $oWkS->{MinCol};
     }
     if ( $end[0] > $oWkS->{MaxRow} ) {
@@ -1304,7 +1316,7 @@ sub xls2csv {
           . ( $end[0] + 1 )
           . " > max row "
           . ( $oWkS->{MaxRow} + 1 )
-          . " Reseting\n";
+          . " Resetting\n";
         $end[0] = $oWkS->{MaxRow};
 
     }
@@ -1314,26 +1326,55 @@ sub xls2csv {
     my $x2 = $end[1];
     my $y2 = $end[0];
 
+    my @cell_data;
+    my $row = 0;
+
     if ( !$rotate ) {
         for ( my $y = $y1 ; $y <= $y2 ; $y++ ) {
             for ( my $x = $x1 ; $x <= $x2 ; $x++ ) {
                 my $cell = $oWkS->{Cells}[$y][$x];
-                $output .= $cell->Value if ( defined $cell );
-                $output .= "," if ( $x != $x2 );
+
+                my $value;
+                if (defined $cell) {
+                    $value .= $cell->value();
+                }
+                else {
+                    $value = '';
+                }
+
+                push @{ $cell_data[$row] }, $value;
             }
-            $output .= "\n";
+            $row++;
         }
     }
     else {
         for ( my $x = $x1 ; $x <= $x2 ; $x++ ) {
             for ( my $y = $y1 ; $y <= $y2 ; $y++ ) {
                 my $cell = $oWkS->{Cells}[$y][$x];
-                $output .= $cell->Value if ( defined $cell );
-                $output .= "," if ( $y != $y2 );
+
+                my $value;
+                if (defined $cell) {
+                    $value .= $cell->value();
+                }
+                else {
+                    $value = '';
+                }
+
+                push @{ $cell_data[$row] }, $value;
             }
-            $output .= "\n";
+            $row++;
         }
     }
+
+    # Create the CSV output string.
+    my $csv = Text::CSV_XS->new( { binary => 1, eol => $/ } );
+    my $output = "";
+
+    for my $row (@cell_data) {
+        $csv->combine( @$row );
+        $output .= $csv->string();
+    }
+
 
     return $output;
 }
@@ -1350,106 +1391,164 @@ Spreadsheet::ParseExcel::Utility - Utility functions for Spreadsheet::ParseExcel
 
 =head1 SYNOPSIS
 
-    use strict;
     use Spreadsheet::ParseExcel::Utility qw(ExcelFmt ExcelLocaltime LocaltimeExcel);
 
-    #Convert localtime ->Excel Time
-    my $iBirth = LocaltimeExcel(11, 10, 12, 23, 2, 64);
-                               # = 1964-3-23 12:10:11
-    print $iBirth, "\n";       # 23459.5070717593
+    # Convert localtime to Excel time
+    my $datetime = LocaltimeExcel(11, 10, 12, 23, 2, 64); # 1964-3-23 12:10:11
 
-    #Convert Excel Time -> localtime
-    my @aBirth = ExcelLocaltime($iBirth, undef);
-    print join(":", @aBirth), "\n";   # 11:10:12:23:2:64:1:0
+    print $datetime, "\n"; # 23459.5070717593 (Excel date/time format)
 
-    #Formatting
-    print ExcelFmt('yyyy-mm-dd', $iBirth), "\n"; #1964-3-23
-    print ExcelFmt('m-d-yy', $iBirth), "\n";     # 3-23-64
-    print ExcelFmt('#,##0', $iBirth), "\n";      # 23,460
-    print ExcelFmt('#,##0.00', $iBirth), "\n";   # 23,459.51
-    print ExcelFmt('"My Birthday is (m/d):" m/d', $iBirth), "\n";
-                   # My Birthday is (m/d): 3/23
+    # Convert Excel Time to localtime
+    my @time = ExcelLocaltime($datetime);
+    print join(":", @time), "\n";   # 11:10:12:23:2:64:1:0
+
+    # Formatting
+    print ExcelFmt('yyyy-mm-dd', $datetime), "\n"; # 1964-3-23
+    print ExcelFmt('m-d-yy',     $datetime), "\n"; # 3-23-64
+    print ExcelFmt('#,##0',      $datetime), "\n"; # 23,460
+    print ExcelFmt('#,##0.00',   $datetime), "\n"; # 23,459.51
 
 =head1 DESCRIPTION
 
-Spreadsheet::ParseExcel::Utility exports utility functions concerned with Excel format setting.
+The C<Spreadsheet::ParseExcel::Utility> module provides utility functions for working with ParseExcel and Excel data.
 
 =head1 Functions
 
-This module can export 3 functions: ExcelFmt, ExcelLocaltime and LocaltimeExcel.
+C<Spreadsheet::ParseExcel::Utility> can export the following functions:
 
-=head2 ExcelFmt
+    ExcelFmt
+    ExcelLocaltime
+    LocaltimeExcel
+    col2int
+    int2col
+    sheetRef
+    xls2csv
 
-$sTxt = ExcelFmt($sFmt, $iData [, $i1904]);
+These functions must be imported implicitly:
 
-I<$sFmt> is a format string for Excel. I<$iData> is the target value.
-If I<$flg1904> is true, this functions assumes that epoch is 1904.
-I<$sTxt> is the result.
+    # Just one function.
+    use Spreadsheet::ParseExcel::Utility 'col2int';
 
-For more detail and examples, please refer sample/chkFmt.pl in this distribution.
-
-ex.
-
-=head2 ExcelLocaltime
-
-($iSec, $iMin, $iHour, $iDay, $iMon, $iYear, $iwDay, $iMSec) =
-            ExcelLocaltime($iExTime [, $flg1904]);
-
-I<ExcelLocaltime> converts time information in Excel format into Perl localtime format.
-I<$iExTime> is a time of Excel. If I<$flg1904> is true, this functions assumes that
-epoch is 1904.
-I<$iSec>, I<$iMin>, I<$iHour>, I<$iDay>, I<$iMon>, I<$iYear>, I<$iwDay> are same as localtime.
-I<$iMSec> means 1/1,000,000 seconds(ms).
+    # More than one.
+    use Spreadsheet::ParseExcel::Utility qw(ExcelFmt ExcelLocaltime LocaltimeExcel);
 
 
-=head2 LocaltimeExcel
+=head2 ExcelFmt($format_string, $number, $is_1904)
 
-I<$iExTime> = LocaltimeExcel($iSec, $iMin, $iHour, $iDay, $iMon, $iYear [,$iMSec] [,$flg1904])
+Excel stores data such as dates and currency values as numbers. The way these numbers are displayed is controlled by the number format string for the cell. For example a cell with a number format of C<'$#,##0.00'> for currency and a value of 1234.567 would be displayed as follows:
 
-I<LocaltimeExcel> converts time information in Perl localtime format into Excel format .
-I<$iSec>, I<$iMin>, I<$iHour>, I<$iDay>, I<$iMon>, I<$iYear> are same as localtime.
+    '$#,##0.00' + 1234.567 = '$1,234.57'.
 
-If I<$flg1904> is true, this functions assumes that epoch is 1904.
-I<$iExTime> is a time of Excel.
+The C<ExcelFmt()> function tries to emulate this formatting so that the user can convert raw numbers returned by C<Spreadsheet::ParseExel> to a desired format. For example:
 
-=head2 col2int
+    print ExcelFmt('$#,##0.00', 1234.567); # $1,234.57.
 
-I<$iInt> = col2int($sCol);
+The syntax of the function is:
 
-converts a excel row letter into an int for use in an array
+    my $text = ExcelFmt($format_string, $number, $is_1904);
+
+Where C<$format_string> is an Excel number format string, C<$number> is a real or integer number and C<is_1904> is an optional flag to indicate that dates should use Excel's 1904 epoch instead of the default 1900 epoch.
+
+C<ExcelFmt()> is also used internally to convert numbers returned by the C<Cell::unformatted()> method to the formatted value returned by the C<Cell::value()> method:
+
+
+    my $cell = $worksheet->get_cell( 0, 0 );
+
+    print $cell->unformatted(), "\n"; # 1234.567
+    print $cell->value(),       "\n"; # $1,234.57
+
+The most common usage for C<ExcelFmt> is to convert numbers to dates. Dates and times in Excel are represented by real numbers, for example "1 Jan 2001 12:30 PM" is represented by the number 36892.521. The integer part of the number stores the number of days since the epoch and the fractional part stores the percentage of the day. By applying an Excel number format the number is converted to the desired string representation:
+
+    print ExcelFmt('d mmm yyyy h:mm AM/PM', 36892.521);  # 1 Jan 2001 12:30 PM
+
+C<$is_1904> is an optional flag to indicate that dates should use Excel's 1904 epoch instead of the default 1900 epoch. Excel for Windows generally uses 1900 and Excel for Mac OS uses 1904. The C<$is1904> flag isn't required very often by a casual user and can usually be ignored.
+
+
+=head2 ExcelLocaltime($excel_datetime, $is_1904)
+
+The C<ExcelLocaltime()> function converts from an Excel date/time number to a C<localtime()>-like array of values:
+
+        my @time = ExcelLocaltime($excel_datetime);
+
+        #    0     1     2      3     4       5      6      7
+        my ( $sec, $min, $hour, $day, $month, $year, $wday, $msec ) = @time;
+
+The array elements from C<(0 .. 6)> are the same as Perl's C<localtime()>. The last element C<$msec> is milliseconds. In particular it should be noted that, in common with C<localtime()>, the month is zero indexed and the year is the number of years since 1900. This means that you will usually need to do the following:
+
+        $month++;
+        $year += 1900;
+
+See also Perl's documentation for L<localtime()|perlfunc>:
+
+The C<$is_1904> flag is an optional. It is used to indicate that dates should use Excel's 1904 epoch instead of the default 1900 epoch.
+
+=head2 LocaltimeExcel($sec, $min, $hour, $day, $month, $year, $wday, $msec, $is_1904)
+
+The C<LocaltimeExcel()> function converts from a C<localtime()>-like array of values to an Excel date/time number:
+
+    $excel_datetime = LocaltimeExcel($sec, $min, $hour, $day, $month, $year, $wday, $msec);
+
+The array elements from C<(0 .. 6)> are the same as Perl's C<localtime()>. The last element C<$msec> is milliseconds. In particular it should be noted that, in common with C<localtime()>, the month is zero indexed and the year is the number of years since 1900. See also Perl's documentation for L<localtime()|perlfunc>:
+
+The C<$wday> and C<$msec> elements are usually optional. This time elements can also be zeroed if they aren't of interest:
+
+                                    # sec, min, hour, day, month, year
+    $excel_datetime = LocaltimeExcel( 0,   0,   0,    1,   0,     101 );
+
+    print ExcelFmt('d mmm yyyy', $excel_datetime);  # 1 Jan 2001
+
+The C<$is_1904> flag is also optional. It is used to indicate that dates should use Excel's 1904 epoch instead of the default 1900 epoch.
+
+
+=head2 col2int($column)
+
+The C<col2int()> function converts an Excel column letter to an zero-indexed column number:
+
+    print col2int('A');  # 0
+    print col2int('AA'); # 26
 
 This function was contributed by Kevin Mulholland.
 
-=head2 int2col
 
-I<$sCol> = int2col($iRow);
+=head2 int2col($column_number)
 
-convert a column number into column letters
-NOET: This is quite a brute force coarse method does not manage values over 701 (ZZ)
+The C<int2col()> function converts an zero-indexed Excel column number to a column letter:
 
-This function was contributed by Kevin Mulholland.
-
-=head2 sheetRef
-
-(I<$iRow>, I<$iCol>) = sheetRef($sStr);
-
-convert an excel letter-number address into a useful array address
-NOTE: That also Excel uses X-Y notation, we normally use Y-X in arrays
-$sStr, excel coord (eg. A2).
+    print int2col(0);  # 'A'
+    print int2col(26); # 'AA'
 
 This function was contributed by Kevin Mulholland.
 
-=head2 xls2csv
 
-B<Note>: this function doesn't currently handle embedded commas in the extracted data. Use Ken Prows' xls2cvs (http://search.cpan.org/~ken/xls2csv-1.06/script/xls2csv) or H.Merijn Brand's xls2cvs (which is part of Spreadsheet::Read http://search.cpan.org/~hmbrand/Spreadsheet-Read/) instead. Both of these use Text::CSV_XS.
+=head2 sheetRef($cell_string)
 
-$sCsvTxt = xls2csv($sFileName, $sRegion, $iRotate);
+The C<sheetRef()> function converts an Excel cell reference in 'A1' notation to a zero-indexed C<(row, col)> pair.
 
-convert a chunk of an excel file into csv text chunk
-$sRegions = "sheet-colrow:colrow" (ex. '1-A1:B2' means 'A1:B2' for sheet 1)
-$iRotate  = 0 or 1 (output should be rotated or not)
+    my ($row, $col) = sheetRef('A1'); # ( 0, 0 )
+    my ($row, $col) = sheetRef('C2'); # ( 1, 2 )
 
 This function was contributed by Kevin Mulholland.
+
+
+=head2 xls2csv($filename, $region, $rotate)
+
+The C<xls2csv()> function converts a section of an Excel file into a CSV text string.
+
+    $csv_text = xls2csv($filename, $region, $rotate);
+
+Where:
+
+    $region = "sheet-colrow:colrow"
+    For example '1-A1:B2' means 'A1:B2' for sheet 1.
+
+    and
+
+    $rotate  = 0 or 1 (output is rotated/transposed or not)
+
+This function requires C<Text::CSV_XS> to be installed. It was contributed by Kevin Mulholland along with the C<xls2csv> script in the C<sample> directory of the distro.
+
+See also the following xls2csv utilities: Ken Prows' C<xls2csv>: http://search.cpan.org/~ken/xls2csv/script/xls2csv and H.Merijn Brand's C<xls2csv> (which is part of Spreadsheet::Read): http://search.cpan.org/~hmbrand/Spreadsheet-Read/
+
 
 =head1 AUTHOR
 
