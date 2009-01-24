@@ -15,7 +15,7 @@ use warnings;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.48';
+our $VERSION = '0.49';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -2911,11 +2911,23 @@ However, this still processes the entire workbook. If you wish to save some addi
 
 =over
 
+=item * Issues reported by users: http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel
+
 =item * This module cannot read the values of formulas from files created with Spreadsheet::WriteExcel unless the user specified the values when creating the file (which is generally not the case). The reason for this is that Spreadsheet::WriteExcel writes the formula but not the formula result since it isn't in a position to calculate arbitrary Excel formulas without access to Excel's formula engine.
 
-=item * If Excel has date fields where the specified format is equal to what happens to be the system-default for the short-date locale setting for the current user, Excel does not store the format, but uses the internal format number 14, which defaults to "m-d-yy" on every other system. If Date fields have a format specified, and the date-separation character is the same as what happens to be the current date separation character for the user's regional setting, that character will change when the user changes the character from '/' to '-' or vice-versa. All date formats in the sheet will change. This means that if the author of the sheet used the date format 'dd-mm-yyyy', and his separation character was '-', the fields might be formatted like 'dd/mm/yyyy' on a system where the user set his separation character to '/', causing inconsistent date displays.
+=item * If Excel has date fields where the specified format is equal to the system-default for the short-date locale, Excel does not store the format, but defaults to an internal format which is system dependent. In these cases ParseExcel uses the date format 'yyyy-mm-dd'.
 
 =back
+
+
+
+
+=head1 REPORTING A BUG
+
+Bugs can be reported via rt.cpan.org. See the following for instructions on bug reporting for Spreadsheet::ParseExcel
+
+http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel
+
 
 
 
@@ -2923,9 +2935,9 @@ However, this still processes the entire workbook. If you wish to save some addi
 
 =over
 
-=item * xls2cvs by Ken Prows (http://search.cpan.org/~ken/xls2csv-1.06/script/xls2csv).
+=item * xls2csv by Ken Prows (http://search.cpan.org/~ken/xls2csv-1.06/script/xls2csv).
 
-=item * xls2cvs and xlscat by H.Merijn Brand (these utilities are part of Spreadsheet::Read, see below).
+=item * xls2csv and xlscat by H.Merijn Brand (these utilities are part of Spreadsheet::Read, see below).
 
 =item * excel2txt by Ken Youens-Clark, (http://search.cpan.org/~kclark/excel2txt/excel2txt). This is an excellent example of an Excel filter using Spreadsheet::ParseExcel. It can produce CSV, Tab delimited, Html, XML and Yaml.
 
@@ -2966,6 +2978,8 @@ If you'd care to donate to the Spreadsheet::ParseExcel project, you can do so vi
 
 =item * The current maintenance work is directed towards making the documentation more useful, improving and simplifying the API, and improving the maintainability of the code base. After that new features will be added.
 
+=item * Fix open bugs and documentation for SaveParser.
+
 =item * Add Formula support, Hyperlink support, Named Range support.
 
 =item * Improve Spreadsheet::ParseExcel::SaveParser compatibility with Spreadsheet::WriteExcel.
@@ -2983,7 +2997,7 @@ From Kawai Takanori:
 First of all, I would like to acknowledge the following valuable programs and modules:
 XHTML, OLE::Storage and Spreadsheet::WriteExcel.
 
-In no particular order: Yamaji Haruna, Simamoto Takesi, Noguchi Harumi, Ikezawa Kazuhiro, Suwazono Shugo, Hirofumi Morisada, Michael Edwards, Kim Namusk, Slaven Rezić, Grant Stevens, H.Merijn Brand and many many people + Kawai Mikako.
+In no particular order: Yamaji Haruna, Simamoto Takesi, Noguchi Harumi, Ikezawa Kazuhiro, Suwazono Shugo, Hirofumi Morisada, Michael Edwards, Kim Namusk, Slaven Rezic, Grant Stevens, H.Merijn Brand and many many people + Kawai Mikako.
 
 
 

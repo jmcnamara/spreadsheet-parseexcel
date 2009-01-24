@@ -1,10 +1,22 @@
 Revision history for Perl extension Spreadsheet::ParseExcel.
 
+0.48 24 January 2009
+
+    ! Added Text::CSV_XS to xls2csv() function to handle embedded commas
+      in csv data. Reported by Fredrik Linde.
+      https://rt.cpan.org/Ticket/Display.html?id=41337
+
+    + Rewrote Utility.pm documentation.
+
+    - Removed wantarray from ExcelFmt() and the unused and undocumented
+      feature of returning the result and a format color in a list context.
+      The older mechanism is still available but now requires an explicit flag.
+
 0.48 23 January 2009
 
     ! Fixed bug where numbers with uppercase formats such as MM/DD/YY
-      weren't formatted. Applies to files created by OpenOffice.org
-      and some international versions of Excel. Added tests for above.
+      were ignored. Applies to files created by OpenOffice.org and
+      some international versions of Excel. Added tests for above.
       http://rt.cpan.org/Public/Bug/Display.html?id=20526
       http://rt.cpan.org/Public/Bug/Display.html?id=31206
       http://rt.cpan.org/Public/Bug/Display.html?id=40307
@@ -78,10 +90,8 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
     ! Fixed minor SaveParser bug with font rotation.
       http://rt.cpan.org/Public/Bug/Display.html?id=41626
 
-
 0.42 1 January 2009
     + Fix for world writeable files in distro to allow PAUSE indexing.
-
 
 0.41 24 October 2008
     + Changed maintainership to John McNamara.
@@ -91,7 +101,6 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
 
     ! Changed margin units to inches to (cleanly) avoid undef warning in
       SaveParser.
-
 
 0.33 2008.09.07
     - Default format for formatted dates changed from 'm-d-yy' to 'yyyy-mm-dd'
