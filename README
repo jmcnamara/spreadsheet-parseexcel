@@ -1,14 +1,13 @@
 NAME
-    Spreadsheet::ParseExcel - Get information from Excel file
+    Spreadsheet::ParseExcel - Extract information from Excel file.
 
 DESCRIPTION
-    This module allows you to get information from Excel file.
+    This module allows you to extract information from Excel file.
 
-    This module can handle files of Excel95, 97 and 2000.
-    (and now supports Excel4)
+    This module can handle files in Excel95, 97 and 2000 format.
 
     The module will work on the majority of Windows, UNIX and
-    Macintosh platforms. 
+    Macintosh platforms.
 
 REQUIREMENT
     This module requires these modules:
@@ -44,11 +43,11 @@ INSTALLATION
 For FmtJapan2
   If you use FmtJapan2, you must do following actions:
 
-  (1) Copy "CP932Excel.map" included with this distribution to an 
+  (1) Copy "CP932Excel.map" included with this distribution to an
       applicatable directry.
 
-  (2) To add "CP932Excel" as map name, append following lines to 
-      REGISTRY in the Unicode::Map hierarchy 
+  (2) To add "CP932Excel" as map name, append following lines to
+      REGISTRY in the Unicode::Map hierarchy
       (changing map directy to applicatable directry):
 
 name:    CP932Excel
@@ -59,19 +58,23 @@ map:     (which you copied directry)/CP932Excel.map
 
 
 AUTHOR
-    Current maintainer: Gabor Szabo (szabgab@cpan.org)
 
-    Original author: Kawai Takanori (kwitknr@cpan.org)
+    Current maintainer 0.40+: John McNamara jmcnamara@cpan.org
+
+    Maintainer 0.27-0.33: Gabor Szabo szabgab@cpan.org
+
+    Original author: Kawai Takanori (Hippo2000) kwitknr@cpan.org
 
 
 SUPPORT
     Before you report problems, please check the "KNOWN PROBLEMS" section
     in the manual page for Spreadsheet::ParseExcel.
 
-    Please use RT for bug reports and CPAN::Forum for general questions
-    and discussion.
+    There is a Google group for discussing and asking questions about
+    Spreadsheet::ParseExcel.
+    http://groups-beta.google.com/group/spreadsheet-parseexcel/
 
-    In case you want to show an example Excel file with a problem, either
-    attach it to your RT report or contact the maintainer by e-mail.
+    Bugs can be reported via rt.cpan.org. See the following for instructions:
+    http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel
 
     Test cases are always welcome.
