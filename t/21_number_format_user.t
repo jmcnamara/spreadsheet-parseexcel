@@ -11,8 +11,8 @@
 
 use strict;
 
-use Spreadsheet::ParseExcel::Utility 'ExcelFmt';
-use Test::More tests => 27;
+use Spreadsheet::ParseExcel::Utility qw( ExcelFmt LocaltimeExcel );
+use Test::More tests => 30;
 
 ###############################################################################
 #
@@ -60,6 +60,13 @@ my @testcases = (
     [ 25, 0.6, '14:24:00', 'h:mm:ss' ],
     [ 26, 1.6, '14:24:00', 'h:mm:ss' ],
     [ 27, 2.6, '14:24:00', 'h:mm:ss' ],
+
+    # Test for the examples in the Utility.pm docs.
+    [ 28, 1234.567,  '$1,234.57',           '$#,##0.00' ],
+    [ 29, 36892.521, '1 Jan 2001 12:30 PM', 'd mmm yyyy h:mm AM/PM' ],
+    [ 30, LocaltimeExcel( 0, 0, 0, 1, 0, 101 ), '1 Jan 2001', 'd mmm yyyy' ],
+
+
 );
 
 ###############################################################################
