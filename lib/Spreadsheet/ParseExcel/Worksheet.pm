@@ -17,78 +17,107 @@ package Spreadsheet::ParseExcel::Worksheet;
 
 use strict;
 use warnings;
+use Scalar::Util qw(weaken);
 
 our $VERSION = '0.48';
 
-use Scalar::Util qw(weaken);
-
+###############################################################################
+#
+# new()
+#
 sub new {
-    my ( $class, %rhIni ) = @_;
-    my $self = \%rhIni;
+
+    my ( $class, %properties ) = @_;
+
+    my $self = \%properties;
+
     weaken $self->{_Book};
 
     $self->{Cells}       = undef;
     $self->{DefColWidth} = 8.38;
-    bless $self, $class;
+
+    return bless $self, $class;
 }
 
-#------------------------------------------------------------------------------
-# Spreadsheet::ParseExcel::Worksheet->sheetNo
-#------------------------------------------------------------------------------
-sub sheetNo {
-    my ($oSelf) = @_;
-    return $oSelf->{_SheetNo};
+###############################################################################
+#
+# sheet_num()
+#
+sub sheet_num {
+
+    my $self = shift;
+
+    return $self->{_SheetNo};
 }
 
-#------------------------------------------------------------------------------
-# Spreadsheet::ParseExcel::Worksheet->Cell
-#------------------------------------------------------------------------------
+###############################################################################
+#
+# get_cell()
+#
 sub get_cell {
-    my ( $oSelf, $iR, $iC ) = @_;
 
-    # return undef if no arguments are given or if no cells are defined
-    return
-      if ( ( !defined($iR) )
-        || ( !defined($iC) )
-        || ( !defined( $oSelf->{MaxRow} ) )
-        || ( !defined( $oSelf->{MaxCol} ) ) );
+    my ( $self, $row, $col ) = @_;
 
-    # return undef if outside defined rectangle
-    return
-      if ( ( $iR < $oSelf->{MinRow} )
-        || ( $iR > $oSelf->{MaxRow} )
-        || ( $iC < $oSelf->{MinCol} )
-        || ( $iC > $oSelf->{MaxCol} ) );
+    if (   !defined $row
+        || !defined $col
+        || !defined $self->{MaxRow}
+        || !defined $self->{MaxCol} )
+    {
 
-    # return the Cell object
-    return $oSelf->{Cells}[$iR][$iC];
+        # Return undef if no arguments are given or if no cells are defined.
+        return undef;
+    }
+    elsif ($row < $self->{MinRow}
+        || $row > $self->{MaxRow}
+        || $col < $self->{MinCol}
+        || $col > $self->{MaxCol} )
+    {
+
+        # Return undef if outside allowable row/col range.
+        return undef;
+    }
+    else {
+
+        # Return the Cell object.
+        return $self->{Cells}->[$row]->[$col];
+    }
 }
-*Cell = *get_cell;
 
-#------------------------------------------------------------------------------
-# Spreadsheet::ParseExcel::Worksheet->RowRange
-#------------------------------------------------------------------------------
+###############################################################################
+#
+# row_range()
+#
 sub row_range {
-    my ($oSelf) = @_;
-    my $iMin = $oSelf->{MinRow} || 0;
-    my $iMax = defined( $oSelf->{MaxRow} ) ? $oSelf->{MaxRow} : ( $iMin - 1 );
 
-    # return the range
-    return ( $iMin, $iMax );
+    my $self = shift;
+
+    my $min = $self->{MinRow} || 0;
+    my $max = defined( $self->{MaxRow} ) ? $self->{MaxRow} : ( $min - 1 );
+
+    return ( $min, $max );
 }
-*RowRange = *row_range;
 
-#------------------------------------------------------------------------------
-# Spreadsheet::ParseExcel::Worksheet->ColRange
-#------------------------------------------------------------------------------
+###############################################################################
+#
+# col_range()
+#
 sub col_range {
-    my ($oSelf) = @_;
-    my $iMin = $oSelf->{MinCol} || 0;
-    my $iMax = defined( $oSelf->{MaxCol} ) ? $oSelf->{MaxCol} : ( $iMin - 1 );
 
-    # return the range
-    return ( $iMin, $iMax );
+    my $self = shift;
+
+    my $min = $self->{MinCol} || 0;
+    my $max = defined( $self->{MaxCol} ) ? $self->{MaxCol} : ( $min - 1 );
+
+    return ( $min, $max );
 }
+
+###############################################################################
+#
+# Map legacy method names to new names.
+#
+*sheetNo  = *sheet_num;
+*Cell     = *get_cell;
+*RowRange = *row_range;
 *ColRange = *col_range;
 
 1;
