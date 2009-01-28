@@ -228,15 +228,15 @@ sub SaveAs {
         # Veritical Page Breaks
         $oWrS->set_v_pagebreaks( @{ $oWkS->{VPageBreak} } );
 
-=pod
 
-            PageStart    => $oWkS->{PageStart},            # Page number for start
-            UsePage      => $oWkS->{UsePage},              # Use own start page number
-            NoColor      => $oWkS->{NoColor},               # Print in blcak-white
-            Draft        => $oWkS->{Draft},                 # Print in draft mode
-            Notes        => $oWkS->{Notes},                 # Print notes
-            LeftToRight  => $oWkS->{LeftToRight},           # Left to Right
-=cut
+
+#        PageStart    => $oWkS->{PageStart},            # Page number for start
+#        UsePage      => $oWkS->{UsePage},              # Use own start page number
+#        NoColor      => $oWkS->{NoColor},               # Print in blcak-white
+#        Draft        => $oWkS->{Draft},                 # Print in draft mode
+#        Notes        => $oWkS->{Notes},                 # Print notes
+#        LeftToRight  => $oWkS->{LeftToRight},           # Left to Right
+
 
         for (
             my $iC = $oWkS->{MinCol} ;
