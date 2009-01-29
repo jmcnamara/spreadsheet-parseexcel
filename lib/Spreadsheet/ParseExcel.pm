@@ -898,26 +898,33 @@ sub _subStandardWidth {
     $oBook->{StandardWidth} = _adjustColWidth( $oBook, $iW );
 }
 
-#------------------------------------------------------------------------------
-# _subDefColWidth(for Spreadsheet::ParseExcel)      DK:P319
-#------------------------------------------------------------------------------
+###############################################################################
+#
+# _subDefColWidth()
+#
+# Read the DEFCOLWIDTH Biff record. This gives the width in terms of chars
+# and is different from the width in the COLINFO record.
+#
 sub _subDefColWidth {
-    my ( $oBook, $bOp, $bLen, $sWk ) = @_;
-    return undef unless ( defined $oBook->{_CurSheet} );
-    my $iW = unpack( "v", $sWk );
-    $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{DefColWidth} =
-      _adjustColWidth( $oBook, $iW );
+
+    my ( $self, $record, $length, $data ) = @_;
+
+    my $width = unpack "v", $data;
+
+    # Adjustment for default Arial 10 width.
+    $width = 8.43 if $width == 8;
+
+    $self->{Worksheet}->[ $self->{_CurSheet} ]->{DefColWidth} = $width;
 }
 
 #------------------------------------------------------------------------------
 # _adjustColWidth (for Spreadsheet::ParseExcel)
 #------------------------------------------------------------------------------
 sub _adjustColWidth {
-    my ( $oBook, $iW ) = @_;
-    return ( ( $iW - 0xA0 ) / 256 );
 
-  #    ($oBook->{Worksheet}[$oBook->{_CurSheet}]->{SheetVersion} == verExcel97)?
-  #        (($iW -0xA0)/256) : $iW;
+    my ( $self, $width ) = @_;
+
+    return ( ( $width - 0xA0 ) / 256 );
 }
 
 #------------------------------------------------------------------------------
@@ -1524,6 +1531,12 @@ sub _subSETUP {
     $oWkS->{Notes}       = ( ( $iGrBit & 0x20 ) ? 1 : 0 );
     $oWkS->{NoOrient}    = ( ( $iGrBit & 0x40 ) ? 1 : 0 );
     $oWkS->{UsePage}     = ( ( $iGrBit & 0x80 ) ? 1 : 0 );
+
+    # The NoPls flag indicates that the values have not been taken from an
+    # actual printer and thus may not be accurate.
+
+    # Set default scale if NoPls otherwise it may be an invalid value of 0XFF.
+    $oWkS->{Scale} = 100 if $oWkS->{NoPls};
 
     # Workaround for a backward compatible typo.
     $oWkS->{HeaderMergin} = $oWkS->{HeaderMargin};
@@ -2233,13 +2246,13 @@ Return the L<"Cell"> object at row C<$row> and column C<$col> if it is defined. 
 
 =head2 row_range()
 
-Return a two-element list C<($min, $max)> containing the minimum and maximum defined rows in the worksheet. If there is no row defined C<$max> is smaller than C<$min>.
+Returns a two-element list C<($min, $max)> containing the minimum and maximum defined rows in the worksheet. If there is no row defined C<$max> is smaller than C<$min>.
 
     my ( $row_min, $row_max ) = $worksheet->row_range();
 
 =head2 col_range()
 
-Return a two-element list C<($min, $max)> containing the minimum and maximum of defined columns in the worksheet. If there is no column defined C<$max> is smaller than C<$min>.
+Returns a two-element list C<($min, $max)> containing the minimum and maximum of defined columns in the worksheet. If there is no column defined C<$max> is smaller than C<$min>.
 
     my ( $col_min, $col_max ) = $worksheet->col_range();
 
