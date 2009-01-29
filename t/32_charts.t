@@ -44,7 +44,7 @@ for my $index ( 0 .. 2 ) {
     $cell_value = $cell->value();
     $expected   = 'Sheet' . ( $index + 1 );
     $caption1   = " \tFile = $file, Sheet name = $expected";
-    $caption2   = " \t              Cell value = $expected";
+    $caption2   = " \t     + $file, Cell value = $expected";
 
     is( $sheetname,  $expected, $caption1 );
     is( $cell_value, $expected, $caption2 );
@@ -65,7 +65,7 @@ for my $index ( 0 .. 2 ) {
     $cell_value = $cell->value();
     $expected   = 'Sheet' . ( $index + 1 );
     $caption1   = " \tFile = $file, Sheet name = $expected";
-    $caption2   = " \t              Cell value = $expected";
+    $caption2   = " \t     + $file, Cell value = $expected";
 
     is( $sheetname,  $expected, $caption1 );
     is( $cell_value, $expected, $caption2 );
@@ -86,7 +86,7 @@ for my $index ( 0 .. 2 ) {
     $cell_value = $cell->value();
     $expected   = 'Sheet' . ( $index + 1 );
     $caption1   = " \tFile = $file, Sheet name = $expected";
-    $caption2   = " \t              Cell value = $expected";
+    $caption2   = " \t     + $file, Cell value = $expected";
 
     is( $sheetname,  $expected, $caption1 );
     is( $cell_value, $expected, $caption2 );
@@ -107,7 +107,7 @@ for my $index ( 0 .. 2 ) {
     $cell_value = $cell->value();
     $expected   = 'Sheet' . ( $index + 1 );
     $caption1   = " \tFile = $file, Sheet name = $expected";
-    $caption2   = " \t              Cell value = $expected";
+    $caption2   = " \t     + $file, Cell value = $expected";
 
     is( $sheetname,  $expected, $caption1 );
     is( $cell_value, $expected, $caption2 );
