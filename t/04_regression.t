@@ -6,14 +6,18 @@
 #
 # Regression tests for Worksheet properties and methods.
 #
+# The tests are mainly in pairs where direct hash access (old methodology) is tested along with the method calls (>= version 0.50 methodology).
+#
+# The tests in this testsuite are mainly for default Worksheet properties.
+# See also 05_regression.t for testing of non-default properties.
+#
 # reverse('©'), January 2009, John McNamara, jmcnamara@cpan.org
 #
 
 use strict;
 use warnings;
 use Spreadsheet::ParseExcel;
-use Spreadsheet::ParseExcel::Utility 'sheetRef';
-use Test::More 'no_plan';
+use Test::More tests => 72;
 
 ###############################################################################
 #
@@ -23,7 +27,6 @@ my $file     = 't/excel_files/worksheet_01.xls';
 my $parser   = Spreadsheet::ParseExcel->new();
 my $workbook = $parser->Parse($file);
 my $worksheet;
-my $cell;
 my $got_1;
 my $got_2;
 my $expected_1;
@@ -32,20 +35,21 @@ my $caption;
 
 ###############################################################################
 #
-# Test 1.
+# Test 1, 2
 #
-$caption    = "Test string in cell A1";
+$caption    = "Test cell value";
 $worksheet  = $workbook->worksheet('Sheet1');
-$cell       = $worksheet->get_cell( sheetRef('A1') );
 $expected_1 = 'This is a test workbook for worksheet regression';
-$got_1      = $cell->value();
+$got_1      = $worksheet->{Cells}->[0]->[0]->value();
+$got_2      = $worksheet->get_cell( 0, 0 )->value();
 $caption    = " \tWorksheet regression: " . $caption;
 
+is( $got_1, $expected_1, $caption );
 is( $got_1, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 1, 2.
+# Test 3, 4.
 #
 $caption    = "Test worksheet name";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -59,7 +63,51 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 3, 4.
+# Test 5, 6.
+#
+$caption    = "Test row range";
+$worksheet  = $workbook->worksheet('Sheet1');
+$expected_1 = 0;
+$expected_2 = 1;
+$got_1      = ( $worksheet->row_range() )[0];
+$got_2      = ( $worksheet->row_range() )[1];
+$caption    = " \tWorksheet regression: " . $caption;
+
+is( $got_1, $expected_1, $caption );
+is( $got_2, $expected_2, $caption );
+
+###############################################################################
+#
+# Test 7, 8.
+#
+$caption    = "Test cell range";
+$worksheet  = $workbook->worksheet('Sheet1');
+$expected_1 = 0;
+$expected_2 = 0;
+$got_1      = ( $worksheet->col_range() )[0];
+$got_2      = ( $worksheet->col_range() )[1];
+$caption    = " \tWorksheet regression: " . $caption;
+
+is( $got_1, $expected_1, $caption );
+is( $got_2, $expected_2, $caption );
+
+###############################################################################
+#
+# Test 9, 10.
+#
+$caption    = "Test worksheet number";
+$worksheet  = $workbook->worksheet('Sheet1');
+$expected_1 = 0;
+$got_1      = $worksheet->{_SheetNo};
+$got_2      = $worksheet->sheet_num();
+$caption    = " \tWorksheet regression: " . $caption;
+
+is( $got_1, $expected_1, $caption );
+is( $got_2, $expected_1, $caption );
+
+###############################################################################
+#
+# Test 11, 12.
 #
 $caption    = "Test default row height";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -73,7 +121,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 5, 6.
+# Test 13, 14.
 #
 $caption    = "Test default column width";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -101,7 +149,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 9, 10.
+# Test 17, 18.
 #
 $caption    = "Test column 'A' width";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -115,7 +163,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 11, 12.
+# Test 19, 20.
 #
 $caption    = "Test landscape print setting";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -129,7 +177,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 13, 14.
+# Test 21, 22.
 #
 $caption    = "Test print scale";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -143,7 +191,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 15, 16. Note, use Sheet3 for counter example.
+# Test 23, 24. Note, use Sheet3 for counter example.
 #
 $caption    = "Test print fit to page";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -157,7 +205,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 17, 18. Note, use Sheet3 for counter example.
+# Test 25, 26. Note, use Sheet3 for counter example.
 #
 $caption    = "Test print fit to page width";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -172,7 +220,7 @@ is( $got_2, $expected_2, $caption );
 
 ###############################################################################
 #
-# Test 19, 20. Note, use Sheet3 for counter example.
+# Test 27, 28. Note, use Sheet3 for counter example.
 #
 $caption    = "Test print fit to page height";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -187,7 +235,7 @@ is( $got_2, $expected_2, $caption );
 
 ###############################################################################
 #
-# Test 21, 22. Note, use Sheet3 for counter example.
+# Test 29, 30. Note, use Sheet3 for counter example.
 #
 $caption    = "Test paper size";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -201,7 +249,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 23, 24.
+# Test 31, 32.
 #
 $caption    = "Test user defined start page for printing";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -215,7 +263,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 25, 26.
+# Test 33, 34.
 #
 $caption    = "Test user defined start page for printing";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -230,7 +278,7 @@ is( $got_2, $expected_2, $caption );
 
 ###############################################################################
 #
-# Test 27, 28.
+# Test 35, 36.
 #
 $caption    = "Test left margin";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -244,7 +292,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 29, 30.
+# Test 37, 38.
 #
 $caption    = "Test right margin";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -258,7 +306,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 31, 32.
+# Test 39, 40.
 #
 $caption    = "Test top margin";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -272,7 +320,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 33, 34.
+# Test 41, 42.
 #
 $caption    = "Test bottom margin";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -286,7 +334,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 35, 36.
+# Test 43, 44.
 #
 $caption    = "Test header margin";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -300,7 +348,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 37, 38.
+# Test 45, 46.
 #
 $caption    = "Test footer margin";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -314,7 +362,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 39, 40.
+# Test 47, 48.
 #
 $caption    = "Test center horizontally";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -328,7 +376,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 41, 42.
+# Test 49, 50.
 #
 $caption    = "Test center vertically";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -342,7 +390,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 43, 44.
+# Test 51, 52.
 #
 $caption    = "Test header";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -356,7 +404,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 45, 46.
+# Test 53, 54.
 #
 $caption    = "Test Footer";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -370,7 +418,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 47, 48.
+# Test 55, 56.
 #
 $caption    = "Test print with gridlines";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -384,7 +432,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 49, 50.
+# Test 57, 58.
 #
 $caption    = "Test print with row and column headers";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -398,7 +446,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 51, 52.
+# Test 59, 60.
 #
 $caption    = "Test print in black and white";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -412,7 +460,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 53, 54.
+# Test 61, 62.
 #
 $caption    = "Test print in draft quality";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -426,7 +474,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 55, 56.
+# Test 63, 64.
 #
 $caption    = "Test print comments";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -440,7 +488,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 57, 58.
+# Test 65, 66.
 #
 $caption    = "Test print over then down";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -454,7 +502,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 59, 60.
+# Test 67, 68.
 #
 $caption    = "Test horizontal page breaks";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -468,7 +516,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 61, 62.
+# Test 69, 70.
 #
 $caption    = "Test vertical page breaks";
 $worksheet  = $workbook->worksheet('Sheet1');
@@ -482,7 +530,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Test 63, 64.
+# Test 71, 72.
 #
 $caption    = "Test merged areas";
 $worksheet  = $workbook->worksheet('Sheet1');
