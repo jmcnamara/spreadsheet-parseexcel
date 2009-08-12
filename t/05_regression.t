@@ -141,7 +141,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test row '3' height";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 48;
+$expected_1 = 48.75;
 $got_1      = $worksheet->{RowHeight}->[2];
 $got_2      = ( $worksheet->get_row_heights() )[2];
 $caption    = " \tWorksheet regression: " . $caption;
@@ -155,7 +155,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test column 'A' width";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 30.67;
+$expected_1 = 31;
 $got_1      = $worksheet->{ColWidth}->[0];
 $got_2      = ( $worksheet->get_col_widths() )[0];
 $caption    = " \tWorksheet regression: " . $caption;
