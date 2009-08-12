@@ -6,7 +6,8 @@
 #
 # Regression tests for Worksheet properties and methods.
 #
-# The tests are mainly in pairs where direct hash access (old methodology) is tested along with the method calls (>= version 0.50 methodology).
+# The tests are mainly in pairs where direct hash access (old methodology)
+# is tested along with the method calls (>= version 0.50 methodology).
 #
 # The tests in this testsuite are mainly for default Worksheet properties.
 # See also 05_regression.t for testing of non-default properties.
