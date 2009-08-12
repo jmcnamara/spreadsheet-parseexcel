@@ -162,14 +162,14 @@ $caption    = " \tWorksheet regression: " . $caption;
 
 is( $got_1, $expected_1, $caption );
 is( $got_2, $expected_1, $caption );
-__END__
+
 ###############################################################################
 #
 # Test 19, 20.
 #
 $caption    = "Test landscape print setting";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 1;
+$expected_1 = 0;
 $got_1      = $worksheet->{Landscape};
 $got_2      = $worksheet->is_portrait();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -183,7 +183,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test print scale";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 100;
+$expected_1 = 75;
 $got_1      = $worksheet->{Scale};
 $got_2      = $worksheet->get_print_scale();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -196,24 +196,25 @@ is( $got_2, $expected_1, $caption );
 # Test 23, 24. Note, use Sheet3 for counter example.
 #
 $caption    = "Test print fit to page";
-$worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 0;
+$worksheet  = $workbook->worksheet('Sheet3');
+$expected_1 = 1;
 $got_1      = $worksheet->{PageFit};
-$got_2      = $worksheet->get_fit_to_pages();
+$expected_2 = '2x3';
+$got_2      = join 'x', $worksheet->get_fit_to_pages();
 $caption    = " \tWorksheet regression: " . $caption;
 
 is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+is( $got_2, $expected_2, $caption );
 
 ###############################################################################
 #
 # Test 25, 26. Note, use Sheet3 for counter example.
 #
 $caption    = "Test print fit to page width";
-$worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 1;
+$worksheet  = $workbook->worksheet('Sheet3');
+$expected_1 = 2;
 $got_1      = $worksheet->{FitWidth};
-$expected_2 = 0;
+$expected_2 = 2;
 $got_2      = ( $worksheet->get_fit_to_pages() )[0];
 $caption    = " \tWorksheet regression: " . $caption;
 
@@ -225,10 +226,10 @@ is( $got_2, $expected_2, $caption );
 # Test 27, 28. Note, use Sheet3 for counter example.
 #
 $caption    = "Test print fit to page height";
-$worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 1;
+$worksheet  = $workbook->worksheet('Sheet3');
+$expected_1 = 3;
 $got_1      = $worksheet->{FitHeight};
-$expected_2 = 0;
+$expected_2 = 3;
 $got_2      = ( $worksheet->get_fit_to_pages() )[1];
 $caption    = " \tWorksheet regression: " . $caption;
 
@@ -237,11 +238,11 @@ is( $got_2, $expected_2, $caption );
 
 ###############################################################################
 #
-# Test 29, 30. Note, use Sheet3 for counter example.
+# Test 29, 30.
 #
 $caption    = "Test paper size";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 9;
+$expected_1 = 11;
 $got_1      = $worksheet->{PaperSize};
 $got_2      = $worksheet->get_paper();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -255,23 +256,9 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test user defined start page for printing";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 0;
-$got_1      = $worksheet->{UsePage};
-$got_2      = $worksheet->get_start_page();
-$caption    = " \tWorksheet regression: " . $caption;
-
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
-
-###############################################################################
-#
-# Test 33, 34.
-#
-$caption    = "Test user defined start page for printing";
-$worksheet  = $workbook->worksheet('Sheet2');
 $expected_1 = 1;
-$got_1      = $worksheet->{PageStart};
-$expected_2 = 0;
+$got_1      = $worksheet->{UsePage};
+$expected_2 = 2;
 $got_2      = $worksheet->get_start_page();
 $caption    = " \tWorksheet regression: " . $caption;
 
@@ -280,11 +267,25 @@ is( $got_2, $expected_2, $caption );
 
 ###############################################################################
 #
+# Test 33, 34.
+#
+$caption    = "Test user defined start page for printing";
+$worksheet  = $workbook->worksheet('Sheet2');
+$expected_1 = 2;
+$got_1      = $worksheet->{PageStart};
+$got_2      = $worksheet->get_start_page();
+$caption    = " \tWorksheet regression: " . $caption;
+
+is( $got_1, $expected_1, $caption );
+is( $got_2, $expected_1, $caption );
+
+###############################################################################
+#
 # Test 35, 36.
 #
 $caption    = "Test left margin";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = undef;
+$expected_1 = 1.2;
 $got_1      = $worksheet->{LeftMargin};
 $got_2      = $worksheet->get_margin_left();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -298,7 +299,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test right margin";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = undef;
+$expected_1 = 1.4;
 $got_1      = $worksheet->{RightMargin};
 $got_2      = $worksheet->get_margin_right();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -312,7 +313,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test top margin";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = undef;
+$expected_1 = 1.1;
 $got_1      = $worksheet->{TopMargin};
 $got_2      = $worksheet->get_margin_top();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -326,7 +327,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test bottom margin";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = undef;
+$expected_1 = 1.5;
 $got_1      = $worksheet->{BottomMargin};
 $got_2      = $worksheet->get_margin_bottom();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -354,7 +355,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test footer margin";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 0.5;
+$expected_1 = 1.6;
 $got_1      = $worksheet->{FooterMargin};
 $got_2      = $worksheet->get_margin_footer();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -368,7 +369,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test center horizontally";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 0;
+$expected_1 = 1;
 $got_1      = $worksheet->{HCenter};
 $got_2      = $worksheet->is_centered_horizontally();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -382,7 +383,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test center vertically";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 0;
+$expected_1 = 1;
 $got_1      = $worksheet->{VCenter};
 $got_2      = $worksheet->is_centered_vertically();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -396,7 +397,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test header";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = undef;
+$expected_1 = '&CThis is the header';
 $got_1      = $worksheet->{Header};
 $got_2      = $worksheet->get_header();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -410,7 +411,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test Footer";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = undef;
+$expected_1 = '&LThis is the footer';
 $got_1      = $worksheet->{Footer};
 $got_2      = $worksheet->get_footer();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -424,7 +425,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test print with gridlines";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 0;
+$expected_1 = 1;
 $got_1      = $worksheet->{PrintGrid};
 $got_2      = $worksheet->is_print_gridlines();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -438,7 +439,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test print with row and column headers";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 0;
+$expected_1 = 1;
 $got_1      = $worksheet->{PrintHeaders};
 $got_2      = $worksheet->is_print_row_col_headers();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -452,7 +453,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test print in black and white";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 0;
+$expected_1 = 1;
 $got_1      = $worksheet->{NoColor};
 $got_2      = $worksheet->is_print_black_and_white();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -466,7 +467,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test print in draft quality";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 0;
+$expected_1 = 1;
 $got_1      = $worksheet->{Draft};
 $got_2      = $worksheet->is_print_draft();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -480,7 +481,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test print comments";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 0;
+$expected_1 = 1;
 $got_1      = $worksheet->{Notes};
 $got_2      = $worksheet->is_print_comments();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -494,7 +495,7 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test print over then down";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = 0;
+$expected_1 = 1;
 $got_1      = $worksheet->{LeftToRight};
 $got_2      = $worksheet->get_print_order();
 $caption    = " \tWorksheet regression: " . $caption;
@@ -508,13 +509,13 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test horizontal page breaks";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = undef;
+$expected_1 = [6, 20];
 $got_1      = $worksheet->{HPageBreak};
 $got_2      = $worksheet->get_h_pagebreaks();
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+is_deeply( $got_1, $expected_1, $caption );
+is_deeply( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
@@ -522,13 +523,13 @@ is( $got_2, $expected_1, $caption );
 #
 $caption    = "Test vertical page breaks";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = undef;
+$expected_1 = [2];
 $got_1      = $worksheet->{VPageBreak};
 $got_2      = $worksheet->get_v_pagebreaks();
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+is_deeply( $got_1, $expected_1, $caption );
+is_deeply( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
