@@ -70,7 +70,7 @@ is( $got_2, $expected_1, $caption );
 $caption    = "Test row range";
 $worksheet  = $workbook->worksheet('Sheet2');
 $expected_1 = 0;
-$expected_2 = 28;
+$expected_2 = 30;
 $got_1      = ( $worksheet->row_range() )[0];
 $got_2      = ( $worksheet->row_range() )[1];
 $caption    = " \tWorksheet regression: " . $caption;
@@ -537,12 +537,12 @@ is_deeply( $got_2, $expected_1, $caption );
 #
 $caption    = "Test merged areas";
 $worksheet  = $workbook->worksheet('Sheet2');
-$expected_1 = undef;
+$expected_1 = [ [29, 1, 30, 4] ];
 $got_1      = $worksheet->{MergedArea};
 $got_2      = $worksheet->get_merged_areas();
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+is_deeply( $got_1, $expected_1, $caption );
+is_deeply( $got_2, $expected_1, $caption );
 
 __END__
