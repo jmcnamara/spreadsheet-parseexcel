@@ -571,28 +571,35 @@ sub _subBoolErr {
     _SetDimension( $oBook, $iR, $iC, $iC );
 }
 
-#------------------------------------------------------------------------------
-# _subRK (for Spreadsheet::ParseExcel)  DK:P401
-#------------------------------------------------------------------------------
+###############################################################################
+#
+# _subRK()
+#
+# Decode the RK BIFF record.
+#
 sub _subRK {
-    my ( $oBook, $bOp, $bLen, $sWk ) = @_;
-    my ( $iR, $iC ) = unpack( "v3", $sWk );
 
-    my ( $iF, $sTxt ) = _UnpackRKRec( substr( $sWk, 4, 6 ) );
+    my ( $workbook, $biff_number, $length, $data ) = @_;
+
+    my ( $row, $col, $format_index, $rk_number ) = unpack( 'vvvV', $data );
+
+    my $number = _decode_rk_number($rk_number);
+
     _NewCell(
-        $oBook, $iR, $iC,
+        $workbook, $row, $col,
         Kind     => 'RK',
-        Val      => $sTxt,
-        FormatNo => $iF,
-        Format   => $oBook->{Format}[$iF],
+        Val      => $number,
+        FormatNo => $format_index,
+        Format   => $workbook->{Format}->[$format_index],
         Numeric  => 1,
         Code     => undef,
-        Book     => $oBook,
+        Book     => $workbook,
     );
 
-    #2.MaxRow, MaxCol, MinRow, MinCol
-    _SetDimension( $oBook, $iR, $iC, $iC );
+    # Store the max and min row/col values.
+    _SetDimension( $workbook, $row, $col, $col );
 }
+
 
 #------------------------------------------------------------------------------
 # _subArray (for Spreadsheet::ParseExcel)   DK:P297
@@ -733,35 +740,48 @@ sub _subLabel {
     _SetDimension( $oBook, $iR, $iC, $iC );
 }
 
-#------------------------------------------------------------------------------
-# _subMulRK (for Spreadsheet::ParseExcel)   DK:P349
-#------------------------------------------------------------------------------
+
+###############################################################################
+#
+# _subMulRK()
+#
+# Decode the Multiple RK BIFF record.
+#
 sub _subMulRK {
-    my ( $oBook, $bOp, $bLen, $sWk ) = @_;
-    return if ( $oBook->{SheetCount} <= 0 );
 
-    my ( $iR, $iSc ) = unpack( "v2", $sWk );
-    my $iEc = unpack( "v", substr( $sWk, length($sWk) - 2, 2 ) );
+    my ( $workbook, $biff_number, $length, $data ) = @_;
 
-    my $iPos = 4;
-    for ( my $iC = $iSc ; $iC <= $iEc ; $iC++ ) {
-        my ( $iF, $lVal ) = _UnpackRKRec( substr( $sWk, $iPos, 6 ), $iR, $iC );
+    # JMN: I don't know why this is here.
+    return if $workbook->{SheetCount} <= 0;
+
+    my ( $row, $first_col ) = unpack( "v2", $data );
+    my $last_col = unpack( "v", substr( $data, length($data) - 2, 2 ) );
+
+    # Iterate over the RK array and decode the data.
+    my $pos = 4;
+    for my $col ( $first_col .. $last_col ) {
+
+        my $data = substr( $data, $pos, 6 );
+        my ( $format_index, $rk_number ) = unpack 'vV', $data;
+        my $number = _decode_rk_number($rk_number);
+
         _NewCell(
-            $oBook, $iR, $iC,
+            $workbook, $row, $col,
             Kind     => 'MulRK',
-            Val      => $lVal,
-            FormatNo => $iF,
-            Format   => $oBook->{Format}[$iF],
+            Val      => $number,
+            FormatNo => $format_index,
+            Format   => $workbook->{Format}->[$format_index],
             Numeric  => 1,
             Code     => undef,
-            Book     => $oBook,
+            Book     => $workbook,
         );
-        $iPos += 6;
+        $pos += 6;
     }
 
-    #2.MaxRow, MaxCol, MinRow, MinCol
-    _SetDimension( $oBook, $iR, $iSc, $iEc );
+    # Store the max and min row/col values.
+    _SetDimension( $workbook, $row, $first_col, $last_col );
 }
+
 
 #------------------------------------------------------------------------------
 # _subMulBlank (for Spreadsheet::ParseExcel) DK:P349
@@ -1752,60 +1772,51 @@ sub DecodeBoolErr {
     }
 }
 
-#------------------------------------------------------------------------------
-# _UnpackRKRec (for Spreadsheet::ParseExcel)    DK:P 401
-#------------------------------------------------------------------------------
-sub _UnpackRKRec {
-    my ($sArg) = @_;
 
-    my $iF = unpack( 'v', substr( $sArg, 0, 2 ) );
+###############################################################################
+#
+# _decode_rk_number()
+#
+# Convert an encoded RK number into a real number. The RK encoding is
+# explained in some detail in the MS docs. It is a way of storing applicable
+# ints and doubles in 32bits (30 data + 2 info bits) in order to save space.
+#
+sub _decode_rk_number {
 
-    my $lWk = substr( $sArg, 2, 4 );
-    my $sWk = pack( "c4", reverse( unpack( "c4", $lWk ) ) );
-    my $iPtn = unpack( "c", substr( $sWk, 3, 1 ) ) & 0x03;
-    if ( $iPtn == 0 ) {
-        return ( $iF,
-            unpack( "d", ($BIGENDIAN) ? $sWk . "\0\0\0\0" : "\0\0\0\0" . $lWk )
-        );
-    }
-    elsif ( $iPtn == 1 ) {
+    my $rk_number = shift;
+    my $number;
 
-        # http://rt.cpan.org/Ticket/Display.html?id=18063
-        my $u31 = unpack( "c", substr( $sWk, 3, 1 ) ) & 0xFC;
-        $u31 |= 0xFFFFFF00
-          if ( $u31 & 0x80 );    # raise neg bits for neg 1-byte value
-        substr( $sWk, 3, 1 ) &= pack( 'c', $u31 );
+    # Check the main RK type.
+    if($rk_number & 0x02)  {
+        # RK Type 2 and 4, a packed integer.
 
-        my $u01 = unpack( "c", substr( $lWk, 0, 1 ) ) & 0xFC;
-        $u01 |= 0xFFFFFF00
-          if ( $u01 & 0x80 );    # raise neg bits for neg 1-byte value
-        substr( $lWk, 0, 1 ) &= pack( 'c', $u01 );
+        # Shift off the info bits.
+        $number = $rk_number >> 2;
 
-        return ( $iF,
-            unpack( "d", ($BIGENDIAN) ? $sWk . "\0\0\0\0" : "\0\0\0\0" . $lWk )
-              / 100 );
-    }
-    elsif ( $iPtn == 2 ) {
-        my $sUB = unpack( "B32", $sWk );
-        my $sWkLB =
-          pack( "B32", ( substr( $sUB, 0, 1 ) x 2 ) . substr( $sUB, 0, 30 ) );
-        my $sWkL =
-          ($BIGENDIAN)
-          ? $sWkLB
-          : pack( "c4", reverse( unpack( "c4", $sWkLB ) ) );
-        return ( $iF, unpack( "i", $sWkL ) );
+        # Convert from unsigned to signed if required.
+        $number -= 0x40000000 if $number & 0x20000000;
     }
     else {
-        my $sUB = unpack( "B32", $sWk );
-        my $sWkLB =
-          pack( "B32", ( substr( $sUB, 0, 1 ) x 2 ) . substr( $sUB, 0, 30 ) );
-        my $sWkL =
-          ($BIGENDIAN)
-          ? $sWkLB
-          : pack( "c4", reverse( unpack( "c4", $sWkLB ) ) );
-        return ( $iF, unpack( "i", $sWkL ) / 100 );
+        # RK Type 1 and 3, a truncated IEEE Double.
+
+        # Pack the RK number into the high 30 bits of an IEEE double.
+        $number = pack "VV", 0x0000, $rk_number & 0xFFFFFFFC;
+
+        # Reverse the packed IEEE double on big-endian machines.
+        $number = reverse $number if $BIGENDIAN;
+
+        # Unpack the number.
+        $number = unpack "d", $number;
     }
+
+
+    # RK Types 3 and 4 were multiplied by 100 prior to encoding.
+    $number /= 100 if $rk_number & 0x01;
+
+    return $number;
 }
+
+
 
 ###############################################################################
 #
