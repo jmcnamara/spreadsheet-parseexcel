@@ -1,4 +1,4 @@
-###############################################################################
+##############################################################################
 #
 # Spreadsheet::ParseExcel - Extract information from an Excel file.
 #
@@ -49,7 +49,7 @@ use constant verBIFF2   => 0x00;
 use constant verBIFF3   => 0x02;
 use constant verBIFF4   => 0x04;
 use constant verBIFF5   => 0x08;
-use constant verBIFF8   => 0x18;               #Added (Not in BOOK)
+use constant verBIFF8   => 0x18;
 
 my %ProcTbl = (
 
@@ -915,7 +915,7 @@ sub _subDefaultRowHeight {
 sub _subStandardWidth {
     my ( $oBook, $bOp, $bLen, $sWk ) = @_;
     my $iW = unpack( "v", $sWk );
-    $oBook->{StandardWidth} = _adjustColWidth( $oBook, $iW );
+    $oBook->{StandardWidth} = _convert_col_width( $oBook, $iW );
 }
 
 ###############################################################################
@@ -929,7 +929,7 @@ sub _subDefColWidth {
 
     my ( $self, $record, $length, $data ) = @_;
 
-    my $width = unpack "v", $data;
+    my $width = unpack 'v', $data;
 
     # Adjustment for default Arial 10 width.
     $width = 8.43 if $width == 8;
@@ -937,15 +937,39 @@ sub _subDefColWidth {
     $self->{Worksheet}->[ $self->{_CurSheet} ]->{DefColWidth} = $width;
 }
 
-#------------------------------------------------------------------------------
-# _adjustColWidth (for Spreadsheet::ParseExcel)
-#------------------------------------------------------------------------------
-sub _adjustColWidth {
+###############################################################################
+#
+# _convert_col_width()
+#
+# Converts from the internal Excel column width units to user units seen in the
+# interface. It is first necessary to convert the internal width to pixels and
+# then to user units. The conversion is specific to a default font of Arial 10.
+# TODO, the conversion should be extended to other fonts and sizes.
+#
+sub _convert_col_width {
 
-    my ( $self, $width ) = @_;
+    my $self        = shift;
+    my $excel_width = shift;
 
-    return ( ( $width - 0xA0 ) / 256 );
+    # Convert from Excel units to pixels (rounded up).
+    my $pixels = int( 0.5 + $excel_width * 7 / 256 );
+
+    # Convert from pixels to user units.
+    # The conversion is different for columns <= 1 user unit (12 pixels).
+    my $user_width;
+    if ( $pixels <= 12 ) {
+        $user_width = $pixels / 12;
+    }
+    else {
+        $user_width = ( $pixels - 5 ) / 7;
+    }
+
+    # Round up to 2 decimal places.
+    $user_width = int( $user_width * 100 + 0.5 ) / 100;
+
+    return $user_width;
 }
+
 
 #------------------------------------------------------------------------------
 # _subColInfo (for Spreadsheet::ParseExcel) DK:P309
@@ -956,7 +980,7 @@ sub _subColInfo {
     my ( $iSc, $iEc, $iW, $iXF, $iGr ) = unpack( "v5", $sWk );
     for ( my $i = $iSc ; $i <= $iEc ; $i++ ) {
         $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{ColWidth}[$i] =
-          ( $iGr & 0x01 ) ? 0 : _adjustColWidth( $oBook, $iW );
+          ( $iGr & 0x01 ) ? 0 : _convert_col_width( $oBook, $iW );
 
         #0x01 means HIDDEN
         $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{ColFmtNo}[$i] = $iXF;
