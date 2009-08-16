@@ -1287,7 +1287,7 @@ sub xls2csv {
     my $oWkS = $oBook->{Worksheet}[$sheet];
 
     # now check that the region exists in the file
-    # if not trucnate to the possible region
+    # if not truncate to the possible region
     # output a warning msg
     if ( $start[1] < $oWkS->{MinCol} ) {
         print STDERR int2col( $start[1] )
