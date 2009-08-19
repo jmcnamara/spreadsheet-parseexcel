@@ -15,7 +15,7 @@ use warnings;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.49';
+our $VERSION = '0.51';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -104,7 +104,7 @@ my %ProcTbl = (
     0x205 => \&_subBoolErr,                    # BoolErr
     0x207 => \&_subString,                     # STRING
     0x208 => \&_subRow,                        # RowData
-    0x221 => \&_subArray,                      #Array (Consider)
+    0x221 => \&_subArray,                      # Array (Consider)
     0x225 => \&_subDefaultRowHeight,           # Consider
 
     0x31  => \&_subFont,                       # Font
@@ -245,9 +245,9 @@ sub Parse {
             );
         }
 
-        # If the low byte of the BIFF record is 0x09 then it is a BOF record.
+        # If the BIFF record matches 0x0*09 then it is a BOF record.
         # We reset the _skip_chart flag to ensure we check the sheet type.
-        if ( ( $bOp & 0xFF ) == 0x09 ) {
+        if ( ( $bOp & 0xF0FF ) == 0x09 ) {
             $oBook->{_skip_chart} = 0;
         }
 
@@ -2086,7 +2086,7 @@ __END__
 
 =head1 NAME
 
-Spreadsheet::ParseExcel - Extract information from an Excel file.
+Spreadsheet::ParseExcel - Read information from an Excel file.
 
 =head1 SYNOPSIS
 
@@ -2120,7 +2120,9 @@ Spreadsheet::ParseExcel - Extract information from an Excel file.
 
 =head1 DESCRIPTION
 
-The Spreadsheet::ParseExcel module can be used to read information from an Excel 95-2003 file.
+The Spreadsheet::ParseExcel module can be used to read information from Excel 95-2003 binary files.
+
+The module cannot read files in the Excel 2007 Open XML XLSX format. See the Spreadsheet::XLSX module instead.
 
 =head1 Parser
 
@@ -2130,10 +2132,11 @@ The C<new()> method is used to create a new C<Spreadsheet::ParseExcel> parser ob
 
     my $parser = Spreadsheet::ParseExcel->new();
 
-As an B<advanced> feature it is also possible to pass a call-back handler to the parser to control the parsing of the spreadsheet.
+As an advanced feature it is also possible to pass a call-back handler to the parser to control the parsing of the spreadsheet.
 
     $parser = Spreadsheet::ParseExcel->new(
-                        [ CellHandler => \&cell_handler,
+                        [
+                          CellHandler => \&cell_handler,
                           NotSetCell  => 1,
                         ]);
 
@@ -2153,6 +2156,8 @@ If an error occurs C<Parse()> returns C<undef>.
 The C<$filename> parameter is generally the file to be parsed. However, it can also be a filehandle or a scalar reference.
 
 The optional C<$formatter> array ref can be an reference to a L<"Formatter Class"> to format the value of cells.
+
+Note: Versions of Spreadsheet::ParseExcel prior to 0.50 also documented a Workbook C<Parse()> method as a syntactic shortcut for the above C<new()> and C<Parse()> combination. This is now deprecated since it breaks error handling.
 
 
 =head2 ColorIdxToRGB()
@@ -2175,17 +2180,6 @@ The Workbook class has methods and properties that are outlined in the following
 
 =head1 Workbook Methods
 
-=head2 Parse()
-
-As a syntactic shorthand you can create a Parser and Workbook object in one go using the Workbook C<Parse()> method. The following examples are equivalent:
-
-    # Method 1
-    my $parser   = Spreadsheet::ParseExcel->new();
-    my $workbook = $parser->Parse('Book1.xls');
-
-    # Method 2
-    my $workbook = Spreadsheet::ParseExcel::Workbook->Parse('Book1.xls');
-
 
 =head2 worksheets()
 
@@ -2195,12 +2189,12 @@ Returns an array of L<"Worksheet"> objects. This was most commonly used to itera
         ...
     }
 
-=head2 Worksheet()
+=head2 worksheet()
 
-The C<Worksheet()> method returns a single C<Worksheet> object using either its name or index:
+The C<worksheet()> method returns a single C<Worksheet> object using either its name or index:
 
-    $worksheet = $workbook->Worksheet('Sheet1');
-    $worksheet = $workbook->Worksheet(0);
+    $worksheet = $workbook->worksheet('Sheet1');
+    $worksheet = $workbook->worksheet(0);
 
 Returns C<undef> if the sheet name or index doesn't exist.
 
@@ -2265,13 +2259,49 @@ Returns an array ref  of print title hash refs. Each print title is as follows:
     }
 
 
-
-
 =head1 Worksheet
 
-The C<Spreadsheet::ParseExcel::Worksheet> class has the following methods and properties.
+The C<Spreadsheet::ParseExcel::Worksheet> class encapsulates the properties of an Excel worksheet. It has the following methods:
 
-=head1 Worksheet methods
+    # Commonly used methods.
+    $worksheet->get_cell()
+    $worksheet->row_range()
+    $worksheet->col_range()
+    $worksheet->get_name()
+
+    # Infrequently used methods.
+    $worksheet->get_h_pagebreaks()
+    $worksheet->get_v_pagebreaks()
+    $worksheet->get_merged_areas()
+    $worksheet->get_row_heights()
+    $worksheet->get_col_widths()
+    $worksheet->get_default_row_height()
+    $worksheet->get_default_col_width()
+    $worksheet->get_header()
+    $worksheet->get_footer()
+    $worksheet->get_margin_left()
+    $worksheet->get_margin_right()
+    $worksheet->get_margin_top()
+    $worksheet->get_margin_bottom()
+    $worksheet->get_margin_header()
+    $worksheet->get_margin_footer()
+    $worksheet->get_paper()
+    $worksheet->get_start_page()
+    $worksheet->get_print_order()
+    $worksheet->get_print_scale()
+    $worksheet->get_fit_to_pages()
+    $worksheet->is_portrait()
+    $worksheet->is_centered_horizontally()
+    $worksheet->is_centered_vertically()
+    $worksheet->is_print_gridlines()
+    $worksheet->is_print_row_col_headers()
+    $worksheet->is_print_black_and_white()
+    $worksheet->is_print_draft()
+    $worksheet->is_print_comments()
+
+The Spreadsheet::ParseExcel::Worksheet class exposes a lot of methods but in general very few are required unless you are writing an advanced filter.
+
+The most commonly used methods are shown below. The others are documented in L<Spreadsheet::ParseExcel::Worksheet>.
 
 =head2 get_cell($row, $col)
 
@@ -2279,11 +2309,13 @@ Return the L<"Cell"> object at row C<$row> and column C<$col> if it is defined. 
 
     my $cell = $worksheet->get_cell($row, $col);
 
+
 =head2 row_range()
 
 Returns a two-element list C<($min, $max)> containing the minimum and maximum defined rows in the worksheet. If there is no row defined C<$max> is smaller than C<$min>.
 
     my ( $row_min, $row_max ) = $worksheet->row_range();
+
 
 =head2 col_range()
 
@@ -2291,215 +2323,16 @@ Returns a two-element list C<($min, $max)> containing the minimum and maximum of
 
     my ( $col_min, $col_max ) = $worksheet->col_range();
 
-=head1 Worksheet Properties
 
-A worksheet object exposes a number of properties as shown below:
+=head2 get_name()
 
-    $worksheet->{Name}
-    $worksheet->{DefRowHeight}
-    $worksheet->{DefColWidth}
-    $worksheet->{RowHeight}->[$row]
-    $worksheet->{ColWidth}->[$col]
-    $worksheet->{Cells}->[$row]->[$col]
-    $worksheet->{Landscape}
-    $worksheet->{Scale}
-    $worksheet->{PageFit}
-    $worksheet->{FitWidth}
-    $worksheet->{FitHeight}
-    $worksheet->{PaperSize}
-    $worksheet->{PageStart}
-    $worksheet->{UsePage}
-    $worksheet->{$margin}
-    $worksheet->{HCenter}
-    $worksheet->{VCenter}
-    $worksheet->{Header}
-    $worksheet->{Footer}
-    $worksheet->{PrintGrid}
-    $worksheet->{PrintHeaders}
-    $worksheet->{NoColor}
-    $worksheet->{Draft}
-    $worksheet->{Notes}
-    $worksheet->{LeftToRight}
-    $worksheet->{HPageBreak}
-    $worksheet->{VPageBreak}
-    $worksheet->{MergedArea}
+The C<get_name()> method returns the name of the worksheet, such as 'Sheet1'.
 
-These properties are generally only of interest to advanced users. Casual users can skip this section.
+    my $name = $worksheet->get_name();
 
-=head2 $worksheet->{Name}
+=head2 Other Worksheet methods
 
-Returns the name of the worksheet such as 'Sheet1'.
-
-=head2 $worksheet->{DefRowHeight}
-
-Returns default height of the rows in the worksheet.
-
-=head2 $worksheet->{DefColWidth}
-
-Returns default width of columns in the worksheet.
-
-=head2 $worksheet->{RowHeight}->[$row]
-
-Returns an array of row heights.
-
-=head2 $worksheet->{ColWidth}->[$col]
-
-Returns array of column widths. A value of C<undef> means the column has the C<DefColWidth>.
-
-=head2 $worksheet->{Cells}->[$row]->[$col]
-
-Returns array of L<"Cell"> objects in the worksheet.
-
-    my $cell = $worksheet->{Cells}->[$row]->[$col];
-
-=head2 $worksheet->{Landscape}
-
-Returns 0 for horizontal or 1 for vertical.
-
-=head2 $worksheet->{Scale}
-
-Returns the worksheet print scale.
-
-=head2 $worksheet->{PageFit}
-
-Returns true if the "fit to" print option is set.
-
-=head2 $worksheet->{FitWidth}
-
-Return the number of pages in the "fit to width" option.
-
-=head2 $worksheet->{FitHeight}
-
-Return the number of pages in the "fit to height" option.
-
-=head2 $worksheet->{PaperSize}
-
-Returns the printer paper size. The value corresponds to the formats shown below:
-
-
-    Index   Paper format            Paper size
-    =====   ============            ==========
-      0     Printer default         -
-      1     Letter                  8 1/2 x 11 in
-      2     Letter Small            8 1/2 x 11 in
-      3     Tabloid                 11 x 17 in
-      4     Ledger                  17 x 11 in
-      5     Legal                   8 1/2 x 14 in
-      6     Statement               5 1/2 x 8 1/2 in
-      7     Executive               7 1/4 x 10 1/2 in
-      8     A3                      297 x 420 mm
-      9     A4                      210 x 297 mm
-     10     A4 Small                210 x 297 mm
-     11     A5                      148 x 210 mm
-     12     B4                      250 x 354 mm
-     13     B5                      182 x 257 mm
-     14     Folio                   8 1/2 x 13 in
-     15     Quarto                  215 x 275 mm
-     16     -                       10x14 in
-     17     -                       11x17 in
-     18     Note                    8 1/2 x 11 in
-     19     Envelope  9             3 7/8 x 8 7/8
-     20     Envelope 10             4 1/8 x 9 1/2
-     21     Envelope 11             4 1/2 x 10 3/8
-     22     Envelope 12             4 3/4 x 11
-     23     Envelope 14             5 x 11 1/2
-     24     C size sheet            -
-     25     D size sheet            -
-     26     E size sheet            -
-     27     Envelope DL             110 x 220 mm
-     28     Envelope C3             324 x 458 mm
-     29     Envelope C4             229 x 324 mm
-     30     Envelope C5             162 x 229 mm
-     31     Envelope C6             114 x 162 mm
-     32     Envelope C65            114 x 229 mm
-     33     Envelope B4             250 x 353 mm
-     34     Envelope B5             176 x 250 mm
-     35     Envelope B6             176 x 125 mm
-     36     Envelope                110 x 230 mm
-     37     Monarch                 3.875 x 7.5 in
-     38     Envelope                3 5/8 x 6 1/2 in
-     39     Fanfold                 14 7/8 x 11 in
-     40     German Std Fanfold      8 1/2 x 12 in
-     41     German Legal Fanfold    8 1/2 x 13 in
-     256    User defined
-
-The two most common paper sizes are C<1 = "US Letter"> and C<9 = A4>.
-
-=head2 $worksheet->{PageStart}
-
-Returns the page number where printing starts.
-
-=head2 $worksheet->{UsePage}
-
-Returns whether a user defined start page is in use.
-
-=head2 $worksheet->{$margin}
-
-Returns the worksheet margin for left, right, top, bottom, header and footer where C<$margin> has one of the following values:
-
-    LeftMargin
-    RightMargin
-    TopMargin
-    BottomMargin
-    HeaderMargin
-    FooterMargin
-
-=head2 $worksheet->{HCenter}
-
-Returns true if the "Center horizontally when Printing" option is set.
-
-=head2 $worksheet->{VCenter}
-
-Returns true if the "Center vertically when Printing" option is set.
-
-=head2 $worksheet->{Header}
-
-Returns the print header string. This can contain control codes for alignment and font properties. Refer to the Excel on-line help on headers and footers or to the Spreadsheet::WriteExcel documentation for C<set_header()>.
-
-=head2 $worksheet->{Footer}
-
-Returns the print footer string. This can contain control codes for alignment and font properties. Refer to the Excel on-line help on headers and footers or to the Spreadsheet::WriteExcel documentation for C<set_header()>.
-
-=head2 $worksheet->{PrintGrid}
-
-Returns true if Print with gridlines is set.
-
-=head2 $worksheet->{PrintHeaders}
-
-Returns true if Print with headings is set.
-
-=head2 $worksheet->{NoColor}
-
-Returns true if Print in black and white is set.
-
-=head2 $worksheet->{Draft}
-
-Returns true if the "draft mode" print option is set.
-
-=head2 $worksheet->{Notes}
-
-Returns true if print with notes option is set.
-
-=head2 $worksheet->{LeftToRight}
-
-Returns the print order for the worksheet. Returns 0 for "left to right" printing and 1 for "top down" printing.
-
-=head2 $worksheet->{HPageBreak}
-
-Return an array ref of horizontal page breaks.
-
-=head2 $worksheet->{VPageBreak}
-
-Return an array ref of vertical page breaks.
-
-=head2 $worksheet->{MergedArea}
-
-Return an array ref of merged areas. Each merged area is:
-
-    [ $start_row, $start_col, $end_row, $end_col]
-
-
-
+For other, less commonly used, Worksheet methods see L<Spreadsheet::ParseExcel::Worksheet>.
 
 =head1 Cell
 
@@ -2768,7 +2601,7 @@ The formatter class C<Spreadsheet::ParseExcel::Fmt*> should provide the followin
 
 =head2 ChkType($self, $is_numeric, $format_index)
 
-Method to check the the type of data in the cell. Should return C<Date>, C<Numeric> or C<Text>. It is passed the following parameters:
+Method to check the type of data in the cell. Should return C<Date>, C<Numeric> or C<Text>. It is passed the following parameters:
 
 =over
 

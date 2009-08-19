@@ -38,6 +38,10 @@ sub ParseAbort {
 # Spreadsheet::ParseExcel::Workbook->Parse
 #------------------------------------------------------------------------------
 sub Parse {
+
+    # NOTE: This method is deprecated. It doesn't conform to the the S::PE
+    # Parse() method and it breaks error handling.
+
     my ( $class, $source, $oFmt ) = @_;
     my $excel = Spreadsheet::ParseExcel->new;
     my $workbook = $excel->Parse( $source, $oFmt );

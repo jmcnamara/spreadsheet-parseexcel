@@ -19,7 +19,7 @@ use strict;
 use warnings;
 use Scalar::Util qw(weaken);
 
-our $VERSION = '0.48';
+our $VERSION = '0.50';
 
 ###############################################################################
 #
@@ -569,7 +569,7 @@ This module is used in conjunction with Spreadsheet::ParseExcel. See the documen
 
 =head1 Methods
 
-The following Worksheet methods are available:
+The C<Spreadsheet::ParseExcel::Worksheet> class encapsulates the properties of an Excel worksheet. It has the following methods:
 
     $worksheet->get_cell()
     $worksheet->row_range()
@@ -605,22 +605,23 @@ The following Worksheet methods are available:
     $worksheet->is_print_comments()
 
 
-=head2 get_cell()
+=head2 get_cell($row, $col)
 
-The C<get_cell()> method returns the L<"Cell"> object at row C<$row> and column C<$col>.
+Return the L<"Cell"> object at row C<$row> and column C<$col> if it is defined. Otherwise returns undef.
 
-    my $cell = $worksheet->get_cell();
-
-Returns 0 if the property isn't set.
-
+    my $cell = $worksheet->get_cell($row, $col);
 
 =head2 row_range()
 
-The C<row_range()> method returns TODO.
+Returns a two-element list C<($min, $max)> containing the minimum and maximum defined rows in the worksheet. If there is no row defined C<$max> is smaller than C<$min>.
 
-    my $row_range = $worksheet->row_range();
+    my ( $row_min, $row_max ) = $worksheet->row_range();
 
-Returns 0 if the property isn't set.
+=head2 col_range()
+
+Returns a two-element list C<($min, $max)> containing the minimum and maximum of defined columns in the worksheet. If there is no column defined C<$max> is smaller than C<$min>.
+
+    my ( $col_min, $col_max ) = $worksheet->col_range();
 
 
 =head2 col_range()
@@ -638,8 +639,6 @@ The C<get_name()> method returns the name of the worksheet.
 
     my $name = $worksheet->get_name();
 
-Returns 0 if the property isn't set.
-
 
 =head2 get_h_pagebreaks()
 
@@ -647,7 +646,7 @@ The C<get_h_pagebreaks()> method returns an array ref of row numbers where a hor
 
     my $h_pagebreaks = $worksheet->get_h_pagebreaks();
 
-Returns 0 if the property isn't set.
+Returns C<undef> if there are no pagebreaks.
 
 
 =head2 get_v_pagebreaks()
@@ -656,7 +655,7 @@ The C<get_v_pagebreaks()> method returns an array ref of column numbers where a 
 
     my $v_pagebreaks = $worksheet->get_v_pagebreaks();
 
-Returns 0 if the property isn't set.
+Returns C<undef> if there are no pagebreaks.
 
 
 =head2 get_merged_areas()
@@ -665,7 +664,11 @@ The C<get_merged_areas()> method returns an array ref of cells that are merged.
 
     my $merged_areas = $worksheet->get_merged_areas();
 
-Returns 0 if the property isn't set.
+Each merged area is represented as follows:
+
+    [ $start_row, $start_col, $end_row, $end_col]
+
+Returns C<undef> if there are no merged areas.
 
 
 =head2 get_row_heights()
@@ -674,7 +677,7 @@ The C<get_row_heights()> method returns an array_ref of row heights.
 
     my $row_heights = $worksheet->get_row_heights();
 
-Returns 0 if the property isn't set.
+Returns C<undef> if the property isn't set.
 
 
 =head2 get_col_widths()
@@ -683,7 +686,7 @@ The C<get_col_widths()> method returns an array_ref of column widths.
 
     my $col_widths = $worksheet->get_col_widths();
 
-Returns 0 if the property isn't set.
+Returns C<undef> if the property isn't set.
 
 
 =head2 get_default_row_height()
@@ -692,16 +695,12 @@ The C<get_default_row_height()> method returns the default row height for the wo
 
     my $default_row_height = $worksheet->get_default_row_height();
 
-Returns 0 if the property isn't set.
-
 
 =head2 get_default_col_width()
 
 The C<get_default_col_width()> method returns the default column width for the worksheet. Generally 8.43.
 
     my $default_col_width = $worksheet->get_default_col_width();
-
-Returns 0 if the property isn't set.
 
 
 =head2 get_header()
@@ -710,7 +709,7 @@ The C<get_header()> method returns the worksheet header string. This string can 
 
     my $header = $worksheet->get_header();
 
-Returns 0 if the property isn't set.
+Returns C<undef> if the property isn't set.
 
 
 =head2 get_footer()
@@ -719,7 +718,7 @@ The C<get_footer()> method returns the worksheet footer string. This string can 
 
     my $footer = $worksheet->get_footer();
 
-Returns 0 if the property isn't set.
+Returns C<undef> if the property isn't set.
 
 
 =head2 get_margin_left()
@@ -728,7 +727,7 @@ The C<get_margin_left()> method returns the left margin of the worksheet in inch
 
     my $margin_left = $worksheet->get_margin_left();
 
-Returns 0 if the property isn't set.
+Returns C<undef> if the property isn't set.
 
 
 =head2 get_margin_right()
@@ -737,7 +736,7 @@ The C<get_margin_right()> method returns the right margin of the worksheet in in
 
     my $margin_right = $worksheet->get_margin_right();
 
-Returns 0 if the property isn't set.
+Returns C<undef> if the property isn't set.
 
 
 =head2 get_margin_top()
@@ -746,7 +745,7 @@ The C<get_margin_top()> method returns the top margin of the worksheet in inches
 
     my $margin_top = $worksheet->get_margin_top();
 
-Returns 0 if the property isn't set.
+Returns C<undef> if the property isn't set.
 
 
 =head2 get_margin_bottom()
@@ -755,34 +754,82 @@ The C<get_margin_bottom()> method returns the bottom margin of the worksheet in 
 
     my $margin_bottom = $worksheet->get_margin_bottom();
 
-Returns 0 if the property isn't set.
+Returns C<undef> if the property isn't set.
 
 
 =head2 get_margin_header()
 
-The C<get_margin_header()> method returns the header margin of the worksheet in inches. Returns a default value of 0.5 if not set.
+The C<get_margin_header()> method returns the header margin of the worksheet in inches.
 
     my $margin_header = $worksheet->get_margin_header();
 
-Returns 0 if the property isn't set.
+Returns a default value of 0.5 if not set.
 
 
 =head2 get_margin_footer()
 
-The C<get_margin_footer()> method returns the footer margin of the worksheet in inches. Returns a default value of 0.5 if not set.
+The C<get_margin_footer()> method returns the footer margin of the worksheet in inches.
 
     my $margin_footer = $worksheet->get_margin_footer();
 
-Returns 0 if the property isn't set.
+Returns a default value of 0.5 if not set.
 
 
 =head2 get_paper()
 
-The C<get_paper()> method returns the printer paper size. The value corresponds to the formats shown below:
+The C<get_paper()> method returns the printer paper size.
 
     my $paper = $worksheet->get_paper();
 
-Returns 0 if the property isn't set.
+The value corresponds to the formats shown below:
+
+    Index   Paper format            Paper size
+    =====   ============            ==========
+      0     Printer default         -
+      1     Letter                  8 1/2 x 11 in
+      2     Letter Small            8 1/2 x 11 in
+      3     Tabloid                 11 x 17 in
+      4     Ledger                  17 x 11 in
+      5     Legal                   8 1/2 x 14 in
+      6     Statement               5 1/2 x 8 1/2 in
+      7     Executive               7 1/4 x 10 1/2 in
+      8     A3                      297 x 420 mm
+      9     A4                      210 x 297 mm
+     10     A4 Small                210 x 297 mm
+     11     A5                      148 x 210 mm
+     12     B4                      250 x 354 mm
+     13     B5                      182 x 257 mm
+     14     Folio                   8 1/2 x 13 in
+     15     Quarto                  215 x 275 mm
+     16     -                       10x14 in
+     17     -                       11x17 in
+     18     Note                    8 1/2 x 11 in
+     19     Envelope  9             3 7/8 x 8 7/8
+     20     Envelope 10             4 1/8 x 9 1/2
+     21     Envelope 11             4 1/2 x 10 3/8
+     22     Envelope 12             4 3/4 x 11
+     23     Envelope 14             5 x 11 1/2
+     24     C size sheet            -
+     25     D size sheet            -
+     26     E size sheet            -
+     27     Envelope DL             110 x 220 mm
+     28     Envelope C3             324 x 458 mm
+     29     Envelope C4             229 x 324 mm
+     30     Envelope C5             162 x 229 mm
+     31     Envelope C6             114 x 162 mm
+     32     Envelope C65            114 x 229 mm
+     33     Envelope B4             250 x 353 mm
+     34     Envelope B5             176 x 250 mm
+     35     Envelope B6             176 x 125 mm
+     36     Envelope                110 x 230 mm
+     37     Monarch                 3.875 x 7.5 in
+     38     Envelope                3 5/8 x 6 1/2 in
+     39     Fanfold                 14 7/8 x 11 in
+     40     German Std Fanfold      8 1/2 x 12 in
+     41     German Legal Fanfold    8 1/2 x 13 in
+     256    User defined
+
+The two most common paper sizes are C<1 = "US Letter"> and C<9 = A4>. Returns 9 by default.
 
 
 =head2 get_start_page()
@@ -800,16 +847,14 @@ The C<get_print_order()> method returns 0 if the worksheet print "page order" is
 
     my $print_order = $worksheet->get_print_order();
 
-Returns 0 if the property isn't set.
-
 
 =head2 get_print_scale()
 
-The C<get_print_scale()> method returns the workbook scale for printing. The print scale fctor can be in the range 10 .. 400. TODO return 100 instead of undef.
+The C<get_print_scale()> method returns the workbook scale for printing. The print scale fctor can be in the range 10 .. 400.
 
     my $print_scale = $worksheet->get_print_scale();
 
-Returns 0 if the property isn't set.
+Returns 100 by default.
 
 
 =head2 get_fit_to_pages()
@@ -827,7 +872,7 @@ The C<is_portrait()> method returns true if the worksheet has been set for print
 
     my $is_portrait = $worksheet->is_portrait();
 
-Returns 0 if the property isn't set.
+Returns 0 if the worksheet has been set for printing in horizontal mode.
 
 
 =head2 is_centered_horizontally()
