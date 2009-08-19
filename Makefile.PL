@@ -4,23 +4,28 @@ use ExtUtils::MakeMaker;
 use Config;
 
 my %deps = (
-    'OLE::Storage_Lite'   => 0.08,
+    'OLE::Storage_Lite'   => 0,
     'IO::File'            => 0,
     'Scalar::Util'        => 0,
     'IO::Scalar'          => 0,
-    'Test::More'          => '0.47',
+    'Test::More'          => 0,
 );
+
 if (exists $Config{useperlio} && $Config{useperlio} eq "define") {
-    print "\$Config{useperlio} is defined, removing requirement of IO::Scalar\n";
 #    delete $deps{'IO::Scalar'};
 }
 
 WriteMakefile(
-          'PL_FILES'     => {},
-          'INSTALLDIRS'  => 'site',
-          'NAME'         => 'Spreadsheet::ParseExcel',
-          'EXE_FILES'    => [],
-          'VERSION_FROM' => 'lib/Spreadsheet/ParseExcel.pm',
-          'PREREQ_PM'    => \%deps,
-           test          => {TESTS => 't/*.t'}
+    'AUTHOR'        => 'John McNamara (jmcnamara@cpan.org)',
+    'NAME'          => 'Spreadsheet::ParseExcel',
+    'ABSTRACT'      => 'Read information from an Excel file.',
+    'VERSION_FROM'  => 'lib/Spreadsheet/ParseExcel.pm',
+    'LICENSE'       => 'perl',
+    'EXE_FILES'     => [],
+    'INSTALLDIRS'   => 'site',
+    'PL_FILES'      => {},
+    'PREREQ_PM'     => \%deps,
+    'NEEDS_LINKING' => 0,
+    test            => { TESTS => 't/*.t' }
 );
+

@@ -10,12 +10,12 @@ META.yml
 t/00_basic.t
 t/01_parse.t
 t/02_parse-dates.t
-t/03_pod.t
 t/20_number_format_default.t
 t/21_number_format_user.t
 t/22_number_format_datetime.t
 t/23_number_format_time.t
-t/25_decode_rk_numbers.pl
+t/24_row_col_sizes.t
+t/25_decode_rk_numbers.t
 
 lib/Spreadsheet/ParseExcel.pm
 lib/Spreadsheet/ParseExcel/Cell.pm
