@@ -24,7 +24,7 @@ use vars qw(@ISA @EXPORT_OK);
 @EXPORT_OK = qw(ExcelFmt LocaltimeExcel ExcelLocaltime
   col2int int2col sheetRef xls2csv);
 
-our $VERSION = '0.49';
+our $VERSION = '0.51';
 
 my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 
@@ -68,7 +68,7 @@ my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 #
 sub ExcelFmt {
 
-    my ( $format_str, $number, $is_1904, $number_type, $want_color ) = @_;
+    my ( $format_str, $number, $is_1904, $number_type, $want_subformats ) = @_;
 
     # Return text strings without further formatting.
     return $number unless $number =~ $qrNUMBER;
@@ -131,7 +131,7 @@ sub ExcelFmt {
         $formats[$section] .= $char;
     }
 
-    # Select the appropriate format from the 4 4 possible sub-sections:
+    # Select the appropriate format from the 4 possible sub-sections:
     # positive numbers, negative numbers, zero values, and text.
     # We ignore the Text section since non-numeric values are returned
     # unformatted at the start of the function.
@@ -151,13 +151,13 @@ sub ExcelFmt {
     }
     elsif ( @formats == 3 ) {
         if ( $number == 0 ) {
-            $section = 3;
-        }
-        elsif ( $number < 0 ) {
             $section = 2;
         }
-        else {
+        elsif ( $number < 0 ) {
             $section = 1;
+        }
+        else {
+            $section = 0;
         }
     }
     else {
@@ -184,6 +184,12 @@ sub ExcelFmt {
         $color = $1;
     }
 
+    # Remove the locale, such as [$-409], from the format string.
+    my $locale = '';
+    if ( $format =~ s/^(\[\$-\d+\])// ) {
+        $locale = $1;
+    }
+
     # Remove leading # from '# ?/?', '# ??/??' fraction formats.
     $format =~ s{# \?}{?}g;
 
@@ -203,6 +209,7 @@ sub ExcelFmt {
     my $is_currency = 0;      # Number format is a currency.
     my $is_percent  = 0;      # Number format is a percentage.
     my $is_12_hour  = 0;      # Time format is using 12 hour clock.
+    my $seen_dot    = 0;      # Treat only the first "." as the decimal point.
 
     # Parse the format.
   PARSER:
@@ -210,7 +217,12 @@ sub ExcelFmt {
         $start_pos = $pos;
         my $char = substr( $format, $pos, 1 );
 
-        if ( $char !~ /[#0\+\-\.\?eE\,\%]/ ) {
+        # Ignore control format characters such as '#0+-.?eE,%'. However,
+        # only ignore '.' if it is the first one encountered. RT 45502.
+        if ( ( !$seen_dot && $char !~ /[#0\+\-\.\?eE\,\%]/ )
+            || $char !~ /[#0\+\-\?eE\,\%]/ )
+        {
+
             if ( $token_start != -1 ) {
                 push @placeholders,
                   [
@@ -241,7 +253,8 @@ sub ExcelFmt {
         }
 
         if (   ( defined($double_quote) and ($double_quote) )
-            or ( defined($single_quote) and ($single_quote) ) )
+            or ( defined($single_quote) and ($single_quote) )
+            or ( $seen_dot && $char eq '.' ) )
         {
             $single_quote = 0;
             if (
@@ -359,6 +372,7 @@ sub ExcelFmt {
                 elsif ( substr( $format, $pos, 1 ) eq '.' ) {
                     push @placeholders,
                       [ substr( $format, $pos, 1 ), length($token), 1 ];
+                    $seen_dot = 1;
                 }
                 elsif ( substr( $format, $pos, 1 ) eq ',' ) {
                     $comma_count++;
@@ -525,6 +539,18 @@ sub ExcelFmt {
     #
     if ( ( $format_mode eq 'date' ) && ( $number =~ $qrNUMBER ) ) {
 
+        # The maximum allowable date in Excel is 9999-12-31T23:59:59.000 which
+        # equates to 2958465.999+ in the 1900 epoch and 2957003.999+ in the
+        # 1904 epoch. We use 0 as the minimum in both epochs. The 1904 system
+        # actually supports negative numbers but that isn't worth the effort.
+        my $min_date = 0;
+        my $max_date = 2958466;
+        $max_date = 2957004 if $is_1904;
+
+        if ( $number < $min_date || $number >= $max_date ) {
+            return $number; # Return unformatted number.
+        }
+
         # Process date formats.
         my @time = ExcelLocaltime( $number, $is_1904 );
 
@@ -533,7 +559,6 @@ sub ExcelFmt {
 
         $month++;       # localtime() zero indexed month.
         $year += 1900;  # localtime() year.
-
 
         my @full_month_name = qw(
           None January February March April May June July
@@ -764,14 +789,22 @@ sub ExcelFmt {
             }
             else {
                 if ($is_decimal) {
-                    $number_result = sprintf(
-                        (
-                            defined($after_decimal)
-                            ? "%0${str_length}.${after_decimal}f"
-                            : "%0${str_length}f"
-                        ),
-                        $data
-                    );
+
+                    if ( defined $after_decimal ) {
+                        $number_result =
+                          sprintf "%0${str_length}.${after_decimal}f", $data;
+                    }
+                    else {
+                        $number_result = sprintf "%0${str_length}f", $data;
+                    }
+
+                    # Fix for Perl and sprintf not rounding up like Excel.
+                    # http://rt.cpan.org/Public/Bug/Display.html?id=45626
+                    if ( $data =~ /^${number_result}5/ ) {
+                        $number_result =
+                          sprintf "%0${str_length}.${after_decimal}f",
+                          $data . '1';
+                    }
                 }
                 else {
                     $number_result = sprintf( "%0${str_length}.0f", $data );
@@ -913,10 +946,9 @@ sub ExcelFmt {
     $result =~ s/^\$\-/\-\$/;
     $result =~ s/^\$ \-/\-\$ /;
 
-
-    # Return color string if required.
-    if ($want_color) {
-        return ( $result, $color );
+    # Return color and locale strings if required.
+    if ($want_subformats) {
+        return ( $result, $color, $locale );
     }
     else {
         return $result;
@@ -1238,7 +1270,6 @@ sub xls2csv {
     # We need Text::CSV_XS for proper CSV handling.
     require Text::CSV_XS;
 
-
     # extract any sheet number from the region string
     $regions =~ m/^(\d+)-(.*)/;
 
@@ -1374,7 +1405,6 @@ sub xls2csv {
         $csv->combine( @$row );
         $output .= $csv->string();
     }
-
 
     return $output;
 }
