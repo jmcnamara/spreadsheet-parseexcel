@@ -10,7 +10,7 @@ use Test::More tests => 151;
 use_ok ("Spreadsheet::ParseExcel");
 
 my $bk;
-ok ($bk = Spreadsheet::ParseExcel::Workbook->Parse ("sample/Excel/Dates.xls"),
+ok ($bk = Spreadsheet::ParseExcel::Workbook->Parse ("t/excel_files/Dates.xls"),
     "Open/parse Dates.xls");
 
 ok (my @ws = @{$bk->{Worksheet}},	"Book has sheets");
@@ -67,7 +67,7 @@ is ($ws->{Cells}[0][$_]{Format}{Font}{Color}, 32767, "$col[$_]1 font color") for
 is ($ws->{Cells}[0][ 4]{Format}{Font}{Color},    18, "E1 font color");
 
 my %expect = (
-    B7 => [ 1, 6, 39673, "ddd, dd mmm yyyy", "Mon, 13 Aug 2008" ],
+    B7 => [ 1, 6, 39673, "ddd, dd mmm yyyy", "Wed, 13 Aug 2008" ],
     C7 => [ 2, 6, 39673, "m-d-yy",           "8-13-08"          ],
     );
 # Test ddd, dd MM yyyy

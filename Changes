@@ -1,7 +1,28 @@
 Revision history for Perl extension Spreadsheet::ParseExcel.
 
 
-0.51 19 August 2009
+0.52 August 21 2009
+
+    + Added new FmtJapan module and tests written by Goro Fuji.
+
+    ! Fixed bug in ExcelFmt() date handling where conversion to weekday
+      and month names wasn't handled correctly.
+      Add extra tests to 21_number_format_user.t for above.
+
+    ! Fixed bug when checking $Config{useperlio}.
+      Reported by kbates and H.Merijn Brand.
+      http://rt.cpan.org/Public/Bug/Display.html?id=28861
+
+    ! Fixed bug where CellHandler variables weren't scoped to package.
+      Reported by pomoxp.
+      http://rt.cpan.org/Public/Bug/Display.html?id=43250
+
+    + Added tests for ExcelLocaltime() and LocaltimeExcel().
+      26_localtime2excel.t and 27_localtime2excel.t.
+
+    + Refactored SaveParser docs. Work still ongoing.
+
+0.51 August 19 2009
 
     ! Added fix for incorrectly skipped charts. Thanks Guntram Blohm.
       https://rt.cpan.org/Ticket/Display.html?id=44009
@@ -22,7 +43,7 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
       Reported by Alan James.
       http://rt.cpan.org/Public/Bug/Display.html?id=48831
 
-0.50 18 August 2009
+0.50 August 18 2009
 
     + Refactored Worksheet interface and documentation.
       Added 04_regression.t and 05_regression.t to test above changes.
@@ -33,8 +54,7 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
     ! Fixed RK number conversion. The existing code was the source of several
       RT bugs and portability issues. Added 25_decode_rk_numbers.t testcase.
 
-
-0.49 24 January 2009
+0.49 January 24 2009
 
     ! Added Text::CSV_XS to xls2csv() function to handle embedded commas
       in csv data. Reported by Fredrik Linde.
@@ -46,7 +66,7 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
       feature of returning the result and a format color in a list context.
       The older mechanism is still available but now requires an explicit flag.
 
-0.48 23 January 2009
+0.48 January 23 2009
 
     ! Fixed bug where numbers with uppercase formats such as MM/DD/YY
       were ignored. Applies to files created by OpenOffice.org and
@@ -59,14 +79,14 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
       Worksheet.pm.
       http://rt.cpan.org/Public/Bug/Display.html?id=14278
 
-0.47 22 January 2009
+0.47 January 22 2009
 
     ! Fixed bug where multiple embedded charts on a worksheet caused the
       worksheet order to be lost and data to get overwritten.
       Reported by Steven Martin and others.
       http://rt.cpan.org/Public/Bug/Display.html?id=13365
 
-0.46 18 January 2009
+0.46 January 18 2009
 
     ! Heavily refactored the ExcelFmt() function for maintainability and
       fixed several bugs, in particular for 12 hour clock times.
@@ -84,7 +104,7 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
       unused t/lib dir. Reported by Peter (Stig) Edwards.
       http://rt.cpan.org/Public/Bug/Display.html?id=42442
 
-0.45 13 January 2009
+0.45 January 13 2009
 
     ! Fixed failed parsing of large (8-16k) Unicode strings.
       Reported by Graham Stead and Moka.
@@ -95,7 +115,7 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
       Reported and isolated by Peter (Stig) Edwards.
       http://rt.cpan.org/Public/Bug/Display.html?id=30677
 
-0.44 8 January 2009
+0.44 January 8 2009
 
     ! Fix for OpenOffice.org GENERAL format.
       http://rt.cpan.org/Public/Bug/Display.html?id=7206
@@ -104,7 +124,7 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
     + Perltidyed source and added standard headers and Pod sections
       to all modules.
 
-0.43 7 January 2009
+0.43 January 7 2009
 
     + Restructured and rewrote the main documentation. This is the start of
       a general refactoring. If you would like to keep up to date with it
@@ -124,10 +144,12 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
     ! Fixed minor SaveParser bug with font rotation.
       http://rt.cpan.org/Public/Bug/Display.html?id=41626
 
-0.42 1 January 2009
+0.42 January 1 2009
+
     + Fix for world writeable files in distro to allow PAUSE indexing.
 
-0.41 24 October 2008
+0.41 October 24 2008
+
     + Changed maintainership to John McNamara.
 
     ! Fixed bug when parsing RK numbers (generally ints or small floats).

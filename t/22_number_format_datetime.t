@@ -6,7 +6,7 @@
 #
 # Tests for date and time number format handling using FmtExcel().
 #
-# reverse('©'), January 2009, John McNamara, jmcnamara@cpan.org
+# reverse('ï¿½'), January 2009, John McNamara, jmcnamara@cpan.org
 #
 
 use strict;
@@ -41,8 +41,8 @@ __DATA__
 
 
 # Test data taken from Excel in XML format.
-# Note. In the first Cell the date has been changed manually from 1899-12-31 to 1900-01-00.
-# These values are substantively the same.
+# Note. In the first Cell the date has been changed manually from 1899-12-31 to
+# 1900-01-00 for the sake of testing. These values are substantively the same.
    <Row>
     <Cell ss:StyleID="s21"><Data ss:Type="DateTime">1900-01-00T00:00:00.000</Data></Cell>
     <Cell ss:StyleID="s22" ss:Formula="=RC[-1]"><Data ss:Type="Number">0</Data></Cell>

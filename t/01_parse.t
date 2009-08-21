@@ -98,7 +98,7 @@ if ($@) {
     }
 else {
 {
-    open my $fh, '<','sample/Excel/Test95.xls'; 
+    open my $fh, '<','t/excel_files/Test95.xls';
     my $workbook = Spreadsheet::ParseExcel::Workbook->Parse($fh);
     isnt($workbook, $workbook_1);
     delete $workbook_1->{File};  # when give a filehandlres this field is not set
@@ -109,7 +109,7 @@ else {
 # pass a reference to a scalar containing the file content
 {
     my $data;
-    if (open my $fh, '<','sample/Excel/Test95.xls') {
+    if (open my $fh, '<','t/excel_files/Test95.xls') {
         binmode($fh);
         local $/ = undef;
         $data = <$fh>;
@@ -120,7 +120,7 @@ else {
     BEGIN { $tests += 2; }
 }
 {
-    open my $fh, '<','sample/Excel/Test95.xls';
+    open my $fh, '<','t/excel_files/Test95.xls';
     binmode($fh);
     my @data = <$fh>;
     my $workbook = Spreadsheet::ParseExcel::Workbook->Parse(\@data);

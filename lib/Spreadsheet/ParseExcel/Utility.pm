@@ -24,7 +24,7 @@ use vars qw(@ISA @EXPORT_OK);
 @EXPORT_OK = qw(ExcelFmt LocaltimeExcel ExcelLocaltime
   col2int int2col sheetRef xls2csv);
 
-our $VERSION = '0.51';
+our $VERSION = '0.52';
 
 my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 
@@ -126,7 +126,7 @@ sub ExcelFmt {
         }
 
         # Convert upper case OpenOffice.org date/time formats to lowercase..
-        $char = lc($char) if $char =~/[DMYHS]/;
+        $char = lc($char) if $char =~ /[DMYHS]/;
 
         $formats[$section] .= $char;
     }
@@ -548,7 +548,7 @@ sub ExcelFmt {
         $max_date = 2957004 if $is_1904;
 
         if ( $number < $min_date || $number >= $max_date ) {
-            return $number; # Return unformatted number.
+            return $number;    # Return unformatted number.
         }
 
         # Process date formats.
@@ -557,8 +557,8 @@ sub ExcelFmt {
         #    0     1     2      3     4       5      6      7
         my ( $sec, $min, $hour, $day, $month, $year, $wday, $msec ) = @time;
 
-        $month++;       # localtime() zero indexed month.
-        $year += 1900;  # localtime() year.
+        $month++;              # localtime() zero indexed month.
+        $year += 1900;         # localtime() year.
 
         my @full_month_name = qw(
           None January February March April May June July
@@ -568,10 +568,10 @@ sub ExcelFmt {
           None Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
         );
         my @full_day_name = qw(
-          Monday Tuesday Wednesday Thursday Friday Saturday Sunday
+          Sunday Monday Tuesday Wednesday Thursday Friday Saturday
         );
         my @short_day_name = qw(
-          Mon Tue Wed Thu Fri Sat Sun
+          Sun Mon Tue Wed Thu Fri Sat
         );
 
         # Replace the placeholders in the template such as yyyy mm dd with
@@ -627,13 +627,13 @@ sub ExcelFmt {
             }
             elsif ( $placeholder->[0] eq 'dddd' ) {
 
-                # Full day name. 1 -> Wednesday (for example.)
-                $replacement = $full_day_name[$msec];
+                # Full day name. Wednesday (for example.)
+                $replacement = $full_day_name[$wday];
             }
             elsif ( $placeholder->[0] eq 'ddd' ) {
 
-                # Short day name. 1 -> Wednesday (for example.)
-                $replacement = $short_day_name[$msec];
+                # Short day name. Wed (for example.)
+                $replacement = $short_day_name[$wday];
             }
             elsif ( $placeholder->[0] eq 'dd' ) {
 
@@ -713,16 +713,16 @@ sub ExcelFmt {
                   sprintf( '%d', ( int($number) * 24 + $hour ) * 60 + $min );
             }
             elsif ( $placeholder->[0] eq 'ge' ) {
-
-                # NENGO (Japanese)
-                $replacement =
-                  Spreadsheet::ParseExcel::FmtJapan::CnvNengo( 1, @time );
+                require Spreadsheet::ParseExcel::FmtJapan;
+                # Japanese Nengo (aka Gengo) in initialism (abbr. name)
+                 $replacement =
+                  Spreadsheet::ParseExcel::FmtJapan::CnvNengo( abbr_name => @time );
             }
             elsif ( $placeholder->[0] eq 'ggge' ) {
-
-                # NENGO (Japanese)
-                $replacement =
-                  Spreadsheet::ParseExcel::FmtJapan::CnvNengo( 2, @time );
+                require Spreadsheet::ParseExcel::FmtJapan;
+                # Japanese Nengo (aka Gengo) in Kanji (full name)
+                 $replacement =
+                  Spreadsheet::ParseExcel::FmtJapan::CnvNengo( name => @time );
             }
             elsif ( $placeholder->[0] eq '@' ) {
 
@@ -1057,7 +1057,8 @@ sub LeapYear {
 # LocaltimeExcel (for Spreadsheet::ParseExcel::Utility)
 #------------------------------------------------------------------------------
 sub LocaltimeExcel {
-    my ( $iSec, $iMin, $iHour, $iDay, $iMon, $iYear, $iMSec, $flg1904 ) = @_;
+    my ( $iSec, $iMin, $iHour, $iDay, $iMon, $iYear, $iwDay, $iMSec, $flg1904 )
+      = @_;
 
     #0. Init
     $iMon++;
@@ -1116,6 +1117,7 @@ sub LocaltimeExcel {
 # ExcelLocaltime (for Spreadsheet::ParseExcel::Utility)
 #------------------------------------------------------------------------------
 sub ExcelLocaltime {
+
     my ( $dObj, $flg1904 ) = @_;
     my ( $iSec, $iMin, $iHour, $iDay, $iMon, $iYear, $iwDay, $iMSec );
     my ( $iDt, $iTime, $iYDays );
@@ -1142,7 +1144,8 @@ sub ExcelLocaltime {
           (      ( ( $iYear % 4 ) == 0 )
               && ( ( $iYear % 100 ) || ( $iYear % 400 ) == 0 ) ) ? 366 : 365;
     }
-    $iYear -= 1900;
+    $iYear -= 1900;       # Localtime year is relative to 1900.
+
     for ( $iMon = 1 ; $iMon < 12 ; $iMon++ ) {
         my $iMD;
         if (   $iMon == 1
@@ -1165,6 +1168,8 @@ sub ExcelLocaltime {
         $iDt -= $iMD;
     }
 
+    $iMon -= 1;    # Localtime month is 0 based.
+
     #2. Calc Time
     $iDay = $iDt;
     $iTime += ( 0.0005 / 86400.0 );
@@ -1180,7 +1185,7 @@ sub ExcelLocaltime {
     $iTime *= 1000.0;
     $iMSec = int($iTime);
 
-    return ( $iSec, $iMin, $iHour, $iDay, $iMon - 1, $iYear, $iwDay, $iMSec );
+    return ( $iSec, $iMin, $iHour, $iDay, $iMon, $iYear, $iwDay, $iMSec );
 }
 
 # -----------------------------------------------------------------------------
@@ -1265,7 +1270,7 @@ sub sheetRef {
 #
 sub xls2csv {
     my ( $filename, $regions, $rotate ) = @_;
-    my $sheet  = 0;
+    my $sheet = 0;
 
     # We need Text::CSV_XS for proper CSV handling.
     require Text::CSV_XS;
@@ -1366,7 +1371,7 @@ sub xls2csv {
                 my $cell = $oWkS->{Cells}[$y][$x];
 
                 my $value;
-                if (defined $cell) {
+                if ( defined $cell ) {
                     $value .= $cell->value();
                 }
                 else {
@@ -1384,7 +1389,7 @@ sub xls2csv {
                 my $cell = $oWkS->{Cells}[$y][$x];
 
                 my $value;
-                if (defined $cell) {
+                if ( defined $cell ) {
                     $value .= $cell->value();
                 }
                 else {
@@ -1402,7 +1407,7 @@ sub xls2csv {
     my $output = "";
 
     for my $row (@cell_data) {
-        $csv->combine( @$row );
+        $csv->combine(@$row);
         $output .= $csv->string();
     }
 

@@ -16,6 +16,19 @@ t/22_number_format_datetime.t
 t/23_number_format_time.t
 t/24_row_col_sizes.t
 t/25_decode_rk_numbers.t
+t/26_localtime2excel.t
+t/27_localtime2excel.t
+t/41_test95-97j.t
+t/42_test95-97j-2.t
+t/43_test2000J.t
+t/44_oem.t
+t/45_oem-2.t
+t/excel_files/Dates.xls
+t/excel_files/Test2000J.xls
+t/excel_files/Test95.xls
+t/excel_files/Test95J.xls
+t/excel_files/Test97J.xls
+t/excel_files/TestEncoding.xls
 
 lib/Spreadsheet/ParseExcel.pm
 lib/Spreadsheet/ParseExcel/Cell.pm
@@ -35,7 +48,6 @@ lib/Spreadsheet/ParseExcel/Worksheet.pm
 
 sample/Excel/AuthorK.xls
 sample/Excel/AuthorK95.xls
-sample/Excel/Dates.xls
 sample/Excel/FmtTest.xls
 sample/Excel/Rich.xls
 sample/Excel/Test1904.xls
@@ -55,13 +67,6 @@ sample/dmpExHJ.pl
 sample/dmpExJ.pl
 sample/dmpExR.pl
 sample/Ilya.pl
-sample/res_fmt
-sample/res_info
-sample/res_oem
-sample/res_rich
-sample/res_sample
-sample/res_samplej
-sample/res_iftest.txt
 sample/sample.pl
 sample/sampleOEM.pl
 sample/sample_j.pl
@@ -70,10 +75,6 @@ sample/xls2csv.pl
 sample/iftest.pl
 sample/iftestj.pl
 sample/dmpEx_2xml.pl
-
-sample/Excel/gives-warnings.xls
-sample/warning_output
-sample/warning.pl
 
 sample/parse.pl
 

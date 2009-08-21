@@ -12,7 +12,7 @@
 use strict;
 
 use Spreadsheet::ParseExcel::Utility qw( ExcelFmt LocaltimeExcel );
-use Test::More tests => 85;
+use Test::More tests => 139;
 
 my $is_1904 = 1;
 
@@ -138,6 +138,62 @@ my @testcases = (
     [ 84, 2957003, '31/12/9999', 'dd/mm/yyyy', undef, $is_1904 ],
     [ 85, 2957004, '2957004', 'dd/mm/yyyy',  undef, $is_1904],
 
+
+    # Tests for real names for days and months.
+    [ 86,  36528, 'Mon',    'ddd' ],
+    [ 87,  36529, 'Tue',   'ddd' ],
+    [ 88,  36530, 'Wed', 'ddd' ],
+    [ 89,  36531, 'Thu',  'ddd' ],
+    [ 90,  36532, 'Fri',    'ddd' ],
+    [ 91,  36533, 'Sat',  'ddd' ],
+    [ 92,  36534, 'Sun',    'ddd' ],
+    [ 93,  36535, 'Monday',    'dddd' ],
+    [ 94,  36536, 'Tuesday',   'dddd' ],
+    [ 95,  36537, 'Wednesday', 'dddd' ],
+    [ 96,  36538, 'Thursday',  'dddd' ],
+    [ 97,  36539, 'Friday',    'dddd' ],
+    [ 98,  36540, 'Saturday',  'dddd' ],
+    [ 99,  36541, 'Sunday',    'dddd' ],
+    [ 100, 36526, 'Jan',       'mmm' ],
+    [ 101, 36557, 'Feb',       'mmm' ],
+    [ 102, 36586, 'Mar',       'mmm' ],
+    [ 103, 36617, 'Apr',       'mmm' ],
+    [ 104, 36647, 'May',       'mmm' ],
+    [ 105, 36678, 'Jun',       'mmm' ],
+    [ 106, 36708, 'Jul',       'mmm' ],
+    [ 107, 36739, 'Aug',       'mmm' ],
+    [ 108, 36770, 'Sep',       'mmm' ],
+    [ 109, 36800, 'Oct',       'mmm' ],
+    [ 110, 36831, 'Nov',       'mmm' ],
+    [ 111, 36861, 'Dec',       'mmm' ],
+    [ 112, 36526, 'January',   'mmmm' ],
+    [ 113, 36557, 'February',  'mmmm' ],
+    [ 114, 36586, 'March',     'mmmm' ],
+    [ 115, 36617, 'April',     'mmmm' ],
+    [ 116, 36647, 'May',       'mmmm' ],
+    [ 117, 36678, 'June',      'mmmm' ],
+    [ 118, 36708, 'July',      'mmmm' ],
+    [ 119, 36739, 'August',    'mmmm' ],
+    [ 120, 36770, 'September', 'mmmm' ],
+    [ 121, 36800, 'October',   'mmmm' ],
+    [ 122, 36831, 'November',  'mmmm' ],
+    [ 123, 36861, 'December',  'mmmm' ],
+    [ 124, 36526, 'J',         'mmmmm' ],
+    [ 125, 36557, 'F',         'mmmmm' ],
+    [ 126, 36586, 'M',         'mmmmm' ],
+    [ 127, 36617, 'A',         'mmmmm' ],
+    [ 128, 36647, 'M',         'mmmmm' ],
+    [ 129, 36678, 'J',         'mmmmm' ],
+    [ 130, 36708, 'J',         'mmmmm' ],
+    [ 131, 36739, 'A',         'mmmmm' ],
+    [ 132, 36770, 'S',         'mmmmm' ],
+    [ 133, 36800, 'O',         'mmmmm' ],
+    [ 134, 36831, 'N',         'mmmmm' ],
+    [ 135, 36861, 'D',         'mmmmm' ],
+    [ 136, 1,     'Sun',       'ddd' ],
+    [ 137, 127,   'Sun',       'ddd' ],
+    [ 138, 36898, 'Sun',       'ddd' ],
+    [ 139, 2958103,'Sun',       'ddd' ],
 
 );
 

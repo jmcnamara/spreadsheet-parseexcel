@@ -15,7 +15,7 @@ use warnings;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.51';
+our $VERSION = '0.52';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -51,83 +51,83 @@ use constant verBIFF4   => 0x04;
 use constant verBIFF5   => 0x08;
 use constant verBIFF8   => 0x18;
 
-my %ProcTbl = (
+our %ProcTbl = (
 
     #Develpers' Kit P291
-    0x14 => \&_subHeader,                      # Header
-    0x15 => \&_subFooter,                      # Footer
-    0x18 => \&_subName,                        # NAME(?)
-    0x1A => \&_subVPageBreak,                  # Vertical Page Break
-    0x1B => \&_subHPageBreak,                  # Horizontal Page Break
-    0x22 => \&_subFlg1904,                     # 1904 Flag
-    0x26 => \&_subMargin,                      # Left Margin
-    0x27 => \&_subMargin,                      # Right Margin
-    0x28 => \&_subMargin,                      # Top Margin
-    0x29 => \&_subMargin,                      # Bottom Margin
-    0x2A => \&_subPrintHeaders,                # Print Headers
-    0x2B => \&_subPrintGridlines,              # Print Gridlines
-    0x3C => \&_subContinue,                    # Continue
-    0x43 => \&_subXF,                          # ExTended Format(?)
+    0x14 => \&_subHeader,            # Header
+    0x15 => \&_subFooter,            # Footer
+    0x18 => \&_subName,              # NAME(?)
+    0x1A => \&_subVPageBreak,        # Vertical Page Break
+    0x1B => \&_subHPageBreak,        # Horizontal Page Break
+    0x22 => \&_subFlg1904,           # 1904 Flag
+    0x26 => \&_subMargin,            # Left Margin
+    0x27 => \&_subMargin,            # Right Margin
+    0x28 => \&_subMargin,            # Top Margin
+    0x29 => \&_subMargin,            # Bottom Margin
+    0x2A => \&_subPrintHeaders,      # Print Headers
+    0x2B => \&_subPrintGridlines,    # Print Gridlines
+    0x3C => \&_subContinue,          # Continue
+    0x43 => \&_subXF,                # ExTended Format(?)
 
     #Develpers' Kit P292
-    0x55 => \&_subDefColWidth,                 # Consider
-    0x5C => \&_subWriteAccess,                 # WRITEACCESS
-    0x7D => \&_subColInfo,                     # Colinfo
-    0x7E => \&_subRK,                          # RK
-    0x81 => \&_subWSBOOL,                      # WSBOOL
-    0x83 => \&_subHcenter,                     # HCENTER
-    0x84 => \&_subVcenter,                     # VCENTER
-    0x85 => \&_subBoundSheet,                  # BoundSheet
+    0x55 => \&_subDefColWidth,       # Consider
+    0x5C => \&_subWriteAccess,       # WRITEACCESS
+    0x7D => \&_subColInfo,           # Colinfo
+    0x7E => \&_subRK,                # RK
+    0x81 => \&_subWSBOOL,            # WSBOOL
+    0x83 => \&_subHcenter,           # HCENTER
+    0x84 => \&_subVcenter,           # VCENTER
+    0x85 => \&_subBoundSheet,        # BoundSheet
 
-    0x92 => \&_subPalette,                     # Palette, fgp
+    0x92 => \&_subPalette,           # Palette, fgp
 
-    0x99 => \&_subStandardWidth,               # Standard Col
+    0x99 => \&_subStandardWidth,     # Standard Col
 
     #Develpers' Kit P293
-    0xA1 => \&_subSETUP,                       # SETUP
-    0xBD => \&_subMulRK,                       # MULRK
-    0xBE => \&_subMulBlank,                    # MULBLANK
-    0xD6 => \&_subRString,                     # RString
+    0xA1 => \&_subSETUP,             # SETUP
+    0xBD => \&_subMulRK,             # MULRK
+    0xBE => \&_subMulBlank,          # MULBLANK
+    0xD6 => \&_subRString,           # RString
 
     #Develpers' Kit P294
-    0xE0 => \&_subXF,                          # ExTended Format
-    0xE5 => \&_subMergeArea,                   # MergeArea (Not Documented)
-    0xFC => \&_subSST,                         # Shared String Table
-    0xFD => \&_subLabelSST,                    # Label SST
+    0xE0 => \&_subXF,                # ExTended Format
+    0xE5 => \&_subMergeArea,         # MergeArea (Not Documented)
+    0xFC => \&_subSST,               # Shared String Table
+    0xFD => \&_subLabelSST,          # Label SST
 
     #Develpers' Kit P295
-    0x201 => \&_subBlank,                      # Blank
+    0x201 => \&_subBlank,            # Blank
 
-    0x202 => \&_subInteger,                    # Integer(Not Documented)
-    0x203 => \&_subNumber,                     # Number
-    0x204 => \&_subLabel,                      # Label
-    0x205 => \&_subBoolErr,                    # BoolErr
-    0x207 => \&_subString,                     # STRING
-    0x208 => \&_subRow,                        # RowData
-    0x221 => \&_subArray,                      # Array (Consider)
-    0x225 => \&_subDefaultRowHeight,           # Consider
+    0x202 => \&_subInteger,          # Integer(Not Documented)
+    0x203 => \&_subNumber,           # Number
+    0x204 => \&_subLabel,            # Label
+    0x205 => \&_subBoolErr,          # BoolErr
+    0x207 => \&_subString,           # STRING
+    0x208 => \&_subRow,              # RowData
+    0x221 => \&_subArray,            # Array (Consider)
+    0x225 => \&_subDefaultRowHeight, # Consider
 
-    0x31  => \&_subFont,                       # Font
-    0x231 => \&_subFont,                       # Font
+    0x31  => \&_subFont,             # Font
+    0x231 => \&_subFont,             # Font
 
-    0x27E => \&_subRK,                         # RK
-    0x41E => \&_subFormat,                     # Format
+    0x27E => \&_subRK,               # RK
+    0x41E => \&_subFormat,           # Format
 
-    0x06  => \&_subFormula,                    # Formula
-    0x406 => \&_subFormula,                    # Formula
+    0x06  => \&_subFormula,          # Formula
+    0x406 => \&_subFormula,          # Formula
 
-    0x009 => \&_subBOF,                        # BOF(BIFF2)
-    0x209 => \&_subBOF,                        # BOF(BIFF3)
-    0x409 => \&_subBOF,                        # BOF(BIFF4)
-    0x809 => \&_subBOF,                        # BOF(BIFF5-8)
+    0x009 => \&_subBOF,              # BOF(BIFF2)
+    0x209 => \&_subBOF,              # BOF(BIFF3)
+    0x409 => \&_subBOF,              # BOF(BIFF4)
+    0x809 => \&_subBOF,              # BOF(BIFF5-8)
 );
 
-my $BIGENDIAN;
-my $PREFUNC;
-my $_CellHandler;
-my $_NotSetCell;
-my $_Object;
-my $_use_perlio;
+our $BIGENDIAN;
+our $PREFUNC;
+our $_CellHandler;
+our $_NotSetCell;
+our $_Object;
+our $_use_perlio;
 
 #------------------------------------------------------------------------------
 # Spreadsheet::ParseExcel->new
@@ -136,7 +136,10 @@ sub new {
     my ( $class, %hParam ) = @_;
 
     if ( not defined $_use_perlio ) {
-        if ( exists $Config{useperlio} && $Config{useperlio} eq "define" ) {
+        if (   exists $Config{useperlio}
+            && defined $Config{useperlio}
+            && $Config{useperlio} eq "define" )
+        {
             $_use_perlio = 1;
         }
         else {
@@ -425,6 +428,7 @@ sub _subBOF {
         }
     }
     else {
+
         # Set flag to ignore all chart records until we reach another BOF.
         $oBook->{_skip_chart} = 1;
     }
@@ -600,7 +604,6 @@ sub _subRK {
     _SetDimension( $workbook, $row, $col, $col );
 }
 
-
 #------------------------------------------------------------------------------
 # _subArray (for Spreadsheet::ParseExcel)   DK:P297
 #------------------------------------------------------------------------------
@@ -740,7 +743,6 @@ sub _subLabel {
     _SetDimension( $oBook, $iR, $iC, $iC );
 }
 
-
 ###############################################################################
 #
 # _subMulRK()
@@ -781,7 +783,6 @@ sub _subMulRK {
     # Store the max and min row/col values.
     _SetDimension( $workbook, $row, $first_col, $last_col );
 }
-
 
 #------------------------------------------------------------------------------
 # _subMulBlank (for Spreadsheet::ParseExcel) DK:P349
@@ -969,7 +970,6 @@ sub _convert_col_width {
 
     return $user_width;
 }
-
 
 #------------------------------------------------------------------------------
 # _subColInfo (for Spreadsheet::ParseExcel) DK:P309
@@ -1796,7 +1796,6 @@ sub DecodeBoolErr {
     }
 }
 
-
 ###############################################################################
 #
 # _decode_rk_number()
@@ -1811,7 +1810,8 @@ sub _decode_rk_number {
     my $number;
 
     # Check the main RK type.
-    if($rk_number & 0x02)  {
+    if ( $rk_number & 0x02 ) {
+
         # RK Type 2 and 4, a packed integer.
 
         # Shift off the info bits.
@@ -1821,6 +1821,7 @@ sub _decode_rk_number {
         $number -= 0x40000000 if $number & 0x20000000;
     }
     else {
+
         # RK Type 1 and 3, a truncated IEEE Double.
 
         # Pack the RK number into the high 30 bits of an IEEE double.
@@ -1833,14 +1834,11 @@ sub _decode_rk_number {
         $number = unpack "d", $number;
     }
 
-
     # RK Types 3 and 4 were multiplied by 100 prior to encoding.
     $number /= 100 if $rk_number & 0x01;
 
     return $number;
 }
-
-
 
 ###############################################################################
 #
@@ -1850,7 +1848,7 @@ sub _decode_rk_number {
 # any following CONTINUE records.
 #
 # The workbook strings are initially contained in the SST block but may also
-# occupy one or more CONTINUE blocks. Reading the CONTINUE blocks is made a 
+# occupy one or more CONTINUE blocks. Reading the CONTINUE blocks is made a
 # little tricky by the fact that they can contain an additional initial byte
 # if a string is continued from a previous block.
 #
@@ -2018,9 +2016,10 @@ sub _NewCell {
 
     # Set "Date" type if required for numbers in a MulRK BIFF block.
     if (   defined $FmtStr
-      && $rhKey{Type} eq "Numeric"
+        && $rhKey{Type} eq "Numeric"
         && $rhKey{Kind} eq "MulRK" )
     {
+
         # Match a range of possible date formats. Note: this isn't important
         # except for reporting. The number will still be converted to a date
         # by ExcelFmt() even if 'Type' isn't set to 'Date'.
@@ -2824,7 +2823,7 @@ http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel
 
 =item * XLSperl by Jon Allen (http://search.cpan.org/~jonallen/XLSperl/bin/XLSperl). This application allows you to use Perl "one-liners" with Microsoft Excel files.
 
-=item * Spreadsheet::XLSX (http://search.cpan.org/~dmow/Spreadsheet-XLSX/lib/Spreadsheet/XLSX.pm) by Dmitry Ovsyanko. A module with a similar interface to Spreadsheet::ParseExcel for parsing Excel 2007 XLSX OpenXML files. 
+=item * Spreadsheet::XLSX (http://search.cpan.org/~dmow/Spreadsheet-XLSX/lib/Spreadsheet/XLSX.pm) by Dmitry Ovsyanko. A module with a similar interface to Spreadsheet::ParseExcel for parsing Excel 2007 XLSX OpenXML files.
 
 =item * Spreadsheet::Read (http://search.cpan.org/~hmbrand/Spreadsheet-Read/Read.pm) by H.Merijn Brand. A single interface for reading several different spreadsheet formats.
 

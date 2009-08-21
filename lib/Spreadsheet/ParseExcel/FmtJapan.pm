@@ -1,4 +1,5 @@
 package Spreadsheet::ParseExcel::FmtJapan;
+use utf8;
 
 ###############################################################################
 #
@@ -18,11 +19,11 @@ package Spreadsheet::ParseExcel::FmtJapan;
 use strict;
 use warnings;
 
-use Jcode;
+use Encode qw(find_encoding decode);
 use base 'Spreadsheet::ParseExcel::FmtDefault';
-our $VERSION = '0.44';
+our $VERSION = '0.52';
 
-my %hFmtJapan = (
+my %FormatTable = (
     0x00 => '@',
     0x01 => '0',
     0x02 => '0.00',
@@ -53,9 +54,9 @@ my %hFmtJapan = (
 
     #0x17-0x24 -- Differs in Natinal
     0x1E => 'm/d/yy',
-    0x1F => 'yyyy"Ç¯"m"·î"d"Æü"',
-    0x20 => 'h"»þ"mm"Ê¬"',
-    0x21 => 'h"»þ"mm"Ê¬"ss"ÉÃ"',
+    0x1F => 'yyyy"å¹´"m"æœˆ"d"æ—¥"',
+    0x20 => 'h"æ™‚"mm"åˆ†"',
+    0x21 => 'h"æ™‚"mm"åˆ†"ss"ç§’"',
 
     #0x17-0x24 -- Differs in Natinal
     0x25 => '(#,##0_);(#,##0)',
@@ -72,107 +73,100 @@ my %hFmtJapan = (
     0x30 => '##0.0E+0',
     0x31 => '@',
 
-    0x37 => 'yyyy"Ç¯"m"·î"',
-    0x38 => 'm"·î"d"Æü"',
+    0x37 => 'yyyy"å¹´"m"æœˆ"',
+    0x38 => 'm"æœˆ"d"æ—¥"',
     0x39 => 'ge.m.d',
-    0x3A => 'ggge"Ç¯"m"·î"d"Æü"',
+    0x3A => 'ggge"å¹´"m"æœˆ"d"æ—¥"',
 );
-my $_Code;
 
 #------------------------------------------------------------------------------
 # new (for Spreadsheet::ParseExcel::FmtJapan)
 #------------------------------------------------------------------------------
 sub new {
-    my ( $sPkg, %hKey ) = @_;
-    my $oThis = { Code => $hKey{Code}, };
-    if ( $oThis->{Code} ) {
-        foreach my $sKey ( keys %hFmtJapan ) {
-            $hFmtJapan{$sKey} =
-              Jcode::convert( $hFmtJapan{$sKey}, $oThis->{Code}, 'euc' );
-        }
-        $_Code = $oThis->{Code};
+    my ( $class, %args ) = @_;
+    my $encoding = $args{Code} || $args{encoding};
+    my $self = { Code => $encoding };
+    if($encoding){
+        $self->{encoding} = find_encoding($encoding eq 'sjis' ? 'cp932' : $encoding)
+            or do{
+                require Carp;
+                Carp::croak(qq{Unknown encoding '$encoding'});
+            };
     }
-    bless $oThis;
-    return $oThis;
+    return bless $self, $class;
 }
 
 #------------------------------------------------------------------------------
 # TextFmt (for Spreadsheet::ParseExcel::FmtJapan)
 #------------------------------------------------------------------------------
 sub TextFmt {
-    my ( $oThis, $sTxt, $sCode ) = @_;
-
-    if ( $oThis->{Code} ) {
-        if ( !defined($sCode) ) {
-            $sTxt =~ s/(.)/\x00$1/sg;
-            $sCode = 'ucs2';
-        }
-        elsif ( $sCode eq '_native_' ) {
-            $sCode = 'sjis';
-        }
-        return Jcode::convert( $sTxt, $oThis->{Code}, $sCode );
+    my ( $self, $text, $input_encoding ) = @_;
+    if(!defined $input_encoding){
+        $input_encoding = 'utf8';
     }
-    else {
-        return $sTxt;
+    elsif($input_encoding eq '_native_'){
+        $input_encoding = 'cp932'; # Shift_JIS in Microsoft products
     }
+    $text = decode($input_encoding, $text);
+    return $self->{Code} ? $self->{encoding}->encode($text) : $text;
 }
-
 #------------------------------------------------------------------------------
 # FmtStringDef (for Spreadsheet::ParseExcel::FmtJapan)
 #------------------------------------------------------------------------------
 sub FmtStringDef {
-    my ( $oThis, $iFmtIdx, $oBook ) = @_;
-    return $oThis->SUPER::FmtStringDef( $iFmtIdx, $oBook, \%hFmtJapan );
-}
-
-#------------------------------------------------------------------------------
-# ValFmt (for Spreadsheet::ParseExcel::FmtJapan)
-#------------------------------------------------------------------------------
-sub ValFmt {
-    my ( $oThis, $oCell, $oBook ) = @_;
-    return $oThis->SUPER::ValFmt( $oCell, $oBook );
-}
-
-#------------------------------------------------------------------------------
-# ChkType (for Spreadsheet::ParseExcel::FmtJapan)
-#------------------------------------------------------------------------------
-sub ChkType {
-    my ( $oPkg, $iNumeric, $iFmtIdx ) = @_;
-
-    # Is there something special for Japan?
-    return $oPkg->SUPER::ChkType( $iNumeric, $iFmtIdx );
+    my ( $self, $format_index, $book ) = @_;
+    return $self->SUPER::FmtStringDef( $format_index, $book, \%FormatTable );
 }
 
 #------------------------------------------------------------------------------
 # CnvNengo (for Spreadsheet::ParseExcel::FmtJapan)
 #------------------------------------------------------------------------------
+
+# Convert A.D. into Japanese Nengo (aka Gengo)
+
+my @Nengo = (
+	{
+		name      => 'å¹³æˆ', # Heisei
+		abbr_name => 'H',
+
+		base      => 1988,
+		start     => 19890108,
+	},
+	{
+		name      => 'æ˜­å’Œ', # Showa
+		abbr_name => 'S',
+
+		base      => 1925,
+		start     => 19261225,
+	},
+	{
+		name      => 'å¤§æ­£', # Taisho
+		abbr_name => 'T',
+
+		base      => 1911,
+		start     => 19120730,
+	},
+	{
+		name      => 'æ˜Žæ²»', # Meiji
+		abbr_name => 'M',
+
+		base      => 1867,
+		start     => 18680908,
+	},
+);
+
+# Usage: CnvNengo(name => @tm) or CnvNeng(abbr_name => @tm)
 sub CnvNengo {
-    my ( $iKind, @aTime ) = @_;
-    my $iWk = sprintf( '%04d%02d%02d', $aTime[5], $aTime[4], $aTime[3] );
-    if ( $iWk lt '19120730' ) {
-        my $iY = $aTime[5] - 1867;
-        return ( $iKind == 1 )
-          ? "M$iY"
-          : Jcode::convert( "ÌÀ¼£$iY", $_Code, 'euc' );
+    my ( $kind, @tm ) = @_;
+    my $year = $tm[5] + 1900;
+    my $wk = ($year * 10000) + ($tm[4] * 100) + ($tm[3] * 1);
+    #my $wk = sprintf( '%04d%02d%02d', $year, $tm[4], $tm[3] );
+    foreach my $nengo(@Nengo){
+        if( $wk >= $nengo->{start} ){
+            return $nengo->{$kind} . ($year - $nengo->{base});
+        }
     }
-    elsif ( $iWk lt '19261225' ) {
-        my $iY = $aTime[5] - 1911;
-        return ( $iKind == 1 )
-          ? "T$iY"
-          : Jcode::convert( "ÂçÀµ$iY", $_Code, 'euc' );
-    }
-    elsif ( $iWk lt '19890108' ) {
-        my $iY = $aTime[5] - 1925;
-        return ( $iKind == 1 )
-          ? "S$iY"
-          : Jcode::convert( "¾¼ÏÂ$iY", $_Code, 'euc' );
-    }
-    else {
-        my $iY = $aTime[5] - 1988;
-        return ( $iKind == 1 )
-          ? "H$iY"
-          : Jcode::convert( "Ê¿À®$iY", $_Code, 'euc' );
-    }
+    return $year;
 }
 
 1;
