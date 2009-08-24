@@ -18,41 +18,27 @@ package Spreadsheet::ParseExcel::Workbook;
 use strict;
 use warnings;
 
-our $VERSION = '0.44';
+our $VERSION = '0.53';
 
+###############################################################################
+#
+# new()
+#
+# Constructor.
+#
 sub new {
     my ($class) = @_;
     my $self = {};
     bless $self, $class;
 }
 
-#------------------------------------------------------------------------------
-# Spreadsheet::ParseExcel::Workbook->ParseAbort
-#------------------------------------------------------------------------------
-sub ParseAbort {
-    my ( $self, $val ) = @_;
-    $self->{_ParseAbort} = $val;
-}
-
-#------------------------------------------------------------------------------
-# Spreadsheet::ParseExcel::Workbook->Parse
-#------------------------------------------------------------------------------
-sub Parse {
-
-    # NOTE: This method is deprecated. It doesn't conform to the the S::PE
-    # Parse() method and it breaks error handling.
-
-    my ( $class, $source, $oFmt ) = @_;
-    my $excel = Spreadsheet::ParseExcel->new;
-    my $workbook = $excel->Parse( $source, $oFmt );
-    $workbook->{_Excel} = $excel;
-    return $workbook;
-}
-
-#------------------------------------------------------------------------------
-# Spreadsheet::ParseExcel::Workbook Worksheet
-#------------------------------------------------------------------------------
-sub Worksheet {
+###############################################################################
+#
+# worksheet()
+#
+# This method returns a single Worksheet object using either its name or index.
+#
+sub worksheet {
     my ( $oBook, $sName ) = @_;
     my $oWkS;
     foreach $oWkS ( @{ $oBook->{Worksheet} } ) {
@@ -63,17 +49,124 @@ sub Worksheet {
     }
     return undef;
 }
-*worksheet = *Worksheet;
 
-#------------------------------------------------------------------------------
-# Spreadsheet::ParseExcel::Workbook worksheets
-#------------------------------------------------------------------------------
+###############################################################################
+#
+# worksheets()
+#
+# Returns an array ofWorksheet objects.
+#
 sub worksheets {
     my $self = shift;
 
     return @{ $self->{Worksheet} };
 }
 
+###############################################################################
+#
+# worksheet_count()
+#
+# Returns the number Woksheet objects in the Workbook.
+#
+sub worksheet_count {
+
+    my $self = shift;
+
+    return $self->{SheetCount};
+}
+
+###############################################################################
+#
+# get_filename()
+#
+# Returns the name of the Excel file of C<undef> if the data was read from a filehandle rather than a file.
+#
+sub get_filename {
+
+    my $self = shift;
+
+    return $self->{File};
+}
+
+###############################################################################
+#
+# get_print_areas()
+#
+# Returns an array ref of print areas.
+#
+# TODO. This should really be a Worksheet method.
+#
+sub get_print_areas {
+
+    my $self = shift;
+
+    return $self->{PrintArea};
+}
+
+###############################################################################
+#
+# get_print_titles()
+#
+# Returns an array ref of print title hash refs.
+#
+# TODO. This should really be a Worksheet method.
+#
+sub get_print_titles {
+
+    my $self = shift;
+
+    return $self->{PrintTitle};
+}
+
+###############################################################################
+#
+# using_1904_date()
+#
+# Returns true if the Excel file is using the 1904 date epoch.
+#
+sub using_1904_date {
+
+    my $self = shift;
+
+    return $self->{Flg1904};
+}
+
+###############################################################################
+#
+# ParseAbort()
+#
+# Todo
+#
+sub ParseAbort {
+    my ( $self, $val ) = @_;
+    $self->{_ParseAbort} = $val;
+}
+
+###############################################################################
+#
+# Parse(). Deprecated.
+#
+# Syntactic wrapper around Spreadsheet::ParseExcel::Parse().
+# This method is *deprecated* since it doesn't conform to the the current
+# error handling in the S::PE Parse() method.
+#
+sub Parse {
+
+    my ( $class, $source, $formatter ) = @_;
+    my $excel = Spreadsheet::ParseExcel->new();
+    my $workbook = $excel->Parse( $source, $formatter );
+    $workbook->{_Excel} = $excel;
+    return $workbook;
+}
+
+###############################################################################
+#
+# Mapping between legacy method names and new names.
+#
+{
+    no warnings;    # Ignore warnings about variables used only once.
+    *Worksheet = *worksheet;
+}
 1;
 
 __END__
@@ -90,7 +183,95 @@ See the documentation for Spreadsheet::ParseExcel.
 
 =head1 DESCRIPTION
 
-This module is used in conjunction with Spreadsheet::ParseExcel. See the documentation for Spreadsheet::ParseExcel.
+This module is used in conjunction with Spreadsheet::ParseExcel. See the documentation for L<Spreadsheet::ParseExcel>.
+
+
+=head1 Methods
+
+The following Workbook methods are available:
+
+    $workbook->worksheets()
+    $workbook->worksheet()
+    $workbook->worksheet_count()
+    $workbook->get_filename()
+    $workbook->get_print_areas()
+    $workbook->get_print_titles()
+    $workbook->using_1904_date()
+
+
+=head2 worksheets()
+
+The C<worksheets()> method returns an array of Worksheet objects. This was most commonly used to iterate over the worksheets in a workbook:
+
+    for my $worksheet ( $workbook->worksheets() ) {
+        ...
+    }
+
+
+=head2 worksheet()
+
+The C<worksheet()> method returns a single C<Worksheet> object using either its name or index:
+
+    $worksheet = $workbook->worksheet('Sheet1');
+    $worksheet = $workbook->worksheet(0);
+
+Returns C<undef> if the sheet name or index doesn't exist.
+
+
+=head2 worksheet_count()
+
+The C<worksheet_count()> method returns the number of Woksheet objects in the Workbook.
+
+    my $worksheet_count = $workbook->worksheet_count();
+
+
+=head2 get_filename()
+
+The C<get_filename()> method returns the name of the Excel file of C<undef> if the data was read from a filehandle rather than a file.
+
+    my $filename = $workbook->get_filename();
+
+
+=head2 get_print_areas()
+
+The C<get_print_areas()> method returns an array ref of print areas.
+
+    my $print_areas = $workbook->get_print_areas();
+
+Each print area is as follows:
+
+    [ $start_row, $start_col, $end_row, $end_col ]
+
+Returns undef if there are no print areas.
+
+
+=head2 get_print_titles()
+
+The C<get_print_titles()> method returns an array ref of print title hash refs.
+
+    my $print_titles = $workbook->get_print_titles();
+
+Each print title array ref is as follows:
+
+    {
+        Row    => [ $start_row, $end_row ],
+        Column => [ $start_col, $end_col ],
+    }
+
+
+Returns undef if there are no print titles.
+
+
+=head2 using_1904_date()
+
+The C<using_1904_date()> method returns true if the Excel file is using the 1904 date epoch instead of the 1900 epoch.
+
+    my $using_1904_date = $workbook->using_1904_date();
+
+ The Windows version of Excel generally uses the 1900 epoch while the Mac version of Excel generally uses the 1904 epoch.
+
+Returns 0 if the 1900 epoch is in use.
+
 
 =head1 AUTHOR
 

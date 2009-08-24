@@ -544,10 +544,13 @@ sub is_print_comments {
 #
 # Mapping between legacy method names and new names.
 #
-*sheetNo  = *sheet_num;
-*Cell     = *get_cell;
-*RowRange = *row_range;
-*ColRange = *col_range;
+{
+    no warnings;    # Ignore warnings about variables used only once.
+    *sheetNo  = *sheet_num;
+    *Cell     = *get_cell;
+    *RowRange = *row_range;
+    *ColRange = *col_range;
+}
 
 1;
 
@@ -561,7 +564,7 @@ Spreadsheet::ParseExcel::Worksheet - A class for Worksheets.
 
 =head1 SYNOPSIS
 
-See the documentation for Spreadsheet::ParseExcel.
+See the documentation for L<Spreadsheet::ParseExcel>.
 
 =head1 DESCRIPTION
 

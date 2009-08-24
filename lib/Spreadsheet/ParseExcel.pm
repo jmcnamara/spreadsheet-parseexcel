@@ -2069,16 +2069,15 @@ sub _NewCell {
 
 #------------------------------------------------------------------------------
 # ColorIdxToRGB (for Spreadsheet::ParseExcel)
+#
+# TODO JMN Make this a Workbook method and re-document.
+#
 #------------------------------------------------------------------------------
 sub ColorIdxToRGB {
     my ( $sPkg, $iIdx ) = @_;
     return ( ( defined $aColor[$iIdx] ) ? $aColor[$iIdx] : $aColor[0] );
 }
 
-#DESTROY {
-#    my ($self) = @_;
-#    warn "DESTROY $self called\n"
-#}
 
 1;
 __END__
@@ -2121,7 +2120,7 @@ Spreadsheet::ParseExcel - Read information from an Excel file.
 
 The Spreadsheet::ParseExcel module can be used to read information from Excel 95-2003 binary files.
 
-The module cannot read files in the Excel 2007 Open XML XLSX format. See the Spreadsheet::XLSX module instead.
+The module cannot read files in the Excel 2007 Open XML XLSX format. See the L<Spreadsheet::XLSX> module instead.
 
 =head1 Parser
 
@@ -2159,15 +2158,6 @@ The optional C<$formatter> array ref can be an reference to a L<"Formatter Class
 Note: Versions of Spreadsheet::ParseExcel prior to 0.50 also documented a Workbook C<Parse()> method as a syntactic shortcut for the above C<new()> and C<Parse()> combination. This is now deprecated since it breaks error handling.
 
 
-=head2 ColorIdxToRGB()
-
-The C<ColorIdxToRGB()> method returns a RGB string corresponding to a specified color index. The RGB string has 6 characters, representing the RGB hex value, for example C<'FF0000'>. The color index is generally obtained from a L<FONT> object.
-
-    $RGB = $parser->ColorIdxToRGB($color_index);
-
-
-
-
 =head1 Workbook
 
 A C<Spreadsheet::ParseExcel::Workbook> is created via the C<Spreadsheet::ParseExcel> C<Parse()> method:
@@ -2175,9 +2165,14 @@ A C<Spreadsheet::ParseExcel::Workbook> is created via the C<Spreadsheet::ParseEx
     my $parser   = Spreadsheet::ParseExcel->new();
     my $workbook = $parser->Parse('Book1.xls');
 
-The Workbook class has methods and properties that are outlined in the following sections.
+The main methods of the Workbook class are:
 
-=head1 Workbook Methods
+    $workbook->worksheets()
+    $workbook->worksheet()
+    $workbook->worksheet_count()
+    $workbook->get_filename()
+
+These more commonly used methods of the Workbook class are outlined below. The other, less commonly used, methods are documented in L<Spreadsheet::ParseExcel::Worksheet>.
 
 
 =head2 worksheets()
@@ -2188,6 +2183,7 @@ Returns an array of L<"Worksheet"> objects. This was most commonly used to itera
         ...
     }
 
+
 =head2 worksheet()
 
 The C<worksheet()> method returns a single C<Worksheet> object using either its name or index:
@@ -2197,110 +2193,50 @@ The C<worksheet()> method returns a single C<Worksheet> object using either its 
 
 Returns C<undef> if the sheet name or index doesn't exist.
 
-=head1 Workbook Properties
 
-A workbook object exposes a number of properties as shown below:
+=head2 worksheet_count()
 
-    $workbook->{Worksheet }->[$index]
-    $workbook->{File}
-    $workbook->{Author}
-    $workbook->{Flg1904}
-    $workbook->{Version}
-    $workbook->{SheetCount}
-    $workbook->{PrintArea }->[$index]
-    $workbook->{PrintTitle}->[$index]
+The C<worksheet_count()> method returns the number of Woksheet objects in the Workbook.
 
-These properties are generally only of interest to advanced users. Casual users can skip this section.
+    my $worksheet_count = $workbook->worksheet_count();
 
-=head2 $workbook->{Worksheet}->[$index]
 
-Returns an array of L<"Worksheet"> objects. This was most commonly used to iterate over the worksheets in a workbook:
+=head2 get_filename()
 
-    for my $worksheet (@{$workbook->{Worksheet}}) {
-        ...
-    }
+The C<get_filename()> method returns the name of the Excel file of C<undef> if the data was read from a filehandle rather than a file.
 
-It is now deprecated, use C<worksheets())> instead.
+    my $filename = $workbook->get_filename();
 
-=head2 $workbook->{File}
 
-Returns the name of the Excel file.
+=head2 Other Workbook Methods
 
-=head2 $workbook->{Author}
-
-Returns the author of the Excel file.
-
-=head2 $workbook->{Flg1904}
-
-Returns true if the Excel file is using the 1904 date epoch instead of the 1900 epoch. The Windows version of Excel generally uses the 1900 epoch while the Mac version of Excel generally uses the 1904 epoch.
-
-=head2 $workbook->{Version}
-
-Returns the version of the Excel file.
-
-=head2 $workbook->{SheetCount}
-
-Returns the numbers of L<"Worksheet"> objects in the Workbook.
-
-=head2 $workbook->{PrintArea}->[$index]
-
-Returns an array ref of print areas. Each print area is as follows:
-
-    [ $start_row, $start_col, $end_row, $end_col]
-
-=head2 $workbook->{PrintTitle}->[$index]
-
-Returns an array ref  of print title hash refs. Each print title is as follows:
-
-    {
-        Row    => [$start_row, $end_row],
-        Column => [$start_col, $end_col]
-    }
-
+For full documentation of the methods available via a Workbook object see L<Spreadsheet::ParseExcel::Workbook>.
 
 =head1 Worksheet
 
-The C<Spreadsheet::ParseExcel::Worksheet> class encapsulates the properties of an Excel worksheet. It has the following methods:
+The C<Spreadsheet::ParseExcel::Worksheet> class encapsulates the properties of an Excel worksheet.
 
-    # Commonly used methods.
+A Worksheet object is obtained via the L<"worksheets()"> or L<"worksheet()"> methods.
+
+    for my $worksheet ( $workbook->worksheets() ) {
+        ...
+    }
+
+    # Or:
+
+    $worksheet = $workbook->worksheet('Sheet1');
+    $worksheet = $workbook->worksheet(0);
+
+The most commonly used methods of the Worksheet class are:
+
     $worksheet->get_cell()
     $worksheet->row_range()
     $worksheet->col_range()
     $worksheet->get_name()
 
-    # Infrequently used methods.
-    $worksheet->get_h_pagebreaks()
-    $worksheet->get_v_pagebreaks()
-    $worksheet->get_merged_areas()
-    $worksheet->get_row_heights()
-    $worksheet->get_col_widths()
-    $worksheet->get_default_row_height()
-    $worksheet->get_default_col_width()
-    $worksheet->get_header()
-    $worksheet->get_footer()
-    $worksheet->get_margin_left()
-    $worksheet->get_margin_right()
-    $worksheet->get_margin_top()
-    $worksheet->get_margin_bottom()
-    $worksheet->get_margin_header()
-    $worksheet->get_margin_footer()
-    $worksheet->get_paper()
-    $worksheet->get_start_page()
-    $worksheet->get_print_order()
-    $worksheet->get_print_scale()
-    $worksheet->get_fit_to_pages()
-    $worksheet->is_portrait()
-    $worksheet->is_centered_horizontally()
-    $worksheet->is_centered_vertically()
-    $worksheet->is_print_gridlines()
-    $worksheet->is_print_row_col_headers()
-    $worksheet->is_print_black_and_white()
-    $worksheet->is_print_draft()
-    $worksheet->is_print_comments()
-
 The Spreadsheet::ParseExcel::Worksheet class exposes a lot of methods but in general very few are required unless you are writing an advanced filter.
 
-The most commonly used methods are shown below. The others are documented in L<Spreadsheet::ParseExcel::Worksheet>.
+The most commonly used methods are detailed below. The others are documented in L<Spreadsheet::ParseExcel::Worksheet>.
 
 =head2 get_cell($row, $col)
 
@@ -2329,7 +2265,7 @@ The C<get_name()> method returns the name of the worksheet, such as 'Sheet1'.
 
     my $name = $worksheet->get_name();
 
-=head2 Other Worksheet methods
+=head2 Other Worksheet Methods
 
 For other, less commonly used, Worksheet methods see L<Spreadsheet::ParseExcel::Worksheet>.
 
