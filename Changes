@@ -1,5 +1,23 @@
 Revision history for Perl extension Spreadsheet::ParseExcel.
 
+0.54 August 25 2009
+
+    ! Fix for height/width of hidden rows/columns with additional.
+      tests in 05_regression.t. Thanks to Greger Leijonhufvud.
+      http://rt.cpan.org/Public/Bug/Display.html?id=48450
+
+    ! Fix for mal-formed Print_Title Name block.
+      Reported by Marc Elser.
+
+0.53 August 24 2009
+
+    + Made perl 5.8.0 a requirement for proper Unicode handling.
+
+    ! Fixed minor int2col() bug thanks to David Black.
+      Added 28_int2col.t test for above.
+      http://rt.cpan.org/Public/Bug/Display.html?id=48967
+
+    + Refactored Workbook API and docs.
 
 0.52 August 21 2009
 
@@ -74,7 +92,7 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
       http://rt.cpan.org/Public/Bug/Display.html?id=20526
       http://rt.cpan.org/Public/Bug/Display.html?id=31206
       http://rt.cpan.org/Public/Bug/Display.html?id=40307
- 
+
     ! Removed undocumented and counter-intuitive use of overload on SheetNo in
       Worksheet.pm.
       http://rt.cpan.org/Public/Bug/Display.html?id=14278

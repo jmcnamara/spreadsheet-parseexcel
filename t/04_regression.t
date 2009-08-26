@@ -81,7 +81,7 @@ is( $got_2, $expected_2, $caption );
 #
 # Test 7, 8.
 #
-$caption    = "Test cell range";
+$caption    = "Test col range";
 $worksheet  = $workbook->worksheet('Sheet1');
 $expected_1 = 0;
 $expected_2 = 0;
@@ -136,7 +136,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Tests 7, 8.
+# Test 15, 16.
 #
 $caption    = "Test row '1' height";
 $worksheet  = $workbook->worksheet('Sheet1');

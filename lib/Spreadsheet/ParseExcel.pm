@@ -1,3 +1,5 @@
+package Spreadsheet::ParseExcel;
+
 ##############################################################################
 #
 # Spreadsheet::ParseExcel - Extract information from an Excel file.
@@ -8,14 +10,15 @@
 #
 # Documentation after __END__
 #
-package Spreadsheet::ParseExcel;
+
 use strict;
 use warnings;
+use 5.008;
 
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.52';
+our $VERSION = '0.54';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -854,14 +857,9 @@ sub _subRow {
       unpack( "v8", $sWk );
     $iEc--;
 
-    #1. RowHeight
-    if ( $iGr & 0x20 ) {    #Height = 0
-        $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{RowHeight}[$iR] = 0;
-    }
-    else {
-        $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{RowHeight}[$iR] =
-          $iHght / 20.0;
-    }
+    # TODO. we need to handle hidden rows:
+    # $iGr & 0x20
+    $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{RowHeight}[$iR] = $iHght / 20;
 
     #2.MaxRow, MaxCol, MinRow, MinCol
     _SetDimension( $oBook, $iR, $iSc, $iEc );
@@ -975,17 +973,21 @@ sub _convert_col_width {
 # _subColInfo (for Spreadsheet::ParseExcel) DK:P309
 #------------------------------------------------------------------------------
 sub _subColInfo {
-    my ( $oBook, $bOp, $bLen, $sWk ) = @_;
-    return undef unless ( defined $oBook->{_CurSheet} );
-    my ( $iSc, $iEc, $iW, $iXF, $iGr ) = unpack( "v5", $sWk );
-    for ( my $i = $iSc ; $i <= $iEc ; $i++ ) {
-        $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{ColWidth}[$i] =
-          ( $iGr & 0x01 ) ? 0 : _convert_col_width( $oBook, $iW );
 
-        #0x01 means HIDDEN
+    my ( $oBook, $bOp, $bLen, $sWk ) = @_;
+
+    return undef unless defined $oBook->{_CurSheet};
+
+    my ( $iSc, $iEc, $iW, $iXF, $iGr ) = unpack( "v5", $sWk );
+
+    for ( my $i = $iSc ; $i <= $iEc ; $i++ ) {
+
+        $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{ColWidth}[$i] =
+          _convert_col_width( $oBook, $iW );
+
         $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{ColFmtNo}[$i] = $iXF;
 
-# $oBook->{Worksheet}[$oBook->{_CurSheet}]->{ColCr}[$i]    = $iGr; #Not Implemented
+        # TODO. we need to handle hidden cols: $iGr & 0x01.
     }
 }
 
@@ -1605,6 +1607,12 @@ sub _subName {
         if ( $oBook->{BIFFVersion} >= verBIFF8 ) {
             my $iName  = unpack( 'n', substr( $sWk, 14 ) );
             my $iSheet = unpack( 'v', substr( $sWk, 8 ) ) - 1;
+
+            # Workaround for mal-formed Excel workbooks where Print_Title is
+            # set as Global (i.e. itab = 0). Note, this will have to be
+            # treated differently when we get around to handling global names.
+            return undef if $iSheet == -1;
+
             if ( $iName == 6 ) {    #PrintArea
                 my ( $iSheetW, $raArea ) = _ParseNameArea( substr( $sWk, 16 ) );
                 $oBook->{PrintArea}[$iSheet] = $raArea;

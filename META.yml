@@ -1,16 +1,26 @@
 --- #YAML:1.0
-name:                Spreadsheet-ParseExcel
-version:             0.50
-abstract:            Read information from an Excel file.
-license:             perl
-generated_by:        ExtUtils::MakeMaker version 6.44
-distribution_type:   module
-requires:     
-    IO::File:                      0
-    IO::Scalar:                    0
-    OLE::Storage_Lite:             0
-    Scalar::Util:                  0
-    Test::More:                    0.47
+name:               Spreadsheet-ParseExcel
+version:            0.53
+abstract:           Read information from an Excel file.
+author:
+    - John McNamara (jmcnamara@cpan.org)
+license:            perl
+distribution_type:  module
+configure_requires:
+    ExtUtils::MakeMaker:  0
+build_requires:
+    ExtUtils::MakeMaker:  0
+requires:
+    IO::File:           0
+    IO::Scalar:         0
+    OLE::Storage_Lite:  0
+    Scalar::Util:       0
+    perl:               5.008
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.54
 meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.4.html
-    version: 1.4
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4

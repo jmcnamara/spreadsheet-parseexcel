@@ -2,13 +2,13 @@ use strict;
 use warnings;
 use ExtUtils::MakeMaker;
 use Config;
+use 5.008;
 
 my %deps = (
     'OLE::Storage_Lite'   => 0,
     'IO::File'            => 0,
     'Scalar::Util'        => 0,
     'IO::Scalar'          => 0,
-    'Test::More'          => 0,
 );
 
 if (exists $Config{useperlio} && $Config{useperlio} eq "define") {

@@ -18,8 +18,7 @@
 use strict;
 use warnings;
 use Spreadsheet::ParseExcel;
-#use Test::More tests => 72;
-use Test::More 'no_plan';
+use Test::More tests => 76;
 
 ###############################################################################
 #
@@ -70,7 +69,7 @@ is( $got_2, $expected_1, $caption );
 $caption    = "Test row range";
 $worksheet  = $workbook->worksheet('Sheet2');
 $expected_1 = 0;
-$expected_2 = 30;
+$expected_2 = 35;
 $got_1      = ( $worksheet->row_range() )[0];
 $got_2      = ( $worksheet->row_range() )[1];
 $caption    = " \tWorksheet regression: " . $caption;
@@ -82,10 +81,10 @@ is( $got_2, $expected_2, $caption );
 #
 # Test 7, 8.
 #
-$caption    = "Test cell range";
+$caption    = "Test col range";
 $worksheet  = $workbook->worksheet('Sheet2');
 $expected_1 = 0;
-$expected_2 = 4;
+$expected_2 = 9;
 $got_1      = ( $worksheet->col_range() )[0];
 $got_2      = ( $worksheet->col_range() )[1];
 $caption    = " \tWorksheet regression: " . $caption;
@@ -137,7 +136,7 @@ is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
-# Tests 7, 8.
+# Test 15, 16.
 #
 $caption    = "Test row '3' height";
 $worksheet  = $workbook->worksheet('Sheet2');
@@ -544,5 +543,35 @@ $caption    = " \tWorksheet regression: " . $caption;
 
 is_deeply( $got_1, $expected_1, $caption );
 is_deeply( $got_2, $expected_1, $caption );
+
+###############################################################################
+#
+# Test 73, 74.
+#
+$caption    = "Test hidden row 34";
+$worksheet  = $workbook->worksheet('Sheet2');
+$expected_1 = 21;
+$got_1      = $worksheet->{RowHeight}->[33];
+$got_2      = ( $worksheet->get_row_heights() )[33];
+$caption    = " \tWorksheet regression: " . $caption;
+
+is( $got_1, $expected_1, $caption );
+is( $got_2, $expected_1, $caption );
+
+###############################################################################
+#
+# Test 75, 76.
+#
+$caption    = "Test column hidden 'A' width";
+$worksheet  = $workbook->worksheet('Sheet2');
+$expected_1 = 10.71;
+$got_1      = $worksheet->{ColWidth}->[7];
+$got_2      = ( $worksheet->get_col_widths() )[7];
+$caption    = " \tWorksheet regression: " . $caption;
+
+is( $got_1, $expected_1, $caption );
+is( $got_2, $expected_1, $caption );
+
+
 
 __END__

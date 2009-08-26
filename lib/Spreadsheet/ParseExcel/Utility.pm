@@ -24,7 +24,7 @@ use vars qw(@ISA @EXPORT_OK);
 @EXPORT_OK = qw(ExcelFmt LocaltimeExcel ExcelLocaltime
   col2int int2col sheetRef xls2csv);
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 
 my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 
@@ -1230,7 +1230,7 @@ sub int2col {
         $val = int( $val / 26 ) - 1;
     } while ( $val >= 0 );
 
-    return reverse $out;
+    return scalar reverse $out;
 }
 
 # -----------------------------------------------------------------------------
