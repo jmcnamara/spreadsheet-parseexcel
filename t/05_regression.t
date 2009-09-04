@@ -131,8 +131,8 @@ $got_1      = $worksheet->{DefColWidth};
 $got_2      = $worksheet->get_default_col_width;
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+_is_float( $got_1, $expected_1, $caption );
+_is_float( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
@@ -145,8 +145,8 @@ $got_1      = $worksheet->{RowHeight}->[2];
 $got_2      = ( $worksheet->get_row_heights() )[2];
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+_is_float( $got_1, $expected_1, $caption );
+_is_float( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
@@ -289,8 +289,8 @@ $got_1      = $worksheet->{LeftMargin};
 $got_2      = $worksheet->get_margin_left();
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+_is_float( $got_1, $expected_1, $caption );
+_is_float( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
@@ -303,8 +303,8 @@ $got_1      = $worksheet->{RightMargin};
 $got_2      = $worksheet->get_margin_right();
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+_is_float( $got_1, $expected_1, $caption );
+_is_float( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
@@ -317,8 +317,8 @@ $got_1      = $worksheet->{TopMargin};
 $got_2      = $worksheet->get_margin_top();
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+_is_float( $got_1, $expected_1, $caption );
+_is_float( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
@@ -331,8 +331,8 @@ $got_1      = $worksheet->{BottomMargin};
 $got_2      = $worksheet->get_margin_bottom();
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+_is_float( $got_1, $expected_1, $caption );
+_is_float( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
@@ -345,8 +345,8 @@ $got_1      = $worksheet->{HeaderMargin};
 $got_2      = $worksheet->get_margin_header();
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+_is_float( $got_1, $expected_1, $caption );
+_is_float( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
@@ -359,8 +359,8 @@ $got_1      = $worksheet->{FooterMargin};
 $got_2      = $worksheet->get_margin_footer();
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+_is_float( $got_1, $expected_1, $caption );
+_is_float( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
@@ -569,9 +569,31 @@ $got_1      = $worksheet->{ColWidth}->[7];
 $got_2      = ( $worksheet->get_col_widths() )[7];
 $caption    = " \tWorksheet regression: " . $caption;
 
-is( $got_1, $expected_1, $caption );
-is( $got_2, $expected_1, $caption );
+_is_float( $got_1, $expected_1, $caption );
+_is_float( $got_2, $expected_1, $caption );
 
+###############################################################################
+#
+# _is_float()
+#
+# Helper function for float comparison. This is mainly to prevent failing tests
+# on 64bit systems with extended doubles where the 128bit precision is compared
+# against Excel's 64bit precision.
+#
+sub _is_float {
 
+    my ( $got, $expected, $caption ) = @_;
+
+    my $max = 1;
+    $max = abs($got)      if abs($got) > $max;
+    $max = abs($expected) if abs($expected) > $max;
+
+    if ( abs( $got - $expected ) <= 1e-15 * $max ) {
+        ok( 1, $caption );
+    }
+    else {
+        is( $got, $expected, $caption );
+    }
+}
 
 __END__

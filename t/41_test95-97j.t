@@ -40,7 +40,17 @@ foreach my $xls(qw(Test95J.xls Test97J.xls)){
 	for my $i($rmin .. $rmax){
 		for my $j($cmin .. $cmax){
 			#print $sheet->get_cell($i, $j)->value, "\n";
-			is $sheet->get_cell($i, $j)->value, $expected[$i][$j], "[$i, $j]";
+			my $cell     = $sheet->get_cell($i, $j);
+			my $got		 = $cell->value;
+			my $expected = $expected[$i][$j];
+			my $caption	 = "[$i, $j]";
+
+			if ($expected =~ /\d\.\d+/) {
+				_is_float($got, $expected, $caption);
+			}
+			else {
+				is $got, $expected, $caption;
+			}
 		}
 	}
 
@@ -65,8 +75,43 @@ foreach my $xls(qw(Test95J.xls Test97J.xls)){
 	for my $i($rmin .. $rmax){
 		for my $j($cmin .. $cmax){
 			#print $sheet->get_cell($i, $j)->value, "\n";
-			my $cell = $sheet->get_cell($i, $j);
-			is ref($cell) ? $cell->value : $cell, $expected[$i][$j], "[$i, $j]";
+			my $cell     = $sheet->get_cell($i, $j);
+			my $got		 = ref($cell) ? $cell->value : $cell;
+			my $expected = $expected[$i][$j];
+			my $caption	 = "[$i, $j]";
+
+			if (defined $expected && $expected =~ /\d\.\d+/) {
+				_is_float($got, $expected, $caption);
+			}
+			else {
+				is $got, $expected, $caption;
+			}
 		}
 	}
 }
+
+
+###############################################################################
+#
+# _is_float()
+#
+# Helper function for float comparison. This is mainly to prevent failing tests
+# on 64bit systems with extended doubles where the 128bit precision is compared
+# against Excel's 64bit precision.
+#
+sub _is_float {
+
+	my ( $got, $expected, $caption ) = @_;
+
+	my $max = 1;
+	$max = abs($got)	  if abs($got) > $max;
+	$max = abs($expected) if abs($expected) > $max;
+
+	if ( abs( $got - $expected ) <= 1e-15 * $max ) {
+		ok( 1, $caption );
+	}
+	else {
+		is( $got, $expected, $caption );
+	}
+}
+
