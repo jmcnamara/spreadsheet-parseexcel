@@ -46,7 +46,7 @@ $got_2      = $worksheet->get_cell( 0, 0 )->value();
 $caption    = " \tWorksheet regression: " . $caption;
 
 is( $got_1, $expected_1, $caption );
-is( $got_1, $expected_1, $caption );
+is( $got_2, $expected_1, $caption );
 
 ###############################################################################
 #
