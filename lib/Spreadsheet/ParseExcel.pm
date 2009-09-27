@@ -2023,15 +2023,12 @@ sub _NewCell {
     my $FmtStr = $oBook->{FormatStr}{ $rhKey{Format}{FmtIdx} };
 
     # Set "Date" type if required for numbers in a MulRK BIFF block.
-    if (   defined $FmtStr
-        && $rhKey{Type} eq "Numeric"
-        && $rhKey{Kind} eq "MulRK" )
-    {
+    if ( defined $FmtStr && $rhKey{Type} eq "Numeric" ) {
 
         # Match a range of possible date formats. Note: this isn't important
         # except for reporting. The number will still be converted to a date
         # by ExcelFmt() even if 'Type' isn't set to 'Date'.
-        if ( $FmtStr =~ m{[dmy]+([^dmy]?)[dmy]+\1[dmy]+}i ) {
+        if ( $FmtStr =~ m{^[dmy][-\\/dmy]*$}i ) {
             $rhKey{Type} = "Date";
         }
     }
