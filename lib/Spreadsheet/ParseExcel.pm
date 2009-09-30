@@ -18,7 +18,7 @@ use 5.008;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.54';
+our $VERSION = '0.55';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;

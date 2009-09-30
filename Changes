@@ -1,5 +1,14 @@
 Revision history for Perl extension Spreadsheet::ParseExcel.
 
+0.55 August 25 2009
+
+    + Refactored Cell.pm documentation and method names and added
+      regression suite, t/06_regression.t.
+
+    ! Added float comparison test to avoid false failing tests on
+      64bit systems. 
+
+
 0.54 August 25 2009
 
     ! Fix for height/width of hidden rows/columns with additional.

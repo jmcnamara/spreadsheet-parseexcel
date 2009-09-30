@@ -13,6 +13,7 @@ t/02_parse-dates.t
 t/03_regression.t
 t/04_regression.t
 t/05_regression.t
+t/06_regression.t
 t/20_number_format_default.t
 t/21_number_format_user.t
 t/22_number_format_datetime.t
