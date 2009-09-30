@@ -18,7 +18,7 @@ package Spreadsheet::ParseExcel::Cell;
 use strict;
 use warnings;
 
-our $VERSION = '0.44';
+our $VERSION = '0.55';
 
 ###############################################################################
 #
@@ -184,11 +184,13 @@ The C<value()> method returns the formatted value of the cell.
 
     my $value = $cell->value();
 
-Formatted in this sense refers to the numeric fomat of the cell value. For example a number such as 40177 might be formatted as 40,117, 40117.000 or even as the date 2009/12/30.
+Formatted in this sense refers to the numeric format of the cell value. For example a number such as 40177 might be formatted as 40,117, 40117.000 or even as the date 2009/12/30.
 
-If the cell doesn't contain a numeric format then the formatted and unformated cell values are the same, see the C<unformatted()> method below.
+If the cell doesn't contain a numeric format then the formatted and unformatted cell values are the same, see the C<unformatted()> method below.
 
-For a defined C<$cell> the C<value()> method will always return a value. In the case of a cell with formatting but no numeric or string contents the method will return the empyt string C<''>.
+For a defined C<$cell> the C<value()> method will always return a value.
+
+In the case of a cell with formatting but no numeric or string contents the method will return the empty string C<''>.
 
 
 =head2 unformatted()
@@ -211,7 +213,7 @@ If a user defined format hasn't been applied to the cell then the default cell f
 
 =head2 type()
 
-The C<type()> method returns the type of cell such as Text, Numeric or Date. If the type was detected as Numeric, and the Cell Format matches m{^[dmy][-\\/dmy]*$}i, it will be treated as a Date type.
+The C<type()> method returns the type of cell such as Text, Numeric or Date. If the type was detected as Numeric, and the Cell Format matches C<m{^[dmy][-\\/dmy]*$}i>, it will be treated as a Date type.
 
     my $type = $cell->type();
 
@@ -220,11 +222,25 @@ See also L<Dates and Time in Excel>.
 
 =head2 encoding()
 
-The C<encoding()> method returns the character encoding of the cell. It is either undef, ucs2 or _native_.  If undef then the character encoding is generally ascii. If the cell encoding is C<_native_> it means that cell encoding is 'sjis' or something similar.
+The C<encoding()> method returns the character encoding of the cell.
 
     my $encoding = $cell->encoding();
 
-Returns 0 if the property isn't set.
+This method is only of interest to developers. In general Spreadsheet::ParseExcel will return all character strings in UTF-8 regardless of the encoding used by Excel.
+
+The C<encoding()> method returns one of the following values:
+
+=over
+
+=item * 0: Unknown format. This shouldn't happen. In the default case the format should be 1.
+
+=item * 1: 8bit ASCII or single byte UTF-16. This indicates that the characters are encoded in a single byte. In Excel 95 and earlier This usually meant ASCII or an international variant. In Excel 97 it refers to a compressed UTF-16 character string where all of the high order bytes are 0 and are omitted to save space.
+
+=item * 2: UTF-16BE.
+
+=item * 3: Native encoding. In Excel 95 and earlier this encoding was used to represent multi-byte character encodings such as SJIS.
+
+=back
 
 
 =head2 is_merged()
@@ -238,11 +254,18 @@ Returns C<undef> if the property isn't set.
 
 =head2 get_rich_text()
 
-The C<get_rich_text()> method returns an array ref of font information about each string block in a "rich", i.e. multi-format, string. Each entry has the form: [ $start_position, $font_object ]
+The C<get_rich_text()> method returns an array ref of font information about each string block in a "rich", i.e. multi-format, string.
 
     my $rich_text = $cell->get_rich_text();
 
-Returns 0 if the property isn't set.
+The return value is an arrayref of arrayrefs in the form:
+
+    [
+        [ $start_position, $font_object ],
+         ...,
+    ]
+
+Returns undef if the property isn't set.
 
 
 =head1 Dates and Time in Excel
@@ -251,18 +274,19 @@ Dates and times in Excel are represented by real numbers, for example "Jan 1 200
 
 The integer part of the number stores the number of days since the epoch and the fractional part stores the percentage of the day.
 
-A date or time in Excel is just like any other number. To have the number display as a date you must apply an Excel number format to it. Here are some examples.
+A date or time in Excel is just like any other number. The way in which it is displayed is controlled by the number format:
 
-    Number     Format                      Result
-    39506.5    'dd/mm/yy'                  28/02/08
-    39506.5    'mm/dd/yy'                  02/28/08
-    39506.5    'd-m-yyyy'                  28-2-2008
-    39506.5    'dd/mm/yy hh:mm'            28/02/08 12:00
-    39506.5    'd mmm yyyy'                28 Feb 2008
-    39506.5    'mmm d yyyy hh:mm AM/PM'    Feb 28 2008 12:00 PM
+    Number format               $cell->value()            $cell->unformatted()
+    =============               ==============            ==============
+    'dd/mm/yy'                  '28/02/08'                39506.5
+    'mm/dd/yy'                  '02/28/08'                39506.5
+    'd-m-yyyy'                  '28-2-2008'               39506.5
+    'dd/mm/yy hh:mm'            '28/02/08 12:00'          39506.5
+    'd mmm yyyy'                '28 Feb 2008'             39506.5
+    'mmm d yyyy hh:mm AM/PM'    'Feb 28 2008 12:00 PM'    39506.5
 
 
-TODO ParseExcel date handling functions.
+The L<Spreadsheet::ParseExcel::Utility> module contains a function called C<ExcelLocaltime> which will convert between an unformatted Excel date/time number and a C<localtime()> like array.
 
 For date conversions using the CPAN C<DateTime> framework see L<DateTime::Format::Excel> http://search.cpan.org/search?dist=DateTime-Format-Excel
 

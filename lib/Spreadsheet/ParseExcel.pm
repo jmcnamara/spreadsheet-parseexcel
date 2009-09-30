@@ -2276,63 +2276,37 @@ For other, less commonly used, Worksheet methods see L<Spreadsheet::ParseExcel::
 
 =head1 Cell
 
-The C<Spreadsheet::ParseExcel::Cell> class has the following methods and properties.
+The C<Spreadsheet::ParseExcel::Cell> class has the following main methods.
 
-=head1 Cell methods
+    $cell->value()
+    $cell->unformatted()
 
 =head2 value()
 
-Formatted value of the cell.
+The C<value()> method returns the formatted value of the cell.
+
+    my $value = $cell->value();
+
+Formatted in this sense refers to the numeric format of the cell value. For example a number such as 40177 might be formatted as 40,117, 40117.000 or even as the date 2009/12/30.
+
+If the cell doesn't contain a numeric format then the formatted and unformatted cell values are the same, see the C<unformatted()> method below.
+
+For a defined C<$cell> the C<value()> method will always return a value.
+
+In the case of a cell with formatting but no numeric or string contents the method will return the empty string C<''>.
+
 
 =head2 unformatted()
 
-Unformatted value of the cell.
+The C<unformatted()> method returns the unformatted value of the cell.
 
+    my $unformatted = $cell->unformatted();
 
-=head1 Cell properties
+Returns the cell value without a numeric format. See the C<value()> method above.
 
-    $cell->{Val}
-    $cell->{Type}
-    $cell->{Code}
-    $cell->{Format}
-    $cell->{Merged}
-    $cell->{Rich}
+=head2 Other Cell Methods
 
-=head2 $cell->{Val}
-
-Returns the unformatted value of the cell. This is B<Deprecated>, use C<< $cell->unformatted() >> instead.
-
-=head2 $cell->{Type}
-
-Returns the type of cell such as C<Text>, C<Numeric> or C<Date>.
-
-If the type was detected as C<Numeric>, and the Cell Format matches C<m{^[dmy][-\\/dmy]*$}>, it will be treated as a C<Date> type.
-
-=head2 $cell->{Code}
-
-Returns the character encoding of the cell. It is either  C<undef>, C<ucs2> or C<_native_>.
-
-If C<undef> then the character encoding seems to be C<ascii>.
-
-If C<_native_> it means that cell seems to be 'sjis' or something similar.
-
-=head2 $cell->{Format}
-
-Returns the L<"Format"> object for the cell.
-
-=head2 $cell->{Merged}
-
-Returns true if the cell is merged.
-
-=head2 $cell->{Rich}
-
-Returns an array ref of font information about each string block in a "rich", i.e. multi-format, string. Each entry has the form:
-
-    [ $start_position>, $font_object ]
-
-For more information refer to the example program C<sample/dmpExR.pl>.
-
-
+For other, less commonly used, Worksheet methods see L<Spreadsheet::ParseExcel::Cell>.
 
 
 =head1 Format
