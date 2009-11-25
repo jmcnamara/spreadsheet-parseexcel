@@ -5,7 +5,7 @@ use Config;
 use 5.008;
 
 my %deps = (
-    'OLE::Storage_Lite'   => 0,
+    'OLE::Storage_Lite'   => 0.19,
     'IO::File'            => 0,
     'Scalar::Util'        => 0,
     'IO::Scalar'          => 0,
