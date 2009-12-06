@@ -182,7 +182,7 @@ Constructor.
 
     $workbook = $parse->Parse($sFileName , $formatter);
 
-Returns a L<"Workbook"> object. If an error occurs, returns undef.
+Returns a L</Workbook> object. If an error occurs, returns undef.
 
 The optional C<$formatter> is a Formatter Class to format the value of cells.
 
@@ -195,7 +195,7 @@ This is a subclass of the L<Spreadsheet::ParseExcel::Workbook> and has the follo
 
 =head2 worksheets()
 
-Returns an array of L<"Worksheet"> objects. This was most commonly used to iterate over the worksheets in a workbook:
+Returns an array of L</Worksheet> objects. This was most commonly used to iterate over the worksheets in a workbook:
 
     for my $worksheet ( $workbook->worksheets() ) {
         ...

@@ -2149,7 +2149,7 @@ The call-back can be used to ignore certain cells or to reduce memory usage. See
 
 =head2 Parse($filename, [$formatter])
 
-The Parser C<Parse()> method return a L<"Workbook"> object.
+The Parser C<Parse()> method return a L</Workbook> object.
 
     my $parser   = Spreadsheet::ParseExcel->new();
     my $workbook = $parser->Parse('Book1.xls');
@@ -2158,7 +2158,7 @@ If an error occurs C<Parse()> returns C<undef>.
 
 The C<$filename> parameter is generally the file to be parsed. However, it can also be a filehandle or a scalar reference.
 
-The optional C<$formatter> array ref can be an reference to a L<"Formatter Class"> to format the value of cells.
+The optional C<$formatter> array ref can be an reference to a L</Formatter Class> to format the value of cells.
 
 Note: Versions of Spreadsheet::ParseExcel prior to 0.50 also documented a Workbook C<Parse()> method as a syntactic shortcut for the above C<new()> and C<Parse()> combination. This is now deprecated since it breaks error handling.
 
@@ -2182,7 +2182,7 @@ These more commonly used methods of the Workbook class are outlined below. The o
 
 =head2 worksheets()
 
-Returns an array of L<"Worksheet"> objects. This was most commonly used to iterate over the worksheets in a workbook:
+Returns an array of L</Worksheet> objects. This was most commonly used to iterate over the worksheets in a workbook:
 
     for my $worksheet ( $workbook->worksheets() ) {
         ...
@@ -2221,7 +2221,7 @@ For full documentation of the methods available via a Workbook object see L<Spre
 
 The C<Spreadsheet::ParseExcel::Worksheet> class encapsulates the properties of an Excel worksheet.
 
-A Worksheet object is obtained via the L<"worksheets()"> or L<"worksheet()"> methods.
+A Worksheet object is obtained via the L</worksheets()> or L</worksheet()> methods.
 
     for my $worksheet ( $workbook->worksheets() ) {
         ...
@@ -2245,7 +2245,7 @@ The most commonly used methods are detailed below. The others are documented in 
 
 =head2 get_cell($row, $col)
 
-Return the L<"Cell"> object at row C<$row> and column C<$col> if it is defined. Otherwise returns undef.
+Return the L</Cell> object at row C<$row> and column C<$col> if it is defined. Otherwise returns undef.
 
     my $cell = $worksheet->get_cell($row, $col);
 
@@ -2336,7 +2336,7 @@ These properties are generally only of interest to advanced users. Casual users 
 
 =head2 $format->{Font}
 
-Returns the L<"Font"> object for the Format.
+Returns the L</Font> object for the Format.
 
 =head2 $format->{AlignH}
 
@@ -2633,7 +2633,7 @@ However, in a lot of cases when an Excel file is being processed the only inform
 
 The user specified cell handler is passed as a code reference to C<new()> along with the parameter C<NotSetCell> which tells Spreadsheet::ParseExcel not to store the parsed cell. Note, you don't have to iterate over the rows and columns, this happens automatically as part of the parsing.
 
-The cell handler is passed 5 arguments. The first, C<$workbook>, is a reference to the C<Spreadsheet::ParseExcel::Workbook> object that represent the parsed workbook. This can be used to access any of the C<Spreadsheet::ParseExcel::Workbook> methods, see L<"Workbook">. The second C<$sheet_index> is the zero-based index of the worksheet being parsed. The third and fourth, C<$row> and C<$col>, are the zero-based row and column number of the cell. The fifth, C<$cell>, is a reference to the C<Spreadsheet::ParseExcel::Cell> object. This is used to extract the data from the cell. See L<"Cell"> for more information.
+The cell handler is passed 5 arguments. The first, C<$workbook>, is a reference to the C<Spreadsheet::ParseExcel::Workbook> object that represent the parsed workbook. This can be used to access any of the C<Spreadsheet::ParseExcel::Workbook> methods, see L</Workbook>. The second C<$sheet_index> is the zero-based index of the worksheet being parsed. The third and fourth, C<$row> and C<$col>, are the zero-based row and column number of the cell. The fifth, C<$cell>, is a reference to the C<Spreadsheet::ParseExcel::Cell> object. This is used to extract the data from the cell. See L</Cell> for more information.
 
 This technique can be useful if you are writing an Excel to database filter since you can put your DB calls in the cell handler.
 
