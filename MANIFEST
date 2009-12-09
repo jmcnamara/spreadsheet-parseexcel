@@ -14,6 +14,7 @@ t/03_regression.t
 t/04_regression.t
 t/05_regression.t
 t/06_regression.t
+t/10_error_codes.t
 t/20_number_format_default.t
 t/21_number_format_user.t
 t/22_number_format_datetime.t
@@ -46,6 +47,7 @@ t/excel_files/chart1.xls
 t/excel_files/chart2.xls
 t/excel_files/chart3.xls
 t/excel_files/chart4.xls
+t/excel_files/encrypted.xls
 t/excel_files/long_string1.xls
 t/excel_files/long_string2.xls
 t/excel_files/long_string3.xls

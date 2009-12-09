@@ -54,6 +54,22 @@ use constant verBIFF4   => 0x04;
 use constant verBIFF5   => 0x08;
 use constant verBIFF8   => 0x18;
 
+
+# Error code for some of the common parsing errors.
+use constant ErrorNone          => 0;
+use constant ErrorNoFile        => 1;
+use constant ErrorNoExcelData   => 2;
+use constant ErrorFileEncrypted => 3;
+
+our %error_strings = (
+    ErrorNone,          '',                              # 0
+    ErrorNoFile,        'File not found',                # 1
+    ErrorNoExcelData,   'No Excel data found in file',   # 2
+    ErrorFileEncrypted, 'File is encrypted',             # 3
+
+);
+
+
 our %ProcTbl = (
 
     #Develpers' Kit P291
@@ -177,6 +193,7 @@ sub new {
     $_NotSetCell  = $hParam{NotSetCell};
     $_Object      = $hParam{Object};
 
+    $self->{_error_status} = ErrorNone;
     return $self;
 }
 
@@ -199,126 +216,158 @@ sub SetEventHandlers {
     }
 }
 
-#------------------------------------------------------------------------------
-# Spreadsheet::ParseExcel->Parse
-#------------------------------------------------------------------------------
-sub Parse {
-    my ( $self, $source, $oWkFmt ) = @_;
+###############################################################################
+#
+# Parse()
+#
+# Parse the Excel file and convert it into a tree of objects..
+#
+sub parse {
 
-    my $oBook = Spreadsheet::ParseExcel::Workbook->new;
-    $oBook->{SheetCount} = 0;
+    my ( $self, $source, $formatter ) = @_;
 
-    my ( $sBIFF, $iLen ) = $self->_get_content( $source, $oBook );
-    return undef if not $sBIFF;
+    my $workbook = Spreadsheet::ParseExcel::Workbook->new();
+    $workbook->{SheetCount} = 0;
 
-    if ($oWkFmt) {
-        $oBook->{FmtClass} = $oWkFmt;
+    my ( $biff_data, $data_length ) = $self->_get_content( $source, $workbook );
+    return undef if not $biff_data;
+
+    if ($formatter) {
+        $workbook->{FmtClass} = $formatter;
     }
     else {
-        $oBook->{FmtClass} = Spreadsheet::ParseExcel::FmtDefault->new;
+        $workbook->{FmtClass} = Spreadsheet::ParseExcel::FmtDefault->new();
     }
 
-    #3. Parse content
-    my $lPos = 0;
-    my $sWk = substr( $sBIFF, $lPos, 4 );
-    $lPos += 4;
+    # Parse the BIFF data.
+    my $pos = 0;
+    my $record_header = substr( $biff_data, $pos, 4 );
+    $pos += 4;
 
-    while ( $lPos <= $iLen ) {
-        my ( $bOp, $bLen ) = unpack( "v2", $sWk );
+    while ( $pos <= $data_length ) {
+        my ( $record, $record_length ) = unpack( "v2", $record_header );
 
-        if ($bLen) {
-            $sWk = substr( $sBIFF, $lPos, $bLen );
-            $lPos += $bLen;
+        if ($record_length) {
+            $record_header = substr( $biff_data, $pos, $record_length );
+            $pos += $record_length;
         }
 
-        #1. Formula String with No String
-        if (   $oBook->{_PrevPos}
-            && ( defined $self->{FuncTbl}->{$bOp} )
-            && ( $bOp != 0x207 ) )
+
+        # If the file contains a FILEPASS record we assume that it is encrypted
+        # and cannot be parsed.
+        if ( $record == 0x002F ) {
+            $self->{_error_status} = ErrorFileEncrypted;
+            return undef;
+        }
+
+
+        # Special case of a formula String with no string.
+        if (   $workbook->{_PrevPos}
+            && ( defined $self->{FuncTbl}->{$record} )
+            && ( $record != 0x207 ) )
         {
-            my $iPos = $oBook->{_PrevPos};
-            $oBook->{_PrevPos} = undef;
-            my ( $iR, $iC, $iF ) = @$iPos;
+            my $iPos = $workbook->{_PrevPos};
+            $workbook->{_PrevPos} = undef;
+
+            my ( $row, $col, $format_index ) = @$iPos;
             _NewCell(
-                $oBook, $iR, $iC,
+                $workbook, $row, $col,
                 Kind     => 'Formula String',
                 Val      => '',
-                FormatNo => $iF,
-                Format   => $oBook->{Format}[$iF],
+                FormatNo => $format_index,
+                Format   => $workbook->{Format}[$format_index],
                 Numeric  => 0,
                 Code     => undef,
-                Book     => $oBook,
+                Book     => $workbook,
             );
         }
 
         # If the BIFF record matches 0x0*09 then it is a BOF record.
         # We reset the _skip_chart flag to ensure we check the sheet type.
-        if ( ( $bOp & 0xF0FF ) == 0x09 ) {
-            $oBook->{_skip_chart} = 0;
+        if ( ( $record & 0xF0FF ) == 0x09 ) {
+            $workbook->{_skip_chart} = 0;
         }
 
-        if ( defined $self->{FuncTbl}->{$bOp} && !$oBook->{_skip_chart} ) {
-            $self->{FuncTbl}->{$bOp}->( $oBook, $bOp, $bLen, $sWk );
+        if ( defined $self->{FuncTbl}->{$record} && !$workbook->{_skip_chart} ) {
+            $self->{FuncTbl}->{$record}->( $workbook, $record, $record_length, $record_header );
         }
 
-        $PREFUNC = $bOp if ( $bOp != 0x3C );    #Not Continue
+        $PREFUNC = $record if ( $record != 0x3C );    #Not Continue
 
-        if ( ( $lPos + 4 ) <= $iLen ) {
-            $sWk = substr( $sBIFF, $lPos, 4 );
+        if ( ( $pos + 4 ) <= $data_length ) {
+            $record_header = substr( $biff_data, $pos, 4 );
         }
 
-        $lPos += 4;
-        return $oBook if defined $oBook->{_ParseAbort};
+        $pos += 4;
+        return $workbook if defined $workbook->{_ParseAbort};
     }
-    return $oBook;
+
+    return $workbook;
 }
 
-# $source is either filename or open filehandle or array of string or scalar
-# reference
-# $oBook is passed to be updated
+###############################################################################
+#
+# _get_content()
+#
+# Get the Excel BIFF content from the file or filehandle.
+#
 sub _get_content {
-    my ( $self, $source, $oBook ) = @_;
+
+    my ( $self, $source, $workbook ) = @_;
+    my ( $biff_data, $data_length );
+
+    # Reset the error status in case method is called more than once.
+    $self->{_error_status} = ErrorNone;
 
     if ( ref($source) eq "SCALAR" ) {
 
-        #1.1 Specified by Buffer
-        my ( $sBIFF, $iLen ) = $self->{GetContent}->($source);
-        return $sBIFF ? ( $sBIFF, $iLen ) : (undef);
-    }
+        # Specified by a scalar buffer.
+        ( $biff_data, $data_length ) = $self->{GetContent}->($source);
 
-    #1.2 Specified by Other Things(HASH reference etc)
-    #    elsif(ref($source)) {
-    #        return undef;
-    #    }
-    #1.2 Specified by GLOB reference
-    elsif (( ref($source) =~ /GLOB/ )
-        or ( ref($source) eq 'Fh' ) )
-    {    #For CGI.pm (Light FileHandle)
+    }
+    elsif (( ref($source) =~ /GLOB/ ) || ( ref($source) eq 'Fh' ) ) {
+
+        # For CGI.pm (Light FileHandle)
         binmode($source);
         my $sWk;
         my $sBuff = '';
+
         while ( read( $source, $sWk, 4096 ) ) {
             $sBuff .= $sWk;
         }
-        my ( $sBIFF, $iLen ) = $self->{GetContent}->( \$sBuff );
-        return $sBIFF ? ( $sBIFF, $iLen ) : (undef);
+
+        ( $biff_data, $data_length ) = $self->{GetContent}->( \$sBuff );
+
     }
     elsif ( ref($source) eq 'ARRAY' ) {
 
-        #1.3 Specified by File content
-        $oBook->{File} = undef;
+        # Specified by file content
+        $workbook->{File} = undef;
         my $sData = join( '', @$source );
-        my ( $sBIFF, $iLen ) = $self->{GetContent}->( \$sData );
-        return $sBIFF ? ( $sBIFF, $iLen ) : (undef);
+        ( $biff_data, $data_length ) = $self->{GetContent}->( \$sData );
     }
     else {
 
-        #1.4 Specified by File name
-        $oBook->{File} = $source;
-        return undef unless ( -e $source );
-        my ( $sBIFF, $iLen ) = $self->{GetContent}->($source);
-        return $sBIFF ? ( $sBIFF, $iLen ) : (undef);
+        # Specified by filename .
+        $workbook->{File} = $source;
+
+        if ( ! -e $source ) {
+            $self->{_error_status} = ErrorNoFile;
+            return undef;
     }
+
+        ( $biff_data, $data_length ) = $self->{GetContent}->($source);
+    }
+
+    # If the read was successful return the data.
+    if ($data_length) {
+        return ($biff_data, $data_length );
+    }
+    else {
+        $self->{_error_status} = ErrorNoExcelData;
+        return undef;
+    }
+
 }
 
 #------------------------------------------------------------------------------
@@ -398,7 +447,7 @@ sub _subBOF {
         $oBook->{_CurSheet_} = -1;
     }
 
-    #Worksheeet or Dialogsheet
+    #Worksheet or Dialogsheet
     elsif ( $iDt != 0x0020 ) {    #if($iDt == 0x0010)
         if ( defined $oBook->{_CurSheet_} ) {
             $oBook->{_CurSheet} = $oBook->{_CurSheet_} + 1;
@@ -2084,6 +2133,50 @@ sub ColorIdxToRGB {
 }
 
 
+###############################################################################
+#
+# error().
+#
+# Return an error string for a failed parse().
+#
+sub error {
+
+    my $self = shift;
+
+    my $parse_error = $self->{_error_status};
+
+    if (exists $error_strings{$parse_error}) {
+        return $error_strings{$parse_error};
+    }
+    else {
+        return 'Unknown parse error';
+    }
+}
+
+
+###############################################################################
+#
+# error_code().
+#
+# Return an error code for a failed parse().
+#
+sub error_code {
+
+    my $self = shift;
+
+    return $self->{_error_status};
+}
+
+
+###############################################################################
+#
+# Mapping between legacy method names and new names.
+#
+{
+    no warnings;    # Ignore warnings about variables used only once.
+    *Parse = *parse;
+}
+
 1;
 __END__
 
@@ -2099,7 +2192,11 @@ Spreadsheet::ParseExcel - Read information from an Excel file.
     use Spreadsheet::ParseExcel;
 
     my $parser   = Spreadsheet::ParseExcel->new();
-    my $workbook = $parser->Parse('Book1.xls');
+    my $workbook = $parser->parse('Book1.xls');
+
+    if ( !defined $workbook ) {
+        die $parser->error(), ".\n";
+    }
 
     for my $worksheet ( $workbook->worksheets() ) {
 
@@ -2147,28 +2244,72 @@ As an advanced feature it is also possible to pass a call-back handler to the pa
 The call-back can be used to ignore certain cells or to reduce memory usage. See the section L<Reducing the memory usage of Spreadsheet::ParseExcel> for more information.
 
 
-=head2 Parse($filename, [$formatter])
+=head2 parse($filename, [$formatter])
 
-The Parser C<Parse()> method return a L</Workbook> object.
+The Parser C<parse()> method return a L</Workbook> object.
 
     my $parser   = Spreadsheet::ParseExcel->new();
-    my $workbook = $parser->Parse('Book1.xls');
+    my $workbook = $parser->parse('Book1.xls');
 
-If an error occurs C<Parse()> returns C<undef>.
+If an error occurs C<parse()> returns C<undef>. In general programs should contain a test for failed parsing as follows:
+
+    my $parser   = Spreadsheet::ParseExcel->new();
+    my $workbook = $parser->parse('Book1.xls');
+
+    if ( !defined $workbook ) {
+        die $parser->error(), ".\n";
+    }
 
 The C<$filename> parameter is generally the file to be parsed. However, it can also be a filehandle or a scalar reference.
 
 The optional C<$formatter> array ref can be an reference to a L</Formatter Class> to format the value of cells.
 
-Note: Versions of Spreadsheet::ParseExcel prior to 0.50 also documented a Workbook C<Parse()> method as a syntactic shortcut for the above C<new()> and C<Parse()> combination. This is now deprecated since it breaks error handling.
+Note: Versions of Spreadsheet::ParseExcel prior to 0.50 also documented a Workbook C<parse()> method as a syntactic shortcut for the above C<new()> and C<parse()> combination. This is now deprecated since it breaks error handling.
+
+
+=head2 error()
+
+The Parser C<error()> method returns an error string if a C<parse()> fails:
+
+    my $parser   = Spreadsheet::ParseExcel->new();
+    my $workbook = $parser->parse('Book1.xls');
+
+    if ( !defined $workbook ) {
+        die $parser->error(), ".\n";
+    }
+
+If you wish to generate you own error string you can use the C<error_code()> method instead (see below). The C<error()> and C<error_code()> values are as follows:
+
+    error()                         error_code()
+    =======                         ============
+    ''                              0
+    'File not found'                1
+    'No Excel data found in file'   2
+    'File is encrypted'             3
+
+The C<error_code()> method is explained below.
+
+
+=head2 error_code()
+
+The Parser C<error_code()> method returns an error code if a C<parse()> fails:
+
+    my $parser   = Spreadsheet::ParseExcel->new();
+    my $workbook = $parser->parse('Book1.xls');
+
+    if ( !defined $workbook ) {
+        die "Got error code ", $parser->error_code, ".\n";
+    }
+
+This can be useful if you wish to employ you own error strings or error handling methods.
 
 
 =head1 Workbook
 
-A C<Spreadsheet::ParseExcel::Workbook> is created via the C<Spreadsheet::ParseExcel> C<Parse()> method:
+A C<Spreadsheet::ParseExcel::Workbook> is created via the C<Spreadsheet::ParseExcel> C<parse()> method:
 
     my $parser   = Spreadsheet::ParseExcel->new();
-    my $workbook = $parser->Parse('Book1.xls');
+    my $workbook = $parser->parse('Book1.xls');
 
 The main methods of the Workbook class are:
 
@@ -2615,7 +2756,7 @@ However, in a lot of cases when an Excel file is being processed the only inform
         NotSetCell  => 1
     );
 
-    my $workbook = $parser->Parse('file.xls');
+    my $workbook = $parser->parse('file.xls');
 
     sub cell_handler {
 
@@ -2649,7 +2790,7 @@ If you don't want all of the data in the spreadsheet you can add some control lo
         NotSetCell  => 1
     );
 
-    my $workbook = $parser->Parse('file.xls');
+    my $workbook = $parser->parse('file.xls');
 
     sub cell_handler {
 
@@ -2681,7 +2822,7 @@ However, this still processes the entire workbook. If you wish to save some addi
         NotSetCell  => 1
     );
 
-    my $workbook = $parser->Parse('file.xls');
+    my $workbook = $parser->parse('file.xls');
 
     sub cell_handler {
 

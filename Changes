@@ -2,6 +2,12 @@ Revision history for Perl extension Spreadsheet::ParseExcel.
 
 0.56 xxxx xx xxxx
 
+    + Added error() and error_code() error handling routines.
+      This allows encrypted files to be ignored.
+      Added t/10_error_codes.t for the above methods.
+      http://rt.cpan.org/Public/Bug/Display.html?id=51033
+      http://rt.cpan.org/Public/Bug/Display.html?id=47978
+
     ! Made version 0.19 of OLE::Storage_Lite a prerequisite to avoid
       issues when writing OLE header in SaveParser.
 

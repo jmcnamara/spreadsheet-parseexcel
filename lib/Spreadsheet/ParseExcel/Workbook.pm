@@ -167,6 +167,7 @@ sub Parse {
     no warnings;    # Ignore warnings about variables used only once.
     *Worksheet = *worksheet;
 }
+
 1;
 
 __END__

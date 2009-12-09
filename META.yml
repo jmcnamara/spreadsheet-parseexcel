@@ -13,9 +13,12 @@ build_requires:
 requires:
     IO::File:           0
     IO::Scalar:         0
-    OLE::Storage_Lite:  0
+    OLE::Storage_Lite:  0.19
     Scalar::Util:       0
     perl:               5.008
+resources:
+    MailingList:  http://groups.google.com/group/spreadsheet-parseexcel
+    repository:   http://github.com/jmcnamara/spreadsheet-parseeexcel
 no_index:
     directory:
         - t
