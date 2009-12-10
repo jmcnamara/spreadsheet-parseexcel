@@ -1,6 +1,6 @@
-Revision history for Perl extension Spreadsheet::ParseExcel.
+Revision history for Perl module Spreadsheet::ParseExcel.
 
-0.56 xxxx xx xxxx
+0.56 November 9 2009
 
     + Added error() and error_code() error handling routines.
       This allows encrypted files to be ignored.

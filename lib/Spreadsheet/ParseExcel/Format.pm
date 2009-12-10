@@ -18,7 +18,7 @@ package Spreadsheet::ParseExcel::Format;
 use strict;
 use warnings;
 
-our $VERSION = '0.44';
+our $VERSION = '0.56';
 
 sub new {
     my ( $class, %rhIni ) = @_;

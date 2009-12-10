@@ -18,7 +18,7 @@ use 5.008;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.55';
+our $VERSION = '0.56';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -86,7 +86,7 @@ our %ProcTbl = (
     0x2A => \&_subPrintHeaders,      # Print Headers
     0x2B => \&_subPrintGridlines,    # Print Gridlines
     0x3C => \&_subContinue,          # Continue
-    0x43 => \&_subXF,                # ExTended Format(?)
+    0x43 => \&_subXF,                # Extended Format(?)
 
     #Develpers' Kit P292
     0x55 => \&_subDefColWidth,       # Consider
@@ -2287,6 +2287,8 @@ If you wish to generate you own error string you can use the C<error_code()> met
     'No Excel data found in file'   2
     'File is encrypted'             3
 
+Spreadsheet::ParseExcel doesn't try to decrypt an encrypted Excel file. That is beyond the current scope of the module.
+
 The C<error_code()> method is explained below.
 
 
@@ -2342,7 +2344,7 @@ Returns C<undef> if the sheet name or index doesn't exist.
 
 =head2 worksheet_count()
 
-The C<worksheet_count()> method returns the number of Woksheet objects in the Workbook.
+The C<worksheet_count()> method returns the number of Worksheet objects in the Workbook.
 
     my $worksheet_count = $workbook->worksheet_count();
 
