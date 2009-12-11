@@ -20,13 +20,6 @@ REQUIREMENT
 INSTALLATION
     The module can be installed using the standard Perl procedure:
 
-        perl Build.PL
-        ./Build
-        ./Build test
-        ./Bbuild install
-
-      or
-
         perl Makefile.PL
         make
         make test
