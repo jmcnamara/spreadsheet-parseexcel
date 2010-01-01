@@ -1,5 +1,11 @@
 Revision history for Perl module Spreadsheet::ParseExcel.
 
+0.57 XXXX X XXXX
+
+    ! Removed Build.PL from README. Thanks Ed Avis.
+      https://rt.cpan.org/Ticket/Display.html?id=52670
+
+
 0.56 November 9 2009
 
     + Added error() and error_code() error handling routines.
@@ -18,7 +24,7 @@ Revision history for Perl module Spreadsheet::ParseExcel.
       regression suite, t/06_regression.t.
 
     ! Added float comparison test to avoid false failing tests on
-      64bit systems. 
+      64bit systems.
 
 
 0.54 August 25 2009
