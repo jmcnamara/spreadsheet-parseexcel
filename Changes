@@ -2,6 +2,9 @@ Revision history for Perl module Spreadsheet::ParseExcel.
 
 0.57 XXXX X XXXX
 
+    ! Added example programs, a_simple_parser.pl and
+      display_text_table.pl.
+
     ! Removed Build.PL from README. Thanks Ed Avis.
       https://rt.cpan.org/Ticket/Display.html?id=52670
 

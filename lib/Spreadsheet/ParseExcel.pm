@@ -86,8 +86,8 @@ our %ProcTbl = (
     0x2A => \&_subPrintHeaders,      # Print Headers
     0x2B => \&_subPrintGridlines,    # Print Gridlines
     0x3C => \&_subContinue,          # Continue
-    0x43 => \&_subXF,                # Excel < 4 XF.
-    0x0443 => \&_subXF,              # Excel 4 XF.
+    0x43 => \&_subXF,                # XF for Excel < 4.
+    0x0443 => \&_subXF,              # XF for Excel = 4.
 
     #Develpers' Kit P292
     0x55 => \&_subDefColWidth,       # Consider
