@@ -86,7 +86,8 @@ our %ProcTbl = (
     0x2A => \&_subPrintHeaders,      # Print Headers
     0x2B => \&_subPrintGridlines,    # Print Gridlines
     0x3C => \&_subContinue,          # Continue
-    0x43 => \&_subXF,                # Extended Format(?)
+    0x43 => \&_subXF,                # Excel < 4 XF.
+    0x0443 => \&_subXF,              # Excel 4 XF.
 
     #Develpers' Kit P292
     0x55 => \&_subDefColWidth,       # Consider
@@ -1167,7 +1168,14 @@ sub _subXF {
         $iFillP,   $iFillCF, $iFillCB
     );
 
-    if ( $oBook->{BIFFVersion} == verBIFF8 ) {
+
+
+    if ( $oBook->{BIFFVersion} == verBIFF4 ) {
+        # Minimal support for Excel 4. We just get the font and format indices
+        # so that the cell data value can be formatted.
+        ( $iFnt, $iIdx,) = unpack( "CC", $sWk );
+    }
+    elsif ( $oBook->{BIFFVersion} == verBIFF8 ) {
         my ( $iGen, $iAlign, $iGen2, $iBdr1, $iBdr2, $iBdr3, $iPtn );
 
         ( $iFnt, $iIdx, $iGen, $iAlign, $iGen2, $iBdr1, $iBdr2, $iBdr3, $iPtn )
@@ -1271,20 +1279,27 @@ sub _subXF {
 # _subFormat (for Spreadsheet::ParseExcel)  DK: P336
 #------------------------------------------------------------------------------
 sub _subFormat {
+
     my ( $oBook, $bOp, $bLen, $sWk ) = @_;
     my $sFmt;
-    if (   ( $oBook->{BIFFVersion} == verBIFF2 )
-        || ( $oBook->{BIFFVersion} == verBIFF3 )
-        || ( $oBook->{BIFFVersion} == verBIFF4 )
-        || ( $oBook->{BIFFVersion} == verBIFF5 ) )
-    {
+
+    if ( $oBook->{BIFFVersion} <= verBIFF5 ) {
         $sFmt = substr( $sWk, 3, unpack( 'c', substr( $sWk, 2, 1 ) ) );
         $sFmt = $oBook->{FmtClass}->TextFmt( $sFmt, '_native_' );
     }
     else {
         $sFmt = _convBIFF8String( $oBook, substr( $sWk, 2 ) );
     }
-    $oBook->{FormatStr}->{ unpack( 'v', substr( $sWk, 0, 2 ) ) } = $sFmt;
+
+    my $format_index = unpack( 'v', substr( $sWk, 0, 2 ) );
+
+    # Excel 4 and earlier used an index of 0 to indicate that a built-in format
+    # that was stored implicitly.
+    if ( $oBook->{BIFFVersion} <= verBIFF4 && $format_index == 0 ) {
+        $format_index = keys %{ $oBook->{FormatStr} };
+    }
+
+    $oBook->{FormatStr}->{$format_index} = $sFmt;
 }
 
 #------------------------------------------------------------------------------
