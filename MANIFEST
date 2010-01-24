@@ -73,6 +73,9 @@ lib/Spreadsheet/ParseExcel/Utility.pm
 lib/Spreadsheet/ParseExcel/Workbook.pm
 lib/Spreadsheet/ParseExcel/Worksheet.pm
 
+examples/a_simple_parser.pl
+examples/display_text_table.pl
+
 sample/Excel/AuthorK.xls
 sample/Excel/AuthorK95.xls
 sample/Excel/FmtTest.xls

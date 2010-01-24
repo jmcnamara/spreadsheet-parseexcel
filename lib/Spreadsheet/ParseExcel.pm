@@ -18,7 +18,7 @@ use 5.008;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
-our $VERSION = '0.56';
+our $VERSION = '0.57';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -2983,7 +2983,7 @@ Original author: Kawai Takanori (Hippo2000) kwitknr@cpan.org
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 John McNamara
+Copyright (c) 2009-2010 John McNamara
 
 Copyright (c) 2006-2008 Gabor Szabo
 

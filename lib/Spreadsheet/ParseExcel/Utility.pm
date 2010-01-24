@@ -24,7 +24,7 @@ use vars qw(@ISA @EXPORT_OK);
 @EXPORT_OK = qw(ExcelFmt LocaltimeExcel ExcelLocaltime
   col2int int2col sheetRef xls2csv);
 
-our $VERSION = '0.56';
+our $VERSION = '0.57';
 
 my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 
@@ -1595,7 +1595,7 @@ Original author: Kawai Takanori kwitknr@cpan.org
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 John McNamara
+Copyright (c) 2009-2010 John McNamara
 
 Copyright (c) 2006-2008 Gabor Szabo
 

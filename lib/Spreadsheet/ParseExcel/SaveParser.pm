@@ -24,7 +24,7 @@ use Spreadsheet::ParseExcel::SaveParser::Worksheet;
 use Spreadsheet::WriteExcel;
 use base 'Spreadsheet::ParseExcel';
 
-our $VERSION = '0.56';
+our $VERSION = '0.57';
 
 ###############################################################################
 #
@@ -296,7 +296,7 @@ Original author: Kawai Takanori kwitknr@cpan.org
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 John McNamara
+Copyright (c) 2009-2010 John McNamara
 
 Copyright (c) 2006-2008 Gabor Szabo
 

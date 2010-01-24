@@ -1,6 +1,8 @@
 Revision history for Perl module Spreadsheet::ParseExcel.
 
-0.57 XXXX X XXXX
+0.57 January 24 2010
+
+    ! Added fix for reading formatted data from Excel 4 files.
 
     ! Added example programs, a_simple_parser.pl and
       display_text_table.pl.
