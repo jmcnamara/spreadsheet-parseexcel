@@ -22,6 +22,10 @@ Revision history for Perl module Spreadsheet::ParseExcel.
     ! Made version 0.19 of OLE::Storage_Lite a prerequisite to avoid
       issues when writing OLE header in SaveParser.
 
+    ! Changed Parse() method name to parse() for consistency with the
+      rest of the API. The older method name is still supported but
+      not documented.
+
 
 0.55 August 25 2009
 
