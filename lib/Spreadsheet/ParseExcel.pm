@@ -1621,6 +1621,9 @@ sub _subSETUP {
     my ( $oBook, $bOp, $bLen, $sWk ) = @_;
     return undef unless ( defined $oBook->{_CurSheet} );
 
+    # Workaround for some apps that don't write a complete SETIP record.
+    return undef if $bLen == 2;
+
     my $oWkS = $oBook->{Worksheet}[ $oBook->{_CurSheet} ];
     my $iGrBit;
 
