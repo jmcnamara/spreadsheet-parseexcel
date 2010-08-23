@@ -1,5 +1,11 @@
 Revision history for Perl module Spreadsheet::ParseExcel.
 
+0.58 Xxxxx XX 2010
+    ! Fix for currency locales in format strings.
+      Reported by wjaguar.
+      http://rt.cpan.org/Public/Bug/Display.html?id=60547
+
+
 0.57 January 24 2010
 
     ! Added fix for reading formatted data from Excel 4 files.

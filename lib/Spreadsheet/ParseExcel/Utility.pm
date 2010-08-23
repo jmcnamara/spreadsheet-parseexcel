@@ -186,7 +186,12 @@ sub ExcelFmt {
 
     # Remove the locale, such as [$-409], from the format string.
     my $locale = '';
-    if ( $format =~ s/^(\[\$-\d+\])// ) {
+    if ( $format =~ s/^(\[\$?-\d+\])// ) {
+        $locale = $1;
+    }
+
+    # Replace currency locale, such as [$$-409], with $ in the format string.
+    if ( $format =~ s/^(\[\$\$?-\d+\])/\$/ ) {
         $locale = $1;
     }
 
