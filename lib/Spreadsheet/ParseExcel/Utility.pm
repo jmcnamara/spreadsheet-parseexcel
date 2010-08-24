@@ -191,9 +191,11 @@ sub ExcelFmt {
     }
 
     # Replace currency locale, such as [$$-409], with $ in the format string.
-    if ( $format =~ s/^(\[\$\$?-\d+\])/\$/ ) {
+    # See the RT#60547 test cases in 21_number_format_user.t.
+    if ( $format =~ s/(\[\$([^-]+)(-\d+)?\])/$2/s ) {
         $locale = $1;
     }
+
 
     # Remove leading # from '# ?/?', '# ??/??' fraction formats.
     $format =~ s{# \?}{?}g;
