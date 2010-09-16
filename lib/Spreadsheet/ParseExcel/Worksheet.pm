@@ -627,15 +627,6 @@ Returns a two-element list C<($min, $max)> containing the minimum and maximum of
     my ( $col_min, $col_max ) = $worksheet->col_range();
 
 
-=head2 col_range()
-
-The C<col_range()> method returns TODO.
-
-    my $col_range = $worksheet->col_range();
-
-Returns 0 if the property isn't set.
-
-
 =head2 get_name()
 
 The C<get_name()> method returns the name of the worksheet.
