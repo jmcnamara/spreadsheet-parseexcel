@@ -105,6 +105,12 @@ sub FmtString {
       $oThis->FmtStringDef( $oBook->{Format}[ $oCell->{FormatNo} ]->{FmtIdx},
         $oBook );
 
+    # Special case for cells that use Lotus123 style leading
+    # apostrophe to designate text formatting.
+    if ( $oBook->{Format}[ $oCell->{FormatNo} ]->{Key123} ) {
+        $sFmtStr = '@';
+    }
+
     unless ( defined($sFmtStr) ) {
         if ( $oCell->{Type} eq 'Numeric' ) {
             if ( int( $oCell->{Val} ) != $oCell->{Val} ) {

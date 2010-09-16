@@ -2,6 +2,13 @@ Revision history for Perl module Spreadsheet::ParseExcel.
 
 0.58 Xxxxx XX 2010
 
+    ! Fix for text cells formatted with a leading apostrophe.
+      http://rt.cpan.org/Public/Bug/Display.html?id=61299
+
+    ! Documentation fixes. Thanks to Dan Dascalescu
+      Fix RT #61320 (typos)
+      http://rt.cpan.org/Public/Bug/Display.html?id=61320
+
     ! Fix for currency locales in format strings.
       Reported by wjaguar.
       http://rt.cpan.org/Public/Bug/Display.html?id=60547
