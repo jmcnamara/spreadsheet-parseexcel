@@ -2265,7 +2265,7 @@ The call-back can be used to ignore certain cells or to reduce memory usage. See
 
 =head2 parse($filename, [$formatter])
 
-The Parser C<parse()> method return a L</Workbook> object.
+The Parser C<parse()> method returns a L</Workbook> object.
 
     my $parser   = Spreadsheet::ParseExcel->new();
     my $workbook = $parser->parse('Book1.xls');
