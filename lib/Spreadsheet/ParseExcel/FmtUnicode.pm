@@ -21,7 +21,7 @@ use warnings;
 use Unicode::Map;
 use base 'Spreadsheet::ParseExcel::FmtDefault';
 
-our $VERSION = '0.57';
+our $VERSION = '0.58';
 
 #------------------------------------------------------------------------------
 # new (for Spreadsheet::ParseExcel::FmtUnicode)

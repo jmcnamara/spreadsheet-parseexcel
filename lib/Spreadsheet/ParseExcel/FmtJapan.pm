@@ -21,7 +21,7 @@ use warnings;
 
 use Encode qw(find_encoding decode);
 use base 'Spreadsheet::ParseExcel::FmtDefault';
-our $VERSION = '0.57';
+our $VERSION = '0.58';
 
 my %FormatTable = (
     0x00 => '@',

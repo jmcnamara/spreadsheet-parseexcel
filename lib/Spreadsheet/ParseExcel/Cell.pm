@@ -18,7 +18,7 @@ package Spreadsheet::ParseExcel::Cell;
 use strict;
 use warnings;
 
-our $VERSION = '0.57';
+our $VERSION = '0.58';
 
 ###############################################################################
 #

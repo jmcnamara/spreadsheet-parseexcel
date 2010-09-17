@@ -18,7 +18,7 @@ package Spreadsheet::ParseExcel::Font;
 use strict;
 use warnings;
 
-our $VERSION = '0.57';
+our $VERSION = '0.58';
 
 sub new {
     my ( $class, %rhIni ) = @_;
