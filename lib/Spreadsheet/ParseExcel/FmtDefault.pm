@@ -148,13 +148,16 @@ sub ValFmt {
           ( ( defined $oCell->{Val} ) && ( $oCell->{Val} ne '' ) )
           ? $oThis->TextFmt( $oCell->{Val}, $oCell->{Code} )
           : '';
+
+        return $Dt;
     }
     else {
-        $Dt = $oCell->{Val};
+        $Dt      = $oCell->{Val};
+        $Flg1904 = $oBook->{Flg1904};
+        my $sFmtStr = $oThis->FmtString( $oCell, $oBook );
+
+        return ExcelFmt( $sFmtStr, $Dt, $Flg1904, $oCell->{Type} );
     }
-    $Flg1904 = $oBook->{Flg1904};
-    my $sFmtStr = $oThis->FmtString( $oCell, $oBook );
-    return ExcelFmt( $sFmtStr, $Dt, $Flg1904, $oCell->{Type} );
 }
 
 #------------------------------------------------------------------------------
