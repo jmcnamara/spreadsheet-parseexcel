@@ -18,6 +18,10 @@ use 5.008;
 use OLE::Storage_Lite;
 use IO::File;
 use Config;
+
+use Crypt::RC4;
+use Digest::Perl::MD5;
+
 our $VERSION = '0.58';
 
 use Spreadsheet::ParseExcel::Workbook;
@@ -54,6 +58,13 @@ use constant verBIFF4   => 0x04;
 use constant verBIFF5   => 0x08;
 use constant verBIFF8   => 0x18;
 
+use constant MS_BIFF_CRYPTO_NONE => 0;
+use constant MS_BIFF_CRYPTO_XOR  => 1;
+use constant MS_BIFF_CRYPTO_RC4  => 2;
+
+use constant sizeof_BIFF_8_FILEPASS => ( 6 + 3 * 16 );
+
+use constant REKEY_BLOCK => 0x400;
 
 # Error code for some of the common parsing errors.
 use constant ErrorNone          => 0;
@@ -62,10 +73,10 @@ use constant ErrorNoExcelData   => 2;
 use constant ErrorFileEncrypted => 3;
 
 our %error_strings = (
-    ErrorNone,          '',                              # 0
-    ErrorNoFile,        'File not found',                # 1
-    ErrorNoExcelData,   'No Excel data found in file',   # 2
-    ErrorFileEncrypted, 'File is encrypted',             # 3
+    ErrorNone,          '',                               # 0
+    ErrorNoFile,        'File not found',                 # 1
+    ErrorNoExcelData,   'No Excel data found in file',    # 2
+    ErrorFileEncrypted, 'File is encrypted',              # 3
 
 );
 
@@ -73,73 +84,73 @@ our %error_strings = (
 our %ProcTbl = (
 
     #Develpers' Kit P291
-    0x14 => \&_subHeader,            # Header
-    0x15 => \&_subFooter,            # Footer
-    0x18 => \&_subName,              # NAME(?)
-    0x1A => \&_subVPageBreak,        # Vertical Page Break
-    0x1B => \&_subHPageBreak,        # Horizontal Page Break
-    0x22 => \&_subFlg1904,           # 1904 Flag
-    0x26 => \&_subMargin,            # Left Margin
-    0x27 => \&_subMargin,            # Right Margin
-    0x28 => \&_subMargin,            # Top Margin
-    0x29 => \&_subMargin,            # Bottom Margin
-    0x2A => \&_subPrintHeaders,      # Print Headers
-    0x2B => \&_subPrintGridlines,    # Print Gridlines
-    0x3C => \&_subContinue,          # Continue
-    0x43 => \&_subXF,                # XF for Excel < 4.
-    0x0443 => \&_subXF,              # XF for Excel = 4.
+    0x14   => \&_subHeader,            # Header
+    0x15   => \&_subFooter,            # Footer
+    0x18   => \&_subName,              # NAME(?)
+    0x1A   => \&_subVPageBreak,        # Vertical Page Break
+    0x1B   => \&_subHPageBreak,        # Horizontal Page Break
+    0x22   => \&_subFlg1904,           # 1904 Flag
+    0x26   => \&_subMargin,            # Left Margin
+    0x27   => \&_subMargin,            # Right Margin
+    0x28   => \&_subMargin,            # Top Margin
+    0x29   => \&_subMargin,            # Bottom Margin
+    0x2A   => \&_subPrintHeaders,      # Print Headers
+    0x2B   => \&_subPrintGridlines,    # Print Gridlines
+    0x3C   => \&_subContinue,          # Continue
+    0x43   => \&_subXF,                # XF for Excel < 4.
+    0x0443 => \&_subXF,                # XF for Excel = 4.
 
     #Develpers' Kit P292
-    0x55 => \&_subDefColWidth,       # Consider
-    0x5C => \&_subWriteAccess,       # WRITEACCESS
-    0x7D => \&_subColInfo,           # Colinfo
-    0x7E => \&_subRK,                # RK
-    0x81 => \&_subWSBOOL,            # WSBOOL
-    0x83 => \&_subHcenter,           # HCENTER
-    0x84 => \&_subVcenter,           # VCENTER
-    0x85 => \&_subBoundSheet,        # BoundSheet
+    0x55 => \&_subDefColWidth,         # Consider
+    0x5C => \&_subWriteAccess,         # WRITEACCESS
+    0x7D => \&_subColInfo,             # Colinfo
+    0x7E => \&_subRK,                  # RK
+    0x81 => \&_subWSBOOL,              # WSBOOL
+    0x83 => \&_subHcenter,             # HCENTER
+    0x84 => \&_subVcenter,             # VCENTER
+    0x85 => \&_subBoundSheet,          # BoundSheet
 
-    0x92 => \&_subPalette,           # Palette, fgp
+    0x92 => \&_subPalette,             # Palette, fgp
 
-    0x99 => \&_subStandardWidth,     # Standard Col
+    0x99 => \&_subStandardWidth,       # Standard Col
 
     #Develpers' Kit P293
-    0xA1 => \&_subSETUP,             # SETUP
-    0xBD => \&_subMulRK,             # MULRK
-    0xBE => \&_subMulBlank,          # MULBLANK
-    0xD6 => \&_subRString,           # RString
+    0xA1 => \&_subSETUP,               # SETUP
+    0xBD => \&_subMulRK,               # MULRK
+    0xBE => \&_subMulBlank,            # MULBLANK
+    0xD6 => \&_subRString,             # RString
 
     #Develpers' Kit P294
-    0xE0 => \&_subXF,                # ExTended Format
-    0xE5 => \&_subMergeArea,         # MergeArea (Not Documented)
-    0xFC => \&_subSST,               # Shared String Table
-    0xFD => \&_subLabelSST,          # Label SST
+    0xE0 => \&_subXF,                  # ExTended Format
+    0xE5 => \&_subMergeArea,           # MergeArea (Not Documented)
+    0xFC => \&_subSST,                 # Shared String Table
+    0xFD => \&_subLabelSST,            # Label SST
 
     #Develpers' Kit P295
-    0x201 => \&_subBlank,            # Blank
+    0x201 => \&_subBlank,              # Blank
 
-    0x202 => \&_subInteger,          # Integer(Not Documented)
-    0x203 => \&_subNumber,           # Number
-    0x204 => \&_subLabel,            # Label
-    0x205 => \&_subBoolErr,          # BoolErr
-    0x207 => \&_subString,           # STRING
-    0x208 => \&_subRow,              # RowData
-    0x221 => \&_subArray,            # Array (Consider)
-    0x225 => \&_subDefaultRowHeight, # Consider
+    0x202 => \&_subInteger,            # Integer(Not Documented)
+    0x203 => \&_subNumber,             # Number
+    0x204 => \&_subLabel,              # Label
+    0x205 => \&_subBoolErr,            # BoolErr
+    0x207 => \&_subString,             # STRING
+    0x208 => \&_subRow,                # RowData
+    0x221 => \&_subArray,              # Array (Consider)
+    0x225 => \&_subDefaultRowHeight,   # Consider
 
-    0x31  => \&_subFont,             # Font
-    0x231 => \&_subFont,             # Font
+    0x31  => \&_subFont,               # Font
+    0x231 => \&_subFont,               # Font
 
-    0x27E => \&_subRK,               # RK
-    0x41E => \&_subFormat,           # Format
+    0x27E => \&_subRK,                 # RK
+    0x41E => \&_subFormat,             # Format
 
-    0x06  => \&_subFormula,          # Formula
-    0x406 => \&_subFormula,          # Formula
+    0x06  => \&_subFormula,            # Formula
+    0x406 => \&_subFormula,            # Formula
 
-    0x009 => \&_subBOF,              # BOF(BIFF2)
-    0x209 => \&_subBOF,              # BOF(BIFF3)
-    0x409 => \&_subBOF,              # BOF(BIFF4)
-    0x809 => \&_subBOF,              # BOF(BIFF5-8)
+    0x009 => \&_subBOF,                # BOF(BIFF2)
+    0x209 => \&_subBOF,                # BOF(BIFF3)
+    0x409 => \&_subBOF,                # BOF(BIFF4)
+    0x809 => \&_subBOF,                # BOF(BIFF5-8)
 );
 
 our $BIGENDIAN;
@@ -194,6 +205,14 @@ sub new {
     $_NotSetCell  = $hParam{NotSetCell};
     $_Object      = $hParam{Object};
 
+
+    if ( defined $hParam{Password} ) {
+        $self->{Password} = $hParam{Password};
+    }
+    else {
+        $self->{Password} = 'VelvetSweatshop';
+    }
+
     $self->{_error_status} = ErrorNone;
     return $self;
 }
@@ -217,6 +236,272 @@ sub SetEventHandlers {
     }
 }
 
+#------------------------------------------------------------------------------
+# Decryption routines
+# based on sources of gnumeric (ms-biff.c ms-excel-read.c)
+# 2005, Mazurin Alexey mazurin.alexey@gmail.com
+#------------------------------------------------------------------------------
+sub md5state {
+    my ( $md5 ) = @_;
+    my $s = '';
+    for ( my $i = 0 ; $i < 4 ; $i++ ) {
+        my $v = $md5->{_state}[$i];
+        $s .= chr( $v & 0xff );
+        $s .= chr( ( $v >> 8 ) & 0xff );
+        $s .= chr( ( $v >> 16 ) & 0xff );
+        $s .= chr( ( $v >> 24 ) & 0xff );
+    }
+    $s;
+}
+
+sub MakeKey {
+    my ( $block, $key, $valContext ) = @_;
+
+    my $pwarray = "\0" x 64;
+
+    substr( $pwarray, 0, 5 ) = substr( $valContext, 0, 5 );
+
+    substr( $pwarray, 5, 1 ) = chr( $block & 0xff );
+    substr( $pwarray, 6, 1 ) = chr( ( $block >> 8 ) & 0xff );
+    substr( $pwarray, 7, 1 ) = chr( ( $block >> 16 ) & 0xff );
+    substr( $pwarray, 8, 1 ) = chr( ( $block >> 24 ) & 0xff );
+
+    substr( $pwarray, 9,  1 ) = "\x80";
+    substr( $pwarray, 56, 1 ) = "\x48";
+
+    my $md5 = Digest::Perl::MD5->new();
+    $md5->add( $pwarray );
+
+    my $s = md5state( $md5 );
+
+    ${$key} = Crypt::RC4->new( $s );
+}
+
+sub VerifyPassword {
+    my ( $password, $docid, $salt_data, $hashedsalt_data, $valContext ) = @_;
+
+    my $pwarray = "\0" x 64;
+    my $i;
+    my $md5 = Digest::Perl::MD5->new();
+
+    for ( $i = 0 ; $i < length( $password ) ; $i++ ) {
+        my $o = ord( substr( $password, $i, 1 ) );
+        substr( $pwarray, 2 * $i, 1 ) = chr( $o & 0xff );
+        substr( $pwarray, 2 * $i + 1, 1 ) = chr( ( $o >> 8 ) & 0xff );
+    }
+    substr( $pwarray, 2 * $i, 1 ) = chr( 0x80 );
+    substr( $pwarray, 56, 1 ) = chr( ( $i << 4 ) & 0xff );
+
+    $md5->add( $pwarray );
+
+    my $mdContext1 = md5state( $md5 );
+
+    my $offset    = 0;
+    my $keyoffset = 0;
+    my $tocopy    = 5;
+
+    $md5->reset;
+
+    while ( $offset != 16 ) {
+        if ( ( 64 - $offset ) < 5 ) {
+            $tocopy = 64 - $offset;
+        }
+
+        substr( $pwarray, $offset, $tocopy ) =
+          substr( $mdContext1, $keyoffset, $tocopy );
+
+        $offset += $tocopy;
+
+        if ( $offset == 64 ) {
+            $md5->add( $pwarray );
+            $keyoffset = $tocopy;
+            $tocopy    = 5 - $tocopy;
+            $offset    = 0;
+            next;
+        }
+
+        $keyoffset = 0;
+        $tocopy    = 5;
+        substr( $pwarray, $offset, 16 ) = $docid;
+        $offset += 16;
+    }
+
+    substr( $pwarray, 16, 1 )  = "\x80";
+    substr( $pwarray, 17, 47 ) = "\0" x 47;
+    substr( $pwarray, 56, 1 )  = "\x80";
+    substr( $pwarray, 57, 1 )  = "\x0a";
+
+    $md5->add( $pwarray );
+    ${$valContext} = md5state( $md5 );
+
+    my $key;
+
+    MakeKey( 0, \$key, ${$valContext} );
+
+    my $salt       = $key->RC4( $salt_data );
+    my $hashedsalt = $key->RC4( $hashedsalt_data );
+
+    $salt .= "\x80" . "\0" x 47;
+
+    substr( $salt, 56, 1 ) = "\x80";
+
+    $md5->reset;
+    $md5->add( $salt );
+    my $mdContext2 = md5state( $md5 );
+
+    return ( $mdContext2 eq $hashedsalt );
+}
+
+sub SkipBytes {
+    my ( $q, $start, $count ) = @_;
+
+    my $scratch = "\0" x REKEY_BLOCK;
+    my $block;
+
+    $block = int( ( $start + $count ) / REKEY_BLOCK );
+
+    if ( $block != $q->{block} ) {
+        MakeKey( $q->{block} = $block, \$q->{rc4_key}, $q->{md5_ctxt} );
+        $count = ( $start + $count ) % REKEY_BLOCK;
+    }
+
+    $q->{rc4_key}->RC4( substr( $scratch, 0, $count ) );
+    1;
+}
+
+sub SetDecrypt {
+    my ( $q, $version, $password ) = @_;
+
+    if ( $q->{opcode} != 0x2f ) {
+        return 0;
+    }
+
+    if ( $password eq '' ) {
+        return 0;
+    }
+
+    # TODO old versions decryption
+    #if (version < MS_BIFF_V8 || q->data[0] == 0)
+    #    return ms_biff_pre_biff8_query_set_decrypt (q, password);
+
+    if ( $q->{length} != sizeof_BIFF_8_FILEPASS ) {
+        return 0;
+    }
+
+    unless (
+        VerifyPassword(
+            $password,
+            substr( $q->{data}, 6,  16 ),
+            substr( $q->{data}, 22, 16 ),
+            substr( $q->{data}, 38, 16 ),
+            \$q->{md5_ctxt}
+        )
+      )
+    {
+        return 0;
+    }
+
+    $q->{encryption} = MS_BIFF_CRYPTO_RC4;
+    $q->{block}      = -1;
+
+    #/* For some reaons the 1st record after FILEPASS seems to be unencrypted */
+    $q->{dont_decrypt_next_record} = 1;
+
+    #/* pretend to decrypt the entire stream up till this point, it was not
+    # * encrypted, but do it anyway to keep the rc4 state in sync
+    # */
+    SkipBytes( $q, 0, $q->{streamPos} );
+
+    return 1;
+}
+
+sub InitStream {
+    my ( $stream_data ) = @_;
+    my %q;
+
+    $q{opcode} = 0;
+    $q{length} = 0;
+    $q{data}   = '';
+
+    $q{stream}    = $stream_data;              # data stream
+    $q{streamLen} = length( $stream_data );    # stream length
+    $q{streamPos} = 0;                         # stream position
+
+    $q{encryption}               = 0;
+    $q{xor_key}                  = '';
+    $q{rc4_key}                  = '';
+    $q{md5_ctxt}                 = '';
+    $q{block}                    = 0;
+    $q{dont_decrypt_next_record} = 0;
+
+    \%q;
+}
+
+sub QueryNext {
+    my ( $q ) = @_;
+
+    if ( $q->{streamPos} >= $q->{streamLen} ) {
+        return 0;
+    }
+
+    my $data = substr( $q->{stream}, $q->{streamPos}, 4 );
+
+    ( $q->{opcode}, $q->{length} ) = unpack( 'v2', $data );
+
+    #/* no biff record should be larger than around 20,000 */
+    if ( $q->{length} >= 20000 ) {
+        return 0;
+    }
+
+    if ( $q->{length} > 0 ) {
+        $q->{data} = substr( $q->{stream}, $q->{streamPos} + 4, $q->{length} );
+    }
+    else {
+        $q->{data} = '';
+    }
+
+    if ( $q->{encryption} == MS_BIFF_CRYPTO_RC4 ) {
+        if ( $q->{dont_decrypt_next_record} ) {
+            SkipBytes( $q, $q->{streamPos}, 4 + $q->{length} );
+            $q->{dont_decrypt_next_record} = 0;
+        }
+        else {
+            my $pos  = $q->{streamPos};
+            my $data = $q->{data};
+            my $len  = $q->{length};
+            my $res  = '';
+
+            #/* pretend to decrypt header */
+            SkipBytes( $q, $pos, 4 );
+            $pos += 4;
+
+            while ( $q->{block} != int( ( $pos + $len ) / REKEY_BLOCK ) ) {
+                my $step = REKEY_BLOCK - ( $pos % REKEY_BLOCK );
+                $res .= $q->{rc4_key}->RC4( substr( $data, 0, $step ) );
+                $data = substr( $data, $step );
+                $pos += $step;
+                $len -= $step;
+                MakeKey( ++$q->{block}, \$q->{rc4_key}, $q->{md5_ctxt} );
+            }
+
+            $res .= $q->{rc4_key}->RC4( substr( $data, 0, $len ) );
+            $q->{data} = $res;
+        }
+    }
+    elsif ( $q->{encryption} == MS_BIFF_CRYPTO_XOR ) {
+
+        # not implemented
+        return 0;
+    }
+    elsif ( $q->{encryption} == MS_BIFF_CRYPTO_NONE ) {
+
+    }
+
+    $q->{streamPos} += 4 + $q->{length};
+
+    1;
+}
+
 ###############################################################################
 #
 # Parse()
@@ -233,7 +518,7 @@ sub parse {
     my ( $biff_data, $data_length ) = $self->_get_content( $source, $workbook );
     return undef if not $biff_data;
 
-    if ($formatter) {
+    if ( $formatter ) {
         $workbook->{FmtClass} = $formatter;
     }
     else {
@@ -241,26 +526,36 @@ sub parse {
     }
 
     # Parse the BIFF data.
-    my $pos = 0;
-    my $record_header = substr( $biff_data, $pos, 4 );
-    $pos += 4;
+    my $stream = InitStream( $biff_data );
 
-    while ( $pos <= $data_length ) {
-        my ( $record, $record_length ) = unpack( "v2", $record_header );
+    #    my $pos = 0;
+    #    my $record_header = substr( $biff_data, $pos, 4 );
+    #    $pos += 4;
 
-        if ($record_length) {
-            $record_header = substr( $biff_data, $pos, $record_length );
-            $pos += $record_length;
+    #    while ( $pos <= $data_length ) {
+    while ( QueryNext( $stream ) ) {
+
+        #my ( $record, $record_length ) = unpack( "v2", $record_header );
+        my $record        = $stream->{opcode};
+        my $record_length = $stream->{length};
+        my $record_header;
+
+        if ( $record_length ) {
+
+            #$record_header = substr( $biff_data, $pos, $record_length );
+            #$pos += $record_length;
+            $record_header = $stream->{data};
         }
 
 
         # If the file contains a FILEPASS record we assume that it is encrypted
         # and cannot be parsed.
         if ( $record == 0x002F ) {
-            $self->{_error_status} = ErrorFileEncrypted;
-            return undef;
+            unless ( SetDecrypt( $stream, '', $self->{Password} ) ) {
+                $self->{_error_status} = ErrorFileEncrypted;
+                return undef;
+            }
         }
-
 
         # Special case of a formula String with no string.
         if (   $workbook->{_PrevPos}
@@ -289,17 +584,19 @@ sub parse {
             $workbook->{_skip_chart} = 0;
         }
 
-        if ( defined $self->{FuncTbl}->{$record} && !$workbook->{_skip_chart} ) {
-            $self->{FuncTbl}->{$record}->( $workbook, $record, $record_length, $record_header );
+        if ( defined $self->{FuncTbl}->{$record} && !$workbook->{_skip_chart} )
+        {
+            $self->{FuncTbl}->{$record}
+              ->( $workbook, $record, $record_length, $record_header );
         }
 
         $PREFUNC = $record if ( $record != 0x3C );    #Not Continue
 
-        if ( ( $pos + 4 ) <= $data_length ) {
-            $record_header = substr( $biff_data, $pos, 4 );
-        }
-
-        $pos += 4;
+        #if ( ( $pos + 4 ) <= $data_length ) {
+        #    $record_header = substr( $biff_data, $pos, 4 );
+        #}
+        #
+        #$pos += 4;
         return $workbook if defined $workbook->{_ParseAbort};
     }
 
@@ -320,16 +617,16 @@ sub _get_content {
     # Reset the error status in case method is called more than once.
     $self->{_error_status} = ErrorNone;
 
-    if ( ref($source) eq "SCALAR" ) {
+    if ( ref( $source ) eq "SCALAR" ) {
 
         # Specified by a scalar buffer.
-        ( $biff_data, $data_length ) = $self->{GetContent}->($source);
+        ( $biff_data, $data_length ) = $self->{GetContent}->( $source );
 
     }
-    elsif (( ref($source) =~ /GLOB/ ) || ( ref($source) eq 'Fh' ) ) {
+    elsif ( ( ref( $source ) =~ /GLOB/ ) || ( ref( $source ) eq 'Fh' ) ) {
 
         # For CGI.pm (Light FileHandle)
-        binmode($source);
+        binmode( $source );
         my $sWk;
         my $sBuff = '';
 
@@ -340,7 +637,7 @@ sub _get_content {
         ( $biff_data, $data_length ) = $self->{GetContent}->( \$sBuff );
 
     }
-    elsif ( ref($source) eq 'ARRAY' ) {
+    elsif ( ref( $source ) eq 'ARRAY' ) {
 
         # Specified by file content
         $workbook->{File} = undef;
@@ -352,17 +649,17 @@ sub _get_content {
         # Specified by filename .
         $workbook->{File} = $source;
 
-        if ( ! -e $source ) {
+        if ( !-e $source ) {
             $self->{_error_status} = ErrorNoFile;
             return undef;
-    }
+        }
 
-        ( $biff_data, $data_length ) = $self->{GetContent}->($source);
+        ( $biff_data, $data_length ) = $self->{GetContent}->( $source );
     }
 
     # If the read was successful return the data.
-    if ($data_length) {
-        return ($biff_data, $data_length );
+    if ( $data_length ) {
+        return ( $biff_data, $data_length );
     }
     else {
         $self->{_error_status} = ErrorNoExcelData;
@@ -375,14 +672,14 @@ sub _get_content {
 # _subGetContent (for Spreadsheet::ParseExcel)
 #------------------------------------------------------------------------------
 sub _subGetContent {
-    my ($sFile) = @_;
+    my ( $sFile ) = @_;
 
-    my $oOl = OLE::Storage_Lite->new($sFile);
-    return ( undef, undef ) unless ($oOl);
+    my $oOl = OLE::Storage_Lite->new( $sFile );
+    return ( undef, undef ) unless ( $oOl );
     my @aRes = $oOl->getPpsSearch(
         [
-            OLE::Storage_Lite::Asc2Ucs('Book'),
-            OLE::Storage_Lite::Asc2Ucs('Workbook')
+            OLE::Storage_Lite::Asc2Ucs( 'Book' ),
+            OLE::Storage_Lite::Asc2Ucs( 'Workbook' )
         ],
         1, 1
     );
@@ -397,27 +694,27 @@ sub _subGetContent {
     my $oIo;
 
     #1. $sFile is Ref of scalar
-    if ( ref($sFile) eq 'SCALAR' ) {
-        if ($_use_perlio) {
+    if ( ref( $sFile ) eq 'SCALAR' ) {
+        if ( $_use_perlio ) {
             open $oIo, "<", \$sFile;
         }
         else {
             $oIo = IO::Scalar->new;
-            $oIo->open($sFile);
+            $oIo->open( $sFile );
         }
     }
 
     #2. $sFile is a IO::Handle object
     elsif ( UNIVERSAL::isa( $sFile, 'IO::Handle' ) ) {
         $oIo = $sFile;
-        binmode($oIo);
+        binmode( $oIo );
     }
 
     #3. $sFile is a simple filename string
-    elsif ( !ref($sFile) ) {
+    elsif ( !ref( $sFile ) ) {
         $oIo = IO::File->new;
-        $oIo->open("<$sFile") || return undef;
-        binmode($oIo);
+        $oIo->open( "<$sFile" ) || return undef;
+        binmode( $oIo );
     }
     my $sWk;
     my $sBuff = '';
@@ -429,7 +726,7 @@ sub _subGetContent {
 
     #Not Excel file (simple method)
     return ( undef, undef ) if ( substr( $sBuff, 0, 1 ) ne "\x09" );
-    return ( $sBuff, length($sBuff) );
+    return ( $sBuff, length( $sBuff ) );
 }
 
 #------------------------------------------------------------------------------
@@ -459,7 +756,7 @@ sub _subBOF {
                 $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{SheetType},
               )
               = unpack( "v2", $sWk )
-              if ( length($sWk) > 4 );
+              if ( length( $sWk ) > 4 );
         }
         else {
             $oBook->{BIFFVersion} = int( $bOp / 0x100 );
@@ -558,10 +855,10 @@ sub _subNumber {
 # _convDval (for Spreadsheet::ParseExcel)
 #------------------------------------------------------------------------------
 sub _convDval {
-    my ($sWk) = @_;
+    my ( $sWk ) = @_;
     return
       unpack( "d",
-        ($BIGENDIAN) ? pack( "c8", reverse( unpack( "c8", $sWk ) ) ) : $sWk );
+        ( $BIGENDIAN ) ? pack( "c8", reverse( unpack( "c8", $sWk ) ) ) : $sWk );
 }
 
 #------------------------------------------------------------------------------
@@ -574,7 +871,7 @@ sub _subRString {
     $sTxt = substr( $sWk, 8, $iL );
 
     #Has STRUN
-    if ( length($sWk) > ( 8 + $iL ) ) {
+    if ( length( $sWk ) > ( 8 + $iL ) ) {
         _NewCell(
             $oBook, $iR, $iC,
             Kind     => 'RString',
@@ -640,7 +937,7 @@ sub _subRK {
 
     my ( $row, $col, $format_index, $rk_number ) = unpack( 'vvvV', $data );
 
-    my $number = _decode_rk_number($rk_number);
+    my $number = _decode_rk_number( $rk_number );
 
     _NewCell(
         $workbook, $row, $col,
@@ -673,10 +970,10 @@ sub _subFormula {
     my ( $oBook, $bOp, $bLen, $sWk ) = @_;
     my ( $iR, $iC, $iF ) = unpack( "v3", $sWk );
 
-    my ($iFlg) = unpack( "v", substr( $sWk, 12, 2 ) );
+    my ( $iFlg ) = unpack( "v", substr( $sWk, 12, 2 ) );
     if ( $iFlg == 0xFFFF ) {
-        my ($iKind) = unpack( "c", substr( $sWk, 6, 1 ) );
-        my ($iVal)  = unpack( "c", substr( $sWk, 8, 1 ) );
+        my ( $iKind ) = unpack( "c", substr( $sWk, 6, 1 ) );
+        my ( $iVal )  = unpack( "c", substr( $sWk, 8, 1 ) );
 
         if ( ( $iKind == 1 ) or ( $iKind == 2 ) ) {
             my $sTxt =
@@ -725,7 +1022,7 @@ sub _subString {
     #Position (not enough for ARRAY)
 
     my $iPos = $oBook->{_PrevPos};
-    return undef unless ($iPos);
+    return undef unless ( $iPos );
     $oBook->{_PrevPos} = undef;
     my ( $iR, $iC, $iF ) = @$iPos;
 
@@ -810,7 +1107,7 @@ sub _subMulRK {
     return if $workbook->{SheetCount} <= 0;
 
     my ( $row, $first_col ) = unpack( "v2", $data );
-    my $last_col = unpack( "v", substr( $data, length($data) - 2, 2 ) );
+    my $last_col = unpack( "v", substr( $data, length( $data ) - 2, 2 ) );
 
     # Iterate over the RK array and decode the data.
     my $pos = 4;
@@ -818,7 +1115,7 @@ sub _subMulRK {
 
         my $data = substr( $data, $pos, 6 );
         my ( $format_index, $rk_number ) = unpack 'vV', $data;
-        my $number = _decode_rk_number($rk_number);
+        my $number = _decode_rk_number( $rk_number );
 
         _NewCell(
             $workbook, $row, $col,
@@ -843,7 +1140,7 @@ sub _subMulRK {
 sub _subMulBlank {
     my ( $oBook, $bOp, $bLen, $sWk ) = @_;
     my ( $iR, $iSc ) = unpack( "v2", $sWk );
-    my $iEc = unpack( "v", substr( $sWk, length($sWk) - 2, 2 ) );
+    my $iEc = unpack( "v", substr( $sWk, length( $sWk ) - 2, 2 ) );
     my $iPos = 4;
     for ( my $iC = $iSc ; $iC <= $iEc ; $iC++ ) {
         my $iF = unpack( 'v', substr( $sWk, $iPos, 2 ) );
@@ -1076,7 +1373,7 @@ sub _subWriteAccess {
 
     #Before BIFF8
     else {
-        my ($iLen) = unpack( "c", $sWk );
+        my ( $iLen ) = unpack( "c", $sWk );
         $oBook->{Author} =
           $oBook->{FmtClass}->TextFmt( substr( $sWk, 1, $iLen ), '_native_' );
     }
@@ -1096,39 +1393,40 @@ sub _convBIFF8String {
         $iStPos = 9;
         ( $iRichCnt, $iExtCnt ) = unpack( 'vV', substr( $sWk, 3, 6 ) );
     }
-    elsif ($iRich) {    #Only Rich
+    elsif ( $iRich ) {    #Only Rich
         $iStPos   = 5;
         $iRichCnt = unpack( 'v', substr( $sWk, 3, 2 ) );
         $iExtCnt  = 0;
     }
-    elsif ($iExt) {     #Only Ext
+    elsif ( $iExt ) {     #Only Ext
         $iStPos   = 7;
         $iRichCnt = 0;
         $iExtCnt  = unpack( 'V', substr( $sWk, 3, 4 ) );
     }
-    else {              #Nothing Special
+    else {                #Nothing Special
         $iStPos   = 3;
         $iExtCnt  = 0;
         $iRichCnt = 0;
     }
 
     #3.Get String
-    if ($iHigh) {       #Compressed
+    if ( $iHigh ) {       #Compressed
         $iLen *= 2;
         $sStr = substr( $sWk, $iStPos, $iLen );
         _SwapForUnicode( \$sStr );
-        $sStr = $oBook->{FmtClass}->TextFmt( $sStr, 'ucs2' ) unless ($iCnvFlg);
+        $sStr = $oBook->{FmtClass}->TextFmt( $sStr, 'ucs2' )
+          unless ( $iCnvFlg );
     }
-    else {              #Not Compressed
+    else {                #Not Compressed
         $sStr = substr( $sWk, $iStPos, $iLen );
-        $sStr = $oBook->{FmtClass}->TextFmt( $sStr, undef ) unless ($iCnvFlg);
+        $sStr = $oBook->{FmtClass}->TextFmt( $sStr, undef ) unless ( $iCnvFlg );
     }
 
     #4. return
-    if (wantarray) {
+    if ( wantarray ) {
 
         #4.1 Get Rich and Ext
-        if ( length($sWk) < $iStPos + $iLen + $iRichCnt * 4 + $iExtCnt ) {
+        if ( length( $sWk ) < $iStPos + $iLen + $iRichCnt * 4 + $iExtCnt ) {
             return (
                 [ undef, $iHigh, undef, undef ],
                 $iStPos + $iLen + $iRichCnt * 4 + $iExtCnt,
@@ -1169,11 +1467,11 @@ sub _subXF {
     );
 
 
-
     if ( $oBook->{BIFFVersion} == verBIFF4 ) {
+
         # Minimal support for Excel 4. We just get the font and format indices
         # so that the cell data value can be formatted.
-        ( $iFnt, $iIdx,) = unpack( "CC", $sWk );
+        ( $iFnt, $iIdx, ) = unpack( "CC", $sWk );
     }
     elsif ( $oBook->{BIFFVersion} == verBIFF8 ) {
         my ( $iGen, $iAlign, $iGen2, $iBdr1, $iBdr2, $iBdr3, $iPtn );
@@ -1326,7 +1624,7 @@ sub _subFont {
         ( $iHeight, $iAttr, $iCIdx, $iBold, $iSuper, $iUnderline ) =
           unpack( "v5c", $sWk );
         my ( $iSize, $iHigh ) = unpack( 'cc', substr( $sWk, 14, 2 ) );
-        if ($iHigh) {
+        if ( $iHigh ) {
             $sFntName = substr( $sWk, 16, $iSize * 2 );
             _SwapForUnicode( \$sFntName );
             $sFntName = $oBook->{FmtClass}->TextFmt( $sFntName, 'ucs2' );
@@ -1338,7 +1636,7 @@ sub _subFont {
         $bBold      = ( $iBold >= 0x2BC ) ? 1 : 0;
         $bItalic    = ( $iAttr & 0x02 )   ? 1 : 0;
         $bStrikeout = ( $iAttr & 0x08 )   ? 1 : 0;
-        $bUnderline = ($iUnderline)       ? 1 : 0;
+        $bUnderline = ( $iUnderline )     ? 1 : 0;
     }
     elsif ( $oBook->{BIFFVersion} == verBIFF5 ) {
         ( $iHeight, $iAttr, $iCIdx, $iBold, $iSuper, $iUnderline ) =
@@ -1350,7 +1648,7 @@ sub _subFont {
         $bBold      = ( $iBold >= 0x2BC ) ? 1 : 0;
         $bItalic    = ( $iAttr & 0x02 )   ? 1 : 0;
         $bStrikeout = ( $iAttr & 0x08 )   ? 1 : 0;
-        $bUnderline = ($iUnderline)       ? 1 : 0;
+        $bUnderline = ( $iUnderline )     ? 1 : 0;
     }
     else {
         ( $iHeight, $iAttr ) = unpack( "v2", $sWk );
@@ -1439,7 +1737,7 @@ sub _subHeader {
 
     #Before BIFF8
     else {
-        my ($iLen) = unpack( "c", $sWk );
+        my ( $iLen ) = unpack( "c", $sWk );
         $sW =
           $oBook->{FmtClass}->TextFmt( substr( $sWk, 1, $iLen ), '_native_' );
         $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{Header} =
@@ -1464,7 +1762,7 @@ sub _subFooter {
 
     #Before BIFF8
     else {
-        my ($iLen) = unpack( "c", $sWk );
+        my ( $iLen ) = unpack( "c", $sWk );
         $sW =
           $oBook->{FmtClass}->TextFmt( substr( $sWk, 1, $iLen ), '_native_' );
         $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{Footer} =
@@ -1496,7 +1794,7 @@ sub _subHPageBreak {
     #Before BIFF8
     else {
         for ( my $i = 0 ; $i < $iCnt ; $i++ ) {
-            my ($iRow) = unpack( 'v', substr( $sWk, 2 + $i * 2, 2 ) );
+            my ( $iRow ) = unpack( 'v', substr( $sWk, 2 + $i * 2, 2 ) );
             push @aBreak, $iRow;
 
             #            push @aBreak, [$iRow, 0, 255];
@@ -1530,7 +1828,7 @@ sub _subVPageBreak {
     #Before BIFF8
     else {
         for ( my $i = 0 ; $i < $iCnt ; $i++ ) {
-            my ($iCol) = unpack( 'v', substr( $sWk, 2 + $i * 2, 2 ) );
+            my ( $iCol ) = unpack( 'v', substr( $sWk, 2 + $i * 2, 2 ) );
             push @aBreak, $iCol;
 
             #            push @aBreak, [$iCol, 0, 65535];
@@ -1689,7 +1987,7 @@ sub _subName {
                 my ( $iSheetW, $raArea ) = _ParseNameArea( substr( $sWk, 16 ) );
                 my @aTtlR = ();
                 my @aTtlC = ();
-                foreach my $raI (@$raArea) {
+                foreach my $raI ( @$raArea ) {
                     if ( $raI->[3] == 0xFF ) {    #Row Title
                         push @aTtlR, [ $raI->[0], $raI->[2] ];
                     }
@@ -1713,7 +2011,7 @@ sub _subName {
                   _ParseNameArea95( substr( $sWk, 15 ) );
                 my @aTtlR = ();
                 my @aTtlC = ();
-                foreach my $raI (@$raArea) {
+                foreach my $raI ( @$raArea ) {
                     if ( $raI->[3] == 0xFF ) {    #Row Title
                         push @aTtlR, [ $raI->[0], $raI->[2] ];
                     }
@@ -1732,8 +2030,8 @@ sub _subName {
 # ParseNameArea (for Spreadsheet::ParseExcel) DK: 494 (ptgAread3d)
 #------------------------------------------------------------------------------
 sub _ParseNameArea {
-    my ($sObj) = @_;
-    my ($iOp);
+    my ( $sObj ) = @_;
+    my ( $iOp );
     my @aRes = ();
     $iOp = unpack( 'C', $sObj );
     my $iSheet;
@@ -1770,8 +2068,8 @@ sub _ParseNameArea {
 # ParseNameArea95 (for Spreadsheet::ParseExcel) DK: 494 (ptgAread3d)
 #------------------------------------------------------------------------------
 sub _ParseNameArea95 {
-    my ($sObj) = @_;
-    my ($iOp);
+    my ( $sObj ) = @_;
+    my ( $iOp );
     my @aRes = ();
     $iOp = unpack( 'C', $sObj );
     my $iSheet;
@@ -1841,7 +2139,7 @@ sub _subMergeArea {
 #------------------------------------------------------------------------------
 sub DecodeBoolErr {
     my ( $iVal, $iFlg ) = @_;
-    if ($iFlg) {    # ERROR
+    if ( $iFlg ) {    # ERROR
         if ( $iVal == 0x00 ) {
             return "#NULL!";
         }
@@ -1868,7 +2166,7 @@ sub DecodeBoolErr {
         }
     }
     else {
-        return ($iVal) ? "TRUE" : "FALSE";
+        return ( $iVal ) ? "TRUE" : "FALSE";
     }
 }
 
@@ -1936,7 +2234,7 @@ sub _subStrWk {
 
     my ( $self, $biff_data, $is_continue ) = @_;
 
-    if ($is_continue) {
+    if ( $is_continue ) {
 
         # We are reading a CONTINUE record.
 
@@ -2067,10 +2365,10 @@ sub _subStrWk {
 # _SwapForUnicode (for Spreadsheet::ParseExcel)
 #------------------------------------------------------------------------------
 sub _SwapForUnicode {
-    my ($sObj) = @_;
+    my ( $sObj ) = @_;
 
     #    for(my $i = 0; $i<length($$sObj); $i+=2){
-    for ( my $i = 0 ; $i < ( int( length($$sObj) / 2 ) * 2 ) ; $i += 2 ) {
+    for ( my $i = 0 ; $i < ( int( length( $$sObj ) / 2 ) * 2 ) ; $i += 2 ) {
         my $sIt = substr( $$sObj, $i, 1 );
         substr( $$sObj, $i, 1 ) = substr( $$sObj, $i + 1, 1 );
         substr( $$sObj, $i + 1, 1 ) = $sIt;
@@ -2113,7 +2411,7 @@ sub _NewCell {
     if ( $rhKey{Rich} ) {
         my @aRich = ();
         my $sRich = $rhKey{Rich};
-        for ( my $iWk = 0 ; $iWk < length($sRich) ; $iWk += 4 ) {
+        for ( my $iWk = 0 ; $iWk < length( $sRich ) ; $iWk += 4 ) {
             my ( $iPos, $iFnt ) = unpack( 'v2', substr( $sRich, $iWk ) );
             push @aRich, [ $iPos, $oBook->{Font}[$iFnt] ];
         }
@@ -2123,7 +2421,7 @@ sub _NewCell {
     if ( defined $_CellHandler ) {
         if ( defined $_Object ) {
             no strict;
-            ref($_CellHandler) eq "CODE"
+            ref( $_CellHandler ) eq "CODE"
               ? $_CellHandler->(
                 $_Object, $oBook, $oBook->{_CurSheet}, $iR, $iC, $oCell
               )
@@ -2134,7 +2432,7 @@ sub _NewCell {
             $_CellHandler->( $oBook, $oBook->{_CurSheet}, $iR, $iC, $oCell );
         }
     }
-    unless ($_NotSetCell) {
+    unless ( $_NotSetCell ) {
         $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{Cells}[$iR][$iC] = $oCell;
     }
     return $oCell;
@@ -2164,7 +2462,7 @@ sub error {
 
     my $parse_error = $self->{_error_status};
 
-    if (exists $error_strings{$parse_error}) {
+    if ( exists $error_strings{$parse_error} ) {
         return $error_strings{$parse_error};
     }
     else {

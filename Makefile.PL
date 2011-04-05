@@ -10,6 +10,8 @@ my %deps = (
     'IO::File'            => 0,
     'Scalar::Util'        => 0,
     'IO::Scalar'          => 0,
+    'Crypt::RC4'          => 0,
+    'Digest::Perl::MD5'   => 0,
 );
 
 my %resources = (
