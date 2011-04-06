@@ -239,7 +239,6 @@ sub SetEventHandlers {
 #------------------------------------------------------------------------------
 # Decryption routines
 # based on sources of gnumeric (ms-biff.c ms-excel-read.c)
-# 2005, Mazurin Alexey mazurin.alexey@gmail.com
 #------------------------------------------------------------------------------
 sub md5state {
     my ( $md5 ) = @_;
@@ -251,7 +250,8 @@ sub md5state {
         $s .= chr( ( $v >> 16 ) & 0xff );
         $s .= chr( ( $v >> 24 ) & 0xff );
     }
-    $s;
+
+    return $s;
 }
 
 sub MakeKey {
@@ -366,7 +366,8 @@ sub SkipBytes {
     }
 
     $q->{rc4_key}->RC4( substr( $scratch, 0, $count ) );
-    1;
+
+    return 1;
 }
 
 sub SetDecrypt {
@@ -434,13 +435,13 @@ sub InitStream {
     $q{block}                    = 0;
     $q{dont_decrypt_next_record} = 0;
 
-    \%q;
+    return \%q;
 }
 
 sub QueryNext {
     my ( $q ) = @_;
 
-    if ( $q->{streamPos} >= $q->{streamLen} ) {
+    if ( $q->{streamPos} + 4 >= $q->{streamLen} ) {
         return 0;
     }
 
@@ -457,7 +458,8 @@ sub QueryNext {
         $q->{data} = substr( $q->{stream}, $q->{streamPos} + 4, $q->{length} );
     }
     else {
-        $q->{data} = '';
+        $q->{data}                     = undef;
+        $q->{dont_decrypt_next_record} = 1;
     }
 
     if ( $q->{encryption} == MS_BIFF_CRYPTO_RC4 ) {
@@ -499,7 +501,7 @@ sub QueryNext {
 
     $q->{streamPos} += 4 + $q->{length};
 
-    1;
+    return 1;
 }
 
 ###############################################################################
@@ -528,25 +530,12 @@ sub parse {
     # Parse the BIFF data.
     my $stream = InitStream( $biff_data );
 
-    #    my $pos = 0;
-    #    my $record_header = substr( $biff_data, $pos, 4 );
-    #    $pos += 4;
-
-    #    while ( $pos <= $data_length ) {
     while ( QueryNext( $stream ) ) {
 
-        #my ( $record, $record_length ) = unpack( "v2", $record_header );
         my $record        = $stream->{opcode};
         my $record_length = $stream->{length};
-        my $record_header;
 
-        if ( $record_length ) {
-
-            #$record_header = substr( $biff_data, $pos, $record_length );
-            #$pos += $record_length;
-            $record_header = $stream->{data};
-        }
-
+        my $record_header = $stream->{data};
 
         # If the file contains a FILEPASS record we assume that it is encrypted
         # and cannot be parsed.
@@ -592,11 +581,6 @@ sub parse {
 
         $PREFUNC = $record if ( $record != 0x3C );    #Not Continue
 
-        #if ( ( $pos + 4 ) <= $data_length ) {
-        #    $record_header = substr( $biff_data, $pos, 4 );
-        #}
-        #
-        #$pos += 4;
         return $workbook if defined $workbook->{_ParseAbort};
     }
 
@@ -1728,6 +1712,11 @@ sub _subHeader {
     return undef unless ( defined $oBook->{_CurSheet} );
     my $sW;
 
+    if ( !defined $sWk ) {
+        $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{Header} = undef;
+        return;
+    }
+
     #BIFF8
     if ( $oBook->{BIFFVersion} >= verBIFF8 ) {
         $sW = _convBIFF8String( $oBook, $sWk );
@@ -1752,6 +1741,11 @@ sub _subFooter {
     my ( $oBook, $bOp, $bLen, $sWk ) = @_;
     return undef unless ( defined $oBook->{_CurSheet} );
     my $sW;
+
+    if ( !defined $sWk ) {
+        $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{Footer} = undef;
+        return;
+    }
 
     #BIFF8
     if ( $oBook->{BIFFVersion} >= verBIFF8 ) {

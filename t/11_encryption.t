@@ -84,7 +84,7 @@ $parser        = Spreadsheet::ParseExcel->new( Password => '11' );
 $workbook      = $parser->Parse( $file );
 $error_string  = $parser->error();
 $error_code    = $parser->error_code();
-$expected_code = 0;
+$expected_code = 3;
 
 is( $error_code, $expected_code, $caption );
 
