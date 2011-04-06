@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Spreadsheet-ParseExcel
-version:            0.58
+version:            0.59
 abstract:           Read information from an Excel file.
 author:
     - John McNamara (jmcnamara@cpan.org)
@@ -16,6 +16,8 @@ requires:
     OLE::Storage_Lite:  0.19
     Scalar::Util:       0
     perl:               5.008
+    Crypt::RC4:         0
+    Digest::Perl::MD5:  0
 resources:
     MailingList:  http://groups.google.com/group/spreadsheet-parseexcel
     repository:   http://github.com/jmcnamara/spreadsheet-parseexcel

@@ -22,7 +22,7 @@ use Config;
 use Crypt::RC4;
 use Digest::Perl::MD5;
 
-our $VERSION = '0.58';
+our $VERSION = '0.59';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -180,7 +180,7 @@ sub new {
         }
     }
 
-    # Check ENDIAN(Little: Interl etc. BIG: Sparc etc)
+    # Check ENDIAN(Little: Intel etc. BIG: Sparc etc)
     $BIGENDIAN =
         ( defined $hParam{Endian} ) ? $hParam{Endian}
       : ( unpack( "H08", pack( "L", 2 ) ) eq '02000000' ) ? 0
@@ -405,12 +405,12 @@ sub SetDecrypt {
     $q->{encryption} = MS_BIFF_CRYPTO_RC4;
     $q->{block}      = -1;
 
-    #/* For some reaons the 1st record after FILEPASS seems to be unencrypted */
+    # The first record after FILEPASS seems to be unencrypted
     $q->{dont_decrypt_next_record} = 1;
 
-    #/* pretend to decrypt the entire stream up till this point, it was not
-    # * encrypted, but do it anyway to keep the rc4 state in sync
-    # */
+    # Pretend to decrypt the entire stream up till this point, it was
+    # encrypted, but do it anyway to keep the rc4 state in sync
+
     SkipBytes( $q, 0, $q->{streamPos} );
 
     return 1;
@@ -449,7 +449,7 @@ sub QueryNext {
 
     ( $q->{opcode}, $q->{length} ) = unpack( 'v2', $data );
 
-    #/* no biff record should be larger than around 20,000 */
+    # No biff record should be larger than around 20,000.
     if ( $q->{length} >= 20000 ) {
         return 0;
     }
@@ -473,7 +473,7 @@ sub QueryNext {
             my $len  = $q->{length};
             my $res  = '';
 
-            #/* pretend to decrypt header */
+            # Pretend to decrypt header.
             SkipBytes( $q, $pos, 4 );
             $pos += 4;
 
@@ -2489,6 +2489,7 @@ sub error_code {
 }
 
 1;
+
 __END__
 
 =head1 NAME
@@ -2543,26 +2544,30 @@ The C<new()> method is used to create a new C<Spreadsheet::ParseExcel> parser ob
 
     my $parser = Spreadsheet::ParseExcel->new();
 
+It it possible to pass a password to decrypt an encrypted file:
+
+    $parser = Spreadsheet::ParseExcel->new( Password => 'secret' );
+
+Only the default Excel encryption scheme is currently supported. See L</Decryption>.
+
 As an advanced feature it is also possible to pass a call-back handler to the parser to control the parsing of the spreadsheet.
 
     $parser = Spreadsheet::ParseExcel->new(
-                        [
-                          CellHandler => \&cell_handler,
-                          NotSetCell  => 1,
-                        ]);
-
+        CellHandler => \&cell_handler,
+        NotSetCell  => 1,
+    );
 
 The call-back can be used to ignore certain cells or to reduce memory usage. See the section L<Reducing the memory usage of Spreadsheet::ParseExcel> for more information.
 
 
-=head2 parse($filename, [$formatter])
+=head2 parse($filename, $formatter)
 
 The Parser C<parse()> method returns a L</Workbook> object.
 
     my $parser   = Spreadsheet::ParseExcel->new();
     my $workbook = $parser->parse('Book1.xls');
 
-If an error occurs C<parse()> returns C<undef>. In general programs should contain a test for failed parsing as follows:
+If an error occurs C<parse()> returns C<undef>. In general, programs should contain a test for failed parsing as follows:
 
     my $parser   = Spreadsheet::ParseExcel->new();
     my $workbook = $parser->parse('Book1.xls');
@@ -2573,9 +2578,13 @@ If an error occurs C<parse()> returns C<undef>. In general programs should conta
 
 The C<$filename> parameter is generally the file to be parsed. However, it can also be a filehandle or a scalar reference.
 
-The optional C<$formatter> array ref can be an reference to a L</Formatter Class> to format the value of cells.
+The optional C<$formatter> parameter can be an reference to a L</Formatter Class> to format the value of cells. This is useful for parsing workbooks with Unicode or Asian characters:
 
-Note: Versions of Spreadsheet::ParseExcel prior to 0.50 also documented a Workbook C<parse()> method as a syntactic shortcut for the above C<new()> and C<parse()> combination. This is now deprecated since it breaks error handling.
+    my $parser    = Spreadsheet::ParseExcel->new();
+    my $formatter = Spreadsheet::ParseExcel::FmtJapan->new();
+    my $workbook  = $parser->parse( 'Book1.xls', $formatter );
+
+The L<Spreadsheet::ParseExcel::FmtJapan> formatter also supports Unicode. If you encounter any encoding problems with the default formatter try that instead.
 
 
 =head2 error()
@@ -2598,9 +2607,10 @@ If you wish to generate you own error string you can use the C<error_code()> met
     'No Excel data found in file'   2
     'File is encrypted'             3
 
-Spreadsheet::ParseExcel doesn't try to decrypt an encrypted Excel file. That is beyond the current scope of the module.
 
 The C<error_code()> method is explained below.
+
+Spreadsheet::ParseExcel will try to decrypt an encrypted Excel file using the default password or a user supplied password passed to C<new()>, see above. If these fail the module will return the C<'File is encrypted'> error. Only the default Excel encryption scheme is currently supported, see L</Decryption>.
 
 
 =head2 error_code()
@@ -2956,11 +2966,9 @@ Returns one of the following values if the superscript or subscript property of 
     1 => Superscript
     2 => Subscript
 
-=head1 Formatter class
+=head1 Formatter Class
 
-I<Spreadsheet::ParseExcel::Fmt*>
-
-Formatter class will convert cell data.
+Formatters can be passed to the C<parse()> method to deal with Unicode or Asian formatting.
 
 Spreadsheet::ParseExcel includes 2 formatter classes. C<FmtDefault> and C<FmtJapanese>. It is also possible to create a user defined formatting class.
 
@@ -3156,11 +3164,33 @@ However, this still processes the entire workbook. If you wish to save some addi
 
     }
 
+=head1 Decryption
+
+If a workbook is "protected" then Excel will encrypt the file whether a password is supplied or not. As of version 0.59 Spreadsheet::ParseExcel supports decrypting Excel workbooks using a default or user supplied password. However, only the following encryption scheme is supported:
+
+    Office 97/2000 Compatible encryption
+
+The following encryption methods are not supported:
+
+    Weak Encryption (XOR)
+    RC4, Microsoft Base Cryptographic Provider v1.0
+    RC4, Microsoft Base DSS and Diffie-Hellman Cryptographic Provider
+    RC4, Microsoft DH SChannel Cryptographic Provider
+    RC4, Microsoft Enhanced Cryptographic Provider v1.0
+    RC4, Microsoft Enhanced DSS and Diffie-Hellman Cryptographic Provider
+    RC4, Microsoft Enhanced RSA and AES Cryptographic Provider
+    RC4, Microsoft RSA SChannel Cryptographic Provider
+    RC4, Microsoft Strong Cryptographic Provider
+
+See the following for more information on Excel encryption: L<http://office.microsoft.com/en-us/office-2003-resource-kit/important-aspects-of-password-and-encryption-protection-HA001140311.aspx>.
+
+
+
 =head1 KNOWN PROBLEMS
 
 =over
 
-=item * Issues reported by users: http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel
+=item * Issues reported by users: L<http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel>
 
 =item * This module cannot read the values of formulas from files created with Spreadsheet::WriteExcel unless the user specified the values when creating the file (which is generally not the case). The reason for this is that Spreadsheet::WriteExcel writes the formula but not the formula result since it isn't in a position to calculate arbitrary Excel formulas without access to Excel's formula engine.
 
@@ -3175,7 +3205,7 @@ However, this still processes the entire workbook. If you wish to save some addi
 
 Bugs can be reported via rt.cpan.org. See the following for instructions on bug reporting for Spreadsheet::ParseExcel
 
-http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel
+L<http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel>
 
 
 
@@ -3184,23 +3214,23 @@ http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel
 
 =over
 
-=item * xls2csv by Ken Prows (http://search.cpan.org/~ken/xls2csv-1.06/script/xls2csv).
+=item * xls2csv by Ken Prows L<http://search.cpan.org/~ken/xls2csv-1.06/script/xls2csv>.
 
 =item * xls2csv and xlscat by H.Merijn Brand (these utilities are part of Spreadsheet::Read, see below).
 
-=item * excel2txt by Ken Youens-Clark, (http://search.cpan.org/~kclark/excel2txt/excel2txt). This is an excellent example of an Excel filter using Spreadsheet::ParseExcel. It can produce CSV, Tab delimited, Html, XML and Yaml.
+=item * excel2txt by Ken Youens-Clark, L<http://search.cpan.org/~kclark/excel2txt/excel2txt>. This is an excellent example of an Excel filter using Spreadsheet::ParseExcel. It can produce CSV, Tab delimited, Html, XML and Yaml.
 
-=item * XLSperl by Jon Allen (http://search.cpan.org/~jonallen/XLSperl/bin/XLSperl). This application allows you to use Perl "one-liners" with Microsoft Excel files.
+=item * XLSperl by Jon Allen L<http://search.cpan.org/~jonallen/XLSperl/bin/XLSperl>. This application allows you to use Perl "one-liners" with Microsoft Excel files.
 
-=item * Spreadsheet::XLSX (http://search.cpan.org/~dmow/Spreadsheet-XLSX/lib/Spreadsheet/XLSX.pm) by Dmitry Ovsyanko. A module with a similar interface to Spreadsheet::ParseExcel for parsing Excel 2007 XLSX OpenXML files.
+=item * Spreadsheet::XLSX L<http://search.cpan.org/~dmow/Spreadsheet-XLSX/lib/Spreadsheet/XLSX.pm> by Dmitry Ovsyanko. A module with a similar interface to Spreadsheet::ParseExcel for parsing Excel 2007 XLSX OpenXML files.
 
-=item * Spreadsheet::Read (http://search.cpan.org/~hmbrand/Spreadsheet-Read/Read.pm) by H.Merijn Brand. A single interface for reading several different spreadsheet formats.
+=item * Spreadsheet::Read L<http://search.cpan.org/~hmbrand/Spreadsheet-Read/Read.pm> by H.Merijn Brand. A single interface for reading several different spreadsheet formats.
 
-=item * Spreadsheet::WriteExcel (http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel/lib/Spreadsheet/WriteExcel.pm). A perl module for creating new Excel files.
+=item * Spreadsheet::WriteExcel L<http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel/lib/Spreadsheet/WriteExcel.pm>. A perl module for creating new Excel files.
 
-=item * Spreadsheet::ParseExcel::SaveParser (http://search.cpan.org/~jmcnamara/Spreadsheet-ParseExcel/lib/Spreadsheet/ParseExcel/SaveParser.pm). This is a combination of Spreadsheet::ParseExcel and Spreadsheet::WriteExcel and it allows you to "rewrite" an Excel file. See the following example (http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel/lib/Spreadsheet/WriteExcel.pm#MODIFYING_AND_REWRITING_EXCEL_FILES). It is part of the Spreadsheet::ParseExcel distro.
+=item * Spreadsheet::ParseExcel::SaveParser L<http://search.cpan.org/~jmcnamara/Spreadsheet-ParseExcel/lib/Spreadsheet/ParseExcel/SaveParser.pm>. This is a combination of Spreadsheet::ParseExcel and Spreadsheet::WriteExcel and it allows you to "rewrite" an Excel file. See the following example L<http://search.cpan.org/~jmcnamara/Spreadsheet-WriteExcel/lib/Spreadsheet/WriteExcel.pm#MODIFYING_AND_REWRITING_EXCEL_FILES>. It is part of the Spreadsheet::ParseExcel distro.
 
-=item * Text::CSV_XS (http://search.cpan.org/~hmbrand/Text-CSV_XS/CSV_XS.pm) by H.Merijn Brand. A fast and rigorous module for reading and writing CSV data. Don't consider rolling your own CSV handling, use this module instead.
+=item * Text::CSV_XS L<http://search.cpan.org/~hmbrand/Text-CSV_XS/CSV_XS.pm> by H.Merijn Brand. A fast and rigorous module for reading and writing CSV data. Don't consider rolling your own CSV handling, use this module instead.
 
 =back
 
@@ -3209,14 +3239,14 @@ http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel
 
 =head1 MAILING LIST
 
-There is a Google group for discussing and asking questions about Spreadsheet::ParseExcel. This is a good place to search to see if your question has been asked before:  http://groups-beta.google.com/group/spreadsheet-parseexcel/
+There is a Google group for discussing and asking questions about Spreadsheet::ParseExcel. This is a good place to search to see if your question has been asked before:  L<http://groups-beta.google.com/group/spreadsheet-parseexcel/>
 
 
 
 
 =head1 DONATIONS
 
-If you'd care to donate to the Spreadsheet::ParseExcel project, you can do so via PayPal: http://tinyurl.com/7ayes
+If you'd care to donate to the Spreadsheet::ParseExcel project, you can do so via PayPal: L<http://tinyurl.com/7ayes>
 
 
 
@@ -3248,6 +3278,8 @@ XHTML, OLE::Storage and Spreadsheet::WriteExcel.
 
 In no particular order: Yamaji Haruna, Simamoto Takesi, Noguchi Harumi, Ikezawa Kazuhiro, Suwazono Shugo, Hirofumi Morisada, Michael Edwards, Kim Namusk, Slaven Rezic, Grant Stevens, H.Merijn Brand and many many people + Kawai Mikako.
 
+Alexey Mazurin added the decryption facility.
+
 
 
 =head1 DISCLAIMER OF WARRANTY
@@ -3261,7 +3293,7 @@ In no event unless required by applicable law or agreed to in writing will any c
 
 =head1 LICENSE
 
-Either the Perl Artistic Licence http://dev.perl.org/licenses/artistic.html or the GPL http://www.opensource.org/licenses/gpl-license.php
+Either the Perl Artistic Licence L<http://dev.perl.org/licenses/artistic.html> or the GPL L<http://www.opensource.org/licenses/gpl-license.php>
 
 
 
@@ -3279,7 +3311,7 @@ Original author: Kawai Takanori (Hippo2000) kwitknr@cpan.org
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009-2010 John McNamara
+Copyright (c) 2009-2011 John McNamara
 
 Copyright (c) 2006-2008 Gabor Szabo
 

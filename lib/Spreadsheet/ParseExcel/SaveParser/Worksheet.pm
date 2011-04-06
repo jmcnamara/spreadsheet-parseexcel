@@ -23,7 +23,7 @@ use warnings;
 #==============================================================================
 
 use base 'Spreadsheet::ParseExcel::Worksheet';
-our $VERSION = '0.58';
+our $VERSION = '0.59';
 
 sub new {
     my ( $sClass, %rhIni ) = @_;

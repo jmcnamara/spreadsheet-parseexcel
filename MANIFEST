@@ -14,6 +14,7 @@ t/04_regression.t
 t/05_regression.t
 t/06_regression.t
 t/10_error_codes.t
+t/11_encryption.t
 t/20_number_format_default.t
 t/21_number_format_user.t
 t/22_number_format_datetime.t
@@ -55,6 +56,9 @@ t/excel_files/long_string5.xls
 t/excel_files/long_string6.xls
 t/excel_files/long_string7.xls
 t/excel_files/long_string8.xls
+t/excel_files/pers-encrypted-RC4-pass-11.xls
+t/excel_files/pers-encrypted-def-pass-QwErTyUiOp.xls
+t/excel_files/pers-protected.xls
 t/excel_files/worksheet_01.xls
 
 lib/Spreadsheet/ParseExcel.pm
