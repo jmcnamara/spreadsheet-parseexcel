@@ -254,7 +254,16 @@ sub SaveAs {
                 }
             }
         }
-        for (
+        
+		my $merged_areas = $oWkS->get_merged_areas();
+		my $merged_areas_h = {};
+		if ($merged_areas) {
+			foreach my $range (@$merged_areas) {
+				$merged_areas_h->{"$range->[0]:$range->[1]"} = $range;
+			}
+		}
+		
+		for (
             my $iR = $oWkS->{MinRow} ;
             defined $oWkS->{MaxRow} && $iR <= $oWkS->{MaxRow} ;
             $iR++
@@ -270,13 +279,11 @@ sub SaveAs {
 
                 my $oWkC = $oWkS->{Cells}[$iR][$iC];
                 if ($oWkC) {
-                    if ( $oWkC->{Merged} ) {
+                    if ( $oWkC->{Merged} and exists $merged_areas_h->{"$iR:$iC"} ) {
                         my $oFmtN = $oWrEx->addformat();
                         $oFmtN->copy( $hFmt{ $oWkC->{FormatNo} } );
-                        $oFmtN->set_merge(1);
-                        $oWrS->write(
-                            $iR,
-                            $iC,
+						$oWrS->merge_range (
+							@{$merged_areas_h->{"$iR:$iC"}},
                             $oBook->{FmtClass}
                               ->TextFmt( $oWkC->{Val}, $oWkC->{Code} ),
                             $oFmtN
