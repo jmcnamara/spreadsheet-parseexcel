@@ -259,7 +259,7 @@ sub SaveAs {
 		my $merged_areas_h = {};
 		if ($merged_areas) {
 			foreach my $range (@$merged_areas) {
-				$merged_areas_h->{"$range->[0]:$range->[1]"} = $range;
+				$merged_areas_h->{$range->[0]}{$range->[1]} = $range;
 			}
 		}
 		
@@ -279,11 +279,11 @@ sub SaveAs {
 
                 my $oWkC = $oWkS->{Cells}[$iR][$iC];
                 if ($oWkC) {
-                    if ( $oWkC->{Merged} and exists $merged_areas_h->{"$iR:$iC"} ) {
+                    if ( $oWkC->{Merged} and exists $merged_areas_h->{$iR}{$iC} ) {
                         my $oFmtN = $oWrEx->addformat();
                         $oFmtN->copy( $hFmt{ $oWkC->{FormatNo} } );
 						$oWrS->merge_range (
-							@{$merged_areas_h->{"$iR:$iC"}},
+							@{$merged_areas_h->{$iR}{$iC}},
                             $oBook->{FmtClass}
                               ->TextFmt( $oWkC->{Val}, $oWkC->{Code} ),
                             $oFmtN
