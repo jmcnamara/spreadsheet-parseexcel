@@ -35,8 +35,25 @@ sub new {
 #------------------------------------------------------------------------------
 sub AddCell {
     my ( $oSelf, $iR, $iC, $sVal, $oCell, $sCode ) = @_;
-    $oSelf->{_Book}
+    
+	my $merged_areas = $oSelf->get_merged_areas();
+	my $merged_areas_h = {};
+	if ($merged_areas) {
+		foreach my $range (@$merged_areas) {
+			$merged_areas_h->{$range->[0]}{$range->[1]} = $range;
+		}
+	}
+				
+	$oCell = $oSelf->{Cells}[$iR][$iC]->{FormatNo}
+		unless defined $oCell;
+	
+	my $cell = $oSelf->{_Book}
       ->AddCell( $oSelf->{_SheetNo}, $iR, $iC, $sVal, $oCell, $sCode );
+	
+	$cell->{Merged} = 1
+		if exists $merged_areas_h->{$iR}{$iC};
+	
+	return $cell;
 }
 
 #------------------------------------------------------------------------------
