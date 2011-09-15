@@ -396,9 +396,22 @@ sub AddCell {
     $rhKey{Val}         = $sVal;
     $rhKey{Code}        = $sCode || '_native_';
     $oBook->{_CurSheet} = $iSheet;
+
+	my $merged_areas = $oBook->{Worksheet}[$iSheet]->get_merged_areas();
+	my $merged_areas_h = {};
+	if ($merged_areas) {
+		foreach my $range (@$merged_areas) {
+			$merged_areas_h->{$range->[0]}{$range->[1]} = $range;
+		}
+	}
+
     my $oNewCell =
       Spreadsheet::ParseExcel::_NewCell( $oBook, $iR, $iC, %rhKey );
     Spreadsheet::ParseExcel::_SetDimension( $oBook, $iR, $iC, $iC );
+
+	$oNewCell->{Merged} = 1
+		if exists $merged_areas_h->{$iR}{$iC};
+
     return $oNewCell;
 }
 
