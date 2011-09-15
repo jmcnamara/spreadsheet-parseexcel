@@ -156,12 +156,12 @@ sub SaveAs {
                 $oWrS->protect();
             }
         }
-        if ( ( $oWkS->{FitWidth} == 1 ) and ( $oWkS->{FitHeight} == 1 ) ) {
+        if ( $oWkS->{Scale} != 100 ) {
 
             # Pages on fit with width and Heigt
             $oWrS->fit_to_pages( $oWkS->{FitWidth}, $oWkS->{FitHeight} );
 
-            #Print Scale
+            #Print Scale and reset FitWidth/FitHeight
             $oWrS->set_print_scale( $oWkS->{Scale} );
         }
         else {
