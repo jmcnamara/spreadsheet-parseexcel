@@ -1,7 +1,7 @@
 #!perl -w
 
 use strict;
-use Test::More tests => 14;
+use Test::More tests => 7;
 
 eval "use Spreadsheet::WriteExcel;";
 
@@ -16,7 +16,7 @@ use_ok ('Spreadsheet::ParseExcel::SaveParser');
 
 use_ok ('Spreadsheet::WriteExcel');
 
-my $xl_base_name = '46_save_parser.xls';
+my $xl_base_name = 't/excel_files/46_save_parser.xls';
 
 my $xl_base = Spreadsheet::WriteExcel->new($xl_base_name);
 
