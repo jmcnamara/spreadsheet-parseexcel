@@ -385,7 +385,8 @@ sub AddFormat {
 sub AddCell {
     my ( $oBook, $iSheet, $iR, $iC, $sVal, $oCell, $sCode ) = @_;
     my %rhKey;
-    $oCell ||= 0;
+    $oCell ||= $oBook->{Worksheet}[$iSheet]
+		->{Cells}[$iR][$iC]->{FormatNo} || 0;
     my $iFmt =
       ( UNIVERSAL::isa( $oCell, 'Spreadsheet::ParseExcel::Cell' ) )
       ? $oCell->{FormatNo}
