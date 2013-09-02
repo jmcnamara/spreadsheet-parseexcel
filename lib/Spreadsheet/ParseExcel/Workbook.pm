@@ -54,7 +54,7 @@ sub worksheet {
 #
 # worksheets()
 #
-# Returns an array ofWorksheet objects.
+# Returns an array of Worksheet objects.
 #
 sub worksheets {
     my $self = shift;
@@ -147,7 +147,7 @@ sub ParseAbort {
 # Parse(). Deprecated.
 #
 # Syntactic wrapper around Spreadsheet::ParseExcel::Parse().
-# This method is *deprecated* since it doesn't conform to the the current
+# This method is *deprecated* since it doesn't conform to the current
 # error handling in the S::PE Parse() method.
 #
 sub Parse {
