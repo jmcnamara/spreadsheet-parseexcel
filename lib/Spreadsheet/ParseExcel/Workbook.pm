@@ -54,7 +54,7 @@ sub worksheet {
 #
 # worksheets()
 #
-# Returns an array ofWorksheet objects.
+# Returns an array of Worksheet objects.
 #
 sub worksheets {
     my $self = shift;
