@@ -48,7 +48,7 @@ sub Create {
     my $workbook = Spreadsheet::ParseExcel::Workbook->new();
     $workbook->{SheetCount} = 0;
 
-    # User specified formater class.
+    # User specified formatter class.
     if ($formatter) {
         $workbook->{FmtClass} = $formatter;
     }
