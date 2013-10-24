@@ -155,9 +155,6 @@ our %ProcTbl = (
 
 our $BIGENDIAN;
 our $PREFUNC;
-our $_CellHandler;
-our $_NotSetCell;
-our $_Object;
 our $_use_perlio;
 
 #------------------------------------------------------------------------------
@@ -201,9 +198,9 @@ sub new {
             $self->SetEventHandler( $sKey, $hParam{AddHandlers}->{$sKey} );
         }
     }
-    $_CellHandler = $hParam{CellHandler} if ( $hParam{CellHandler} );
-    $_NotSetCell  = $hParam{NotSetCell};
-    $_Object      = $hParam{Object};
+    $self->{CellHandler} = $hParam{CellHandler};
+    $self->{NotSetCell}  = $hParam{NotSetCell};
+    $self->{Object}      = $hParam{Object};
 
 
     if ( defined $hParam{Password} ) {
@@ -516,6 +513,9 @@ sub parse {
 
     my $workbook = Spreadsheet::ParseExcel::Workbook->new();
     $workbook->{SheetCount} = 0;
+    $workbook->{CellHandler} = $self->{CellHandler};
+    $workbook->{NotSetCell}  = $self->{NotSetCell};
+    $workbook->{Object}      = $self->{Object};
 
     my ( $biff_data, $data_length ) = $self->_get_content( $source, $workbook );
     return undef if not $biff_data;
@@ -2412,21 +2412,21 @@ sub _NewCell {
         $oCell->{Rich} = \@aRich;
     }
 
-    if ( defined $_CellHandler ) {
-        if ( defined $_Object ) {
+    if ( defined $oBook->{CellHandler} ) {
+        if ( defined $oBook->{Object} ) {
             no strict;
-            ref( $_CellHandler ) eq "CODE"
-              ? $_CellHandler->(
+            ref( $oBook->{CellHandler} ) eq "CODE"
+              ? $oBook->{CellHandler}->(
                 $_Object, $oBook, $oBook->{_CurSheet}, $iR, $iC, $oCell
               )
-              : $_CellHandler->callback( $_Object, $oBook, $oBook->{_CurSheet},
+              : $oBook->{CellHandler}->callback( $_Object, $oBook, $oBook->{_CurSheet},
                 $iR, $iC, $oCell );
         }
         else {
-            $_CellHandler->( $oBook, $oBook->{_CurSheet}, $iR, $iC, $oCell );
+            $oBook->{CellHandler}->( $oBook, $oBook->{_CurSheet}, $iR, $iC, $oCell );
         }
     }
-    unless ( $_NotSetCell ) {
+    unless ( $oBook->{NotSetCell} ) {
         $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{Cells}[$iR][$iC] = $oCell;
     }
     return $oCell;
@@ -2544,7 +2544,7 @@ The C<new()> method is used to create a new C<Spreadsheet::ParseExcel> parser ob
 
     my $parser = Spreadsheet::ParseExcel->new();
 
-It is possible to pass a password to decrypt an encrypted file:
+It it possible to pass a password to decrypt an encrypted file:
 
     $parser = Spreadsheet::ParseExcel->new( Password => 'secret' );
 
