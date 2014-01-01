@@ -35,7 +35,8 @@ sub new {
 #------------------------------------------------------------------------------
 sub AddCell {
     my ( $oSelf, $iR, $iC, $sVal, $oCell, $sCode ) = @_;
-    $oSelf->{_Book}
+    
+	$oSelf->{_Book}
       ->AddCell( $oSelf->{_SheetNo}, $iR, $iC, $sVal, $oCell, $sCode );
 }
 
