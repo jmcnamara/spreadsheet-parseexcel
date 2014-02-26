@@ -34,7 +34,7 @@ use Spreadsheet::ParseExcel::FmtDefault;
 my @aColor = (
     '000000',    # 0x00
     'FFFFFF', 'FFFFFF', 'FFFFFF', 'FFFFFF',
-    'FFFFFF', 'FFFFFF', 'FFFFFF', 'FFFFFF',    # 0x08
+    'FFFFFF', 'FFFFFF', 'FFFFFF', '000000',    # 0x08
     'FFFFFF', 'FF0000', '00FF00', '0000FF',
     'FFFF00', 'FF00FF', '00FFFF', '800000',    # 0x10
     '008000', '000080', '808000', '800080',
@@ -48,7 +48,7 @@ my @aColor = (
     '33CCCC', '99CC00', 'FFCC00', 'FF9900',
     'FF6600', '666699', '969696', '003366',    # 0x38
     '339966', '003300', '333300', '993300',
-    '993366', '333399', '333333', 'FFFFFF'     # 0x40
+    '993366', '333399', '333333', '000000'     # 0x40
 );
 use constant verExcel95 => 0x500;
 use constant verExcel97 => 0x600;
