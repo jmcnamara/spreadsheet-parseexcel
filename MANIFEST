@@ -13,6 +13,7 @@ t/03_regression.t
 t/04_regression.t
 t/05_regression.t
 t/06_regression.t
+t/07_cell_handler.t
 t/10_error_codes.t
 t/11_encryption.t
 t/20_number_format_default.t
