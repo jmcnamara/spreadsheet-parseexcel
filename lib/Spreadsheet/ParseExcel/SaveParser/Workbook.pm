@@ -19,7 +19,7 @@ use strict;
 use warnings;
 
 use base 'Spreadsheet::ParseExcel::Workbook';
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 
 #==============================================================================
 # Spreadsheet::ParseExcel::SaveParser::Workbook

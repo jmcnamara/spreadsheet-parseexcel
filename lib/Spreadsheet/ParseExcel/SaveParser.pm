@@ -24,7 +24,7 @@ use Spreadsheet::ParseExcel::SaveParser::Worksheet;
 use Spreadsheet::WriteExcel;
 use base 'Spreadsheet::ParseExcel';
 
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 
 ###############################################################################
 #

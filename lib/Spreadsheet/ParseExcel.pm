@@ -22,7 +22,7 @@ use Config;
 use Crypt::RC4;
 use Digest::Perl::MD5;
 
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -2544,7 +2544,7 @@ The C<new()> method is used to create a new C<Spreadsheet::ParseExcel> parser ob
 
     my $parser = Spreadsheet::ParseExcel->new();
 
-It it possible to pass a password to decrypt an encrypted file:
+It is possible to pass a password to decrypt an encrypted file:
 
     $parser = Spreadsheet::ParseExcel->new( Password => 'secret' );
 

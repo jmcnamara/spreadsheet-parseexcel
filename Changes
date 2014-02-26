@@ -1,5 +1,10 @@
 Revision history for Perl module Spreadsheet::ParseExcel.
 
+0.60 February 26 2014
+
+    + Fix RT #43250
+      http://rt.cpan.org/Public/Bug/Display.html?id=43250.
+
 0.59 April 6 2011
 
     + Patch for decryption of default encrypted workbooks from
