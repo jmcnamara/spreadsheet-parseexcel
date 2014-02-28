@@ -2483,7 +2483,7 @@ sub _NewCell {
 # ColorIdxToRGB (for Spreadsheet::ParseExcel)
 #
 # Returns for most recently opened book for compatibility, use
-# Workbook::ColorIdxToRGB instead
+# Workbook::color_idx_to_rgb instead
 #
 #------------------------------------------------------------------------------
 sub ColorIdxToRGB {
@@ -2494,7 +2494,7 @@ sub ColorIdxToRGB {
 	return ( ( defined $aColor[$iIdx] ) ? $aColor[$iIdx] : $aColor[0] );
     }
 
-    return $oCurrentBook->ColorIdxToRGB( $iIdx );
+    return $oCurrentBook->color_idx_to_rgb( $iIdx );
 }
 
 

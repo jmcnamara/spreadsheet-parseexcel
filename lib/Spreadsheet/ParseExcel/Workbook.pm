@@ -33,7 +33,7 @@ sub new {
 }
 
 ###############################################################################
-sub ColorIdxToRGB {
+sub color_idx_to_rgb {
     my( $oBook, $iIdx ) = @_;
 
     my $palette = $oBook->{aColor};
