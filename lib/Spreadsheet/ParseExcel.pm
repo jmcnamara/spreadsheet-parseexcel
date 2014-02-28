@@ -31,7 +31,7 @@ use Spreadsheet::ParseExcel::Format;
 use Spreadsheet::ParseExcel::Cell;
 use Spreadsheet::ParseExcel::FmtDefault;
 
-my $oCurrentBook;
+my $currentbook;
 my @aColor = (
     '000000',    # 0x00
     'FFFFFF', 'FFFFFF', 'FFFFFF', 'FFFFFF',
@@ -515,7 +515,7 @@ sub parse {
     my ( $self, $source, $formatter ) = @_;
 
     my $workbook = Spreadsheet::ParseExcel::Workbook->new();
-    $oCurrentBook = $workbook;
+    $currentbook = $workbook;
     $workbook->{SheetCount} = 0;
     $workbook->{CellHandler} = $self->{CellHandler};
     $workbook->{NotSetCell}  = $self->{NotSetCell};
@@ -1335,36 +1335,36 @@ sub _subColInfo {
 # _subWindow1 Window information P 273
 #------------------------------------------------------------------------------
 sub _subWindow1 {
-    my ( $oBook, $bOp, $bLen, $sWk ) = @_;
+    my ( $workbook, $op, $len, $wk ) = @_;
 
-    return if ( $oBook->{BIFFVersion} <= verBIFF4() );
+    return if ( $workbook->{BIFFVersion} <= verBIFF4() );
 
     my (
-        $iHpos,     $iVpos,        $iWidth,
-        $iHeight,   $iOptions,     $iActive,
-        $iFirstTab, $iNumSelected, $iTabBarWidth
-    ) = unpack( "v9", $sWk );
+        $hpos,     $vpos,        $width,
+        $height,   $options,     $active,
+        $firsttab, $numselected, $tabbarwidth
+    ) = unpack( "v9", $wk );
 
-    $oBook->{ActiveSheet} = $iActive;
+    $workbook->{ActiveSheet} = $active;
 }
 
 #------------------------------------------------------------------------------
 # _subSheetLayout OpenOffice 5.96 (P207)
 #------------------------------------------------------------------------------
 sub _subSheetLayout {
-    my ( $oBook, $bOp, $bLen, $sWk ) = @_;
+    my ( $workbook, $op, $len, $wk ) = @_;
 
-    my @iUnused;
+    my @unused;
     (
-        my $iRc,
-        @iUnused[ 1 .. 10 ],
-        @iUnused[ 11 .. 14 ],
-        my $iColor, @iUnused[ 15, 16 ]
-    ) = unpack( "vC10C4vC2", $sWk );
+        my $rc,
+        @unused[ 1 .. 10 ],
+        @unused[ 11 .. 14 ],
+        my $color, @unused[ 15, 16 ]
+    ) = unpack( "vC10C4vC2", $wk );
 
-    return unless ( $iRc == 0x0862 );
+    return unless ( $rc == 0x0862 );
 
-    $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{TabColor} = $iColor;
+    $workbook->{Worksheet}[ $workbook->{_CurSheet} ]->{TabColor} = $color;
 }
 
 #------------------------------------------------------------------------------
@@ -2490,11 +2490,11 @@ sub ColorIdxToRGB {
     my ( $sPkg, $iIdx ) = @_;
 
 
-    unless( defined $oCurrentBook ) {
+    unless( defined $currentbook ) {
 	return ( ( defined $aColor[$iIdx] ) ? $aColor[$iIdx] : $aColor[0] );
     }
 
-    return $oCurrentBook->color_idx_to_rgb( $iIdx );
+    return $currentbook->color_idx_to_rgb( $iIdx );
 }
 
 

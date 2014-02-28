@@ -34,10 +34,10 @@ sub new {
 
 ###############################################################################
 sub color_idx_to_rgb {
-    my( $oBook, $iIdx ) = @_;
+    my( $workbook, $iidx ) = @_;
 
-    my $palette = $oBook->{aColor};
-    return ( ( defined $palette->[$iIdx] ) ? $palette->[$iIdx] : $palette->[0] );
+    my $palette = $workbook->{aColor};
+    return ( ( defined $palette->[$iidx] ) ? $palette->[$iidx] : $palette->[0] );
 }
 
 ###############################################################################
