@@ -22,7 +22,7 @@ use Config;
 use Crypt::RC4;
 use Digest::Perl::MD5;
 
-our $VERSION = '0.59';
+our $VERSION = '0.60';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -31,6 +31,7 @@ use Spreadsheet::ParseExcel::Format;
 use Spreadsheet::ParseExcel::Cell;
 use Spreadsheet::ParseExcel::FmtDefault;
 
+my $oCurrentBook;
 my @aColor = (
     '000000',    # 0x00
     'FFFFFF', 'FFFFFF', 'FFFFFF', 'FFFFFF',
@@ -514,10 +515,12 @@ sub parse {
     my ( $self, $source, $formatter ) = @_;
 
     my $workbook = Spreadsheet::ParseExcel::Workbook->new();
+    $oCurrentBook = $workbook;
     $workbook->{SheetCount} = 0;
     $workbook->{CellHandler} = $self->{CellHandler};
     $workbook->{NotSetCell}  = $self->{NotSetCell};
     $workbook->{Object}      = $self->{Object};
+    $workbook->{aColor}      = [ @aColor ];
 
     my ( $biff_data, $data_length ) = $self->_get_content( $source, $workbook );
     return undef if not $biff_data;
@@ -1634,7 +1637,7 @@ sub _subPalette {
     for ( my $i = 0 ; $i < unpack( 'v', $sWk ) ; $i++ ) {
 
         #        push @aColor, unpack('H6', substr($sWk, $i*4+2));
-        $aColor[ $i + 8 ] = unpack( 'H6', substr( $sWk, $i * 4 + 2 ) );
+        $oBook->{aColor}[ $i + 8 ] = unpack( 'H6', substr( $sWk, $i * 4 + 2 ) );
     }
 }
 
@@ -2479,12 +2482,19 @@ sub _NewCell {
 #------------------------------------------------------------------------------
 # ColorIdxToRGB (for Spreadsheet::ParseExcel)
 #
-# TODO JMN Make this a Workbook method and re-document.
+# Returns for most recently opened book for compatibility, use
+# Workbook::ColorIdxToRGB instead
 #
 #------------------------------------------------------------------------------
 sub ColorIdxToRGB {
     my ( $sPkg, $iIdx ) = @_;
-    return ( ( defined $aColor[$iIdx] ) ? $aColor[$iIdx] : $aColor[0] );
+
+
+    unless( defined $oCurrentBook ) {
+	return ( ( defined $aColor[$iIdx] ) ? $aColor[$iIdx] : $aColor[0] );
+    }
+
+    return $oCurrentBook->ColorIdxToRGB( $iIdx );
 }
 
 
@@ -2996,7 +3006,12 @@ Returns the style of an underlined font where the value has the following meanin
 
 =head2 $font->{Color}
 
-Returns the color index for the font. The index can be converted to a RGB string using the C<ColorIdxToRGB()> Parser method.
+Returns the color index for the font. The mapping to an RGB color is defined by each workbook.
+
+The index can be converted to a RGB string using the C<$workbook->ColorIdxToRGB()> Parser method.
+
+(Older versions of C<Spreadsheet::ParseExcel> provided the C<ColorIdxToRGB> class method, which is deprecated.)
+
 
 =head2 $font->{Strikeout}
 

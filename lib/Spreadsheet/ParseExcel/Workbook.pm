@@ -33,6 +33,14 @@ sub new {
 }
 
 ###############################################################################
+sub ColorIdxToRGB {
+    my( $oBook, $iIdx ) = @_;
+
+    my $palette = $oBook->{aColor};
+    return ( ( defined $palette->[$iIdx] ) ? $palette->[$iIdx] : $palette->[0] );
+}
+
+###############################################################################
 #
 # worksheet()
 #
