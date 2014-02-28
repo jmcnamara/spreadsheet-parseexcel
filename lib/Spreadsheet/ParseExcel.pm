@@ -97,8 +97,10 @@ our %ProcTbl = (
     0x2A   => \&_subPrintHeaders,      # Print Headers
     0x2B   => \&_subPrintGridlines,    # Print Gridlines
     0x3C   => \&_subContinue,          # Continue
+    0x3D   => \&_subWindow1,           # Window1
     0x43   => \&_subXF,                # XF for Excel < 4.
     0x0443 => \&_subXF,                # XF for Excel = 4.
+    0x862  => \&_subSheetLayout,       # Sheet Layout
 
     #Develpers' Kit P292
     0x55 => \&_subDefColWidth,         # Consider
@@ -1188,8 +1190,10 @@ sub _subRow {
       unpack( "v8", $sWk );
     $iEc--;
 
-    # TODO. we need to handle hidden rows:
-    # $iGr & 0x20
+    if ( $iGr & 0x20 ) {
+        $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{RowHidden}[$iR] = 1;
+    }
+
     $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{RowHeight}[$iR] = $iHght / 20;
 
     #2.MaxRow, MaxCol, MinRow, MinCol
@@ -1318,8 +1322,46 @@ sub _subColInfo {
 
         $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{ColFmtNo}[$i] = $iXF;
 
-        # TODO. we need to handle hidden cols: $iGr & 0x01.
+        if ( $iGr & 0x01 ) {
+            $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{ColHidden}[$i] = 1;
+        }
     }
+}
+
+#------------------------------------------------------------------------------
+# _subWindow1 Window information P 273
+#------------------------------------------------------------------------------
+sub _subWindow1 {
+    my ( $oBook, $bOp, $bLen, $sWk ) = @_;
+
+    return if ( $oBook->{BIFFVersion} <= verBIFF4() );
+
+    my (
+        $iHpos,     $iVpos,        $iWidth,
+        $iHeight,   $iOptions,     $iActive,
+        $iFirstTab, $iNumSelected, $iTabBarWidth
+    ) = unpack( "v9", $sWk );
+
+    $oBook->{ActiveSheet} = $iActive;
+}
+
+#------------------------------------------------------------------------------
+# _subSheetLayout OpenOffice 5.96 (P207)
+#------------------------------------------------------------------------------
+sub _subSheetLayout {
+    my ( $oBook, $bOp, $bLen, $sWk ) = @_;
+
+    my @iUnused;
+    (
+        my $iRc,
+        @iUnused[ 1 .. 10 ],
+        @iUnused[ 11 .. 14 ],
+        my $iColor, @iUnused[ 15, 16 ]
+    ) = unpack( "vC10C4vC2", $sWk );
+
+    return unless ( $iRc == 0x0862 );
+
+    $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{TabColor} = $iColor;
 }
 
 #------------------------------------------------------------------------------
@@ -1683,11 +1725,12 @@ sub _subBoundSheet {
         }
         $oBook->{Worksheet}[ $oBook->{SheetCount} ] =
           Spreadsheet::ParseExcel::Worksheet->new(
-            Name     => $sWsName,
-            Kind     => $iKind,
-            _Pos     => $iPos,
-            _Book    => $oBook,
-            _SheetNo => $oBook->{SheetCount},
+            Name        => $sWsName,
+            Kind        => $iKind,
+            _Pos        => $iPos,
+            _Book       => $oBook,
+            _SheetNo    => $oBook->{SheetCount},
+            SheetHidden => $iGr & 0x03
           );
     }
     else {
@@ -1695,10 +1738,11 @@ sub _subBoundSheet {
           Spreadsheet::ParseExcel::Worksheet->new(
             Name =>
               $oBook->{FmtClass}->TextFmt( substr( $sWk, 7 ), '_native_' ),
-            Kind     => $iKind,
-            _Pos     => $iPos,
-            _Book    => $oBook,
-            _SheetNo => $oBook->{SheetCount},
+            Kind        => $iKind,
+            _Pos        => $iPos,
+            _Book       => $oBook,
+            _SheetNo    => $oBook->{SheetCount},
+            SheetHidden => $iGr & 0x03
           );
     }
     $oBook->{SheetCount}++;
