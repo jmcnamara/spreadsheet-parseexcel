@@ -2,6 +2,15 @@ Revision history for Perl module Spreadsheet::ParseExcel.
 
 0.61
 
+    + RT #93393 (active worksheet)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93393
+
+    ! Fix RT #93425 (color from workbook leaks)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93425
+
+    + RT #93367 (hidden rows/columns)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93367
+
     ! Fix RT #93065 (black)
       http://rt.cpan.org/Public/Bug/Display.html?id=93065
 
