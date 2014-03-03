@@ -185,6 +185,8 @@ sub get_row_heights {
 
     my $self = shift;
 
+    return undef unless ( $self->{RowHeight} );
+
     return @{ $self->{RowHeight} };
 }
 
@@ -197,6 +199,8 @@ sub get_row_heights {
 sub get_col_widths {
 
     my $self = shift;
+
+    return undef unless ( $self->{RowHeight} );
 
     return @{ $self->{ColWidth} };
 }
@@ -538,6 +542,74 @@ sub is_print_comments {
     my $self = shift;
 
     return $self->{Notes};
+}
+
+=head2 get_tab_color()
+
+Return color index of tab, or undef if not set.
+
+=cut
+
+sub get_tab_color {
+    my $worksheet = shift;
+
+    return $worksheet->{TabColor};
+}
+
+=head2 is_sheet_hidden()
+
+Return true if sheet is hidden
+
+=cut
+
+sub is_sheet_hidden {
+    my $worksheet = shift;
+
+    return $worksheet->{SheetHidden};
+}
+
+=head2 is_row_hidden($row)
+
+In scalar context, return true if $row is hidden
+In array context, return an array whose elements are true
+if the corresponding row is hidden.
+
+=cut
+
+sub is_row_hidden {
+    my $worksheet = shift;
+
+    my ($row) = @_;
+
+    unless ( $worksheet->{RowHidden} ) {
+        return () if (wantarray);
+        return 0;
+    }
+
+    return @{ $worksheet->{RowHidden} } if (wantarray);
+    return $worksheet->{RowHidden}[$row];
+}
+
+=head2 is_col_hidden($col)
+
+In scalar context, return true if $col is hidden
+In array context, return an array whose elements are true
+if the corresponding column is hidden.
+
+=cut
+
+sub is_col_hidden {
+    my $worksheet = shift;
+
+    my ($col) = @_;
+
+    unless ( $worksheet->{ColHidden} ) {
+        return () if (wantarray);
+        return 0;
+    }
+
+    return @{ $worksheet->{ColHidden} } if (wantarray);
+    return $worksheet->{ColHidden}[$col];
 }
 
 ###############################################################################

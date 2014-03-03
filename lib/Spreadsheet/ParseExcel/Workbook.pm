@@ -33,6 +33,14 @@ sub new {
 }
 
 ###############################################################################
+sub color_idx_to_rgb {
+    my( $workbook, $iidx ) = @_;
+
+    my $palette = $workbook->{aColor};
+    return ( ( defined $palette->[$iidx] ) ? $palette->[$iidx] : $palette->[0] );
+}
+
+###############################################################################
 #
 # worksheet()
 #
@@ -140,6 +148,19 @@ sub using_1904_date {
 sub ParseAbort {
     my ( $self, $val ) = @_;
     $self->{_ParseAbort} = $val;
+}
+
+=head2 get_active_sheet()
+
+Return the number of the active (open) worksheet (at the time the workbook
+was saved.  May return undef.
+
+=cut
+
+sub get_active_sheet {
+    my $workbook = shift;
+
+    return $workbook->{ActiveSheet};
 }
 
 ###############################################################################
