@@ -2,6 +2,9 @@ Revision history for Perl module Spreadsheet::ParseExcel.
 
 0.61
 
+    + RT #93379 (tab color)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93379
+
     + RT #93393 (active worksheet)
       http://rt.cpan.org/Public/Bug/Display.html?id=93393
 
