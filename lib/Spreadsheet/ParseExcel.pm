@@ -22,7 +22,7 @@ use Config;
 use Crypt::RC4;
 use Digest::Perl::MD5;
 
-our $VERSION = '0.60';
+our $VERSION = '0.61';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;

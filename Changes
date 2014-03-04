@@ -2,6 +2,9 @@ Revision history for Perl module Spreadsheet::ParseExcel.
 
 0.61
 
+    ! RT #93500 (Red Cell formats)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93500
+
     + RT #93379 (tab color)
       http://rt.cpan.org/Public/Bug/Display.html?id=93379
 
