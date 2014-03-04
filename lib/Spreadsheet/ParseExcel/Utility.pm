@@ -24,7 +24,7 @@ use vars qw(@ISA @EXPORT_OK);
 @EXPORT_OK = qw(ExcelFmt LocaltimeExcel ExcelLocaltime
   col2int int2col sheetRef xls2csv);
 
-our $VERSION = '0.60';
+our $VERSION = '0.61';
 
 my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 
@@ -180,7 +180,7 @@ sub ExcelFmt {
     # We don't use the colour but we return it to the caller.
     #
     my $color = '';
-    if ( $format =~ s/^(\[[A-Z][a-z]{2,}(\d{1,2})?\])// ) {
+    if ( $format =~ s/^(\[[A-Za-z]{3,}(\d{1,2})?\])// ) {
         $color = $1;
     }
 
