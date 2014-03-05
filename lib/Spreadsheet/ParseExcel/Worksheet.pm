@@ -179,30 +179,34 @@ sub get_merged_areas {
 #
 # get_row_heights()
 #
-# Returns an array_ref of row heights.
+# Returns an array of row heights.
 #
 sub get_row_heights {
 
     my $self = shift;
 
-    return undef unless ( $self->{RowHeight} );
-
-    return @{ $self->{RowHeight} };
+    if ( wantarray() ) {
+      return unless $self->{RowHeight};
+      return @{ $self->{RowHeight} };
+    }
+    return $self->{RowHeight};
 }
 
 ###############################################################################
 #
 # get_col_widths()
 #
-# Returns an array_ref of column widths.
+# Returns an array of column widths.
 #
 sub get_col_widths {
 
     my $self = shift;
 
-    return undef unless ( $self->{RowHeight} );
-
-    return @{ $self->{ColWidth} };
+    if ( wantarray() ) {
+      return unless $self->{ColWidth};
+      return @{ $self->{ColWidth} };
+    }
+    return $self->{ColWidth};
 }
 
 ###############################################################################
@@ -739,7 +743,8 @@ Returns C<undef> if there are no merged areas.
 
 =head2 get_row_heights()
 
-The C<get_row_heights()> method returns an array_ref of row heights.
+The C<get_row_heights()> method returns an array_ref of row heights in scalar context,
+and an array in list context.
 
     my $row_heights = $worksheet->get_row_heights();
 
@@ -748,7 +753,8 @@ Returns C<undef> if the property isn't set.
 
 =head2 get_col_widths()
 
-The C<get_col_widths()> method returns an array_ref of column widths.
+The C<get_col_widths()> method returns an array_ref of column widths in scalar context,
+and an array in list context.
 
     my $col_widths = $worksheet->get_col_widths();
 
