@@ -131,6 +131,35 @@ else {
 }
 }
 
+eval "require IO::Wrap";
+if ($@) {
+    ok (1, "Skipped - no IO::Wrap") for 1..4;
+    }
+else {
+{
+    open my $fh, '<','t/excel_files/Test95.xls';
+    my $workbook = Spreadsheet::ParseExcel::Workbook->Parse($fh);
+    isnt($workbook, $workbook_1);
+    delete $workbook_1->{File};  # when give a filehandlres this field is not set
+    is_deeply($workbook, $workbook_1);
+    BEGIN { $tests += 2; }
+}
+
+# pass an IO::Wrap object
+{
+    my $data;
+    my $fh;
+    if (open my $real_fh, '<','t/excel_files/Test95.xls') {
+        binmode($real_fh);
+        $fh = IO::Wrap::wraphandle($real_fh);
+    }
+    my $workbook = Spreadsheet::ParseExcel::Workbook->Parse($fh);
+    isnt($workbook, $workbook_1);
+    is_deeply($workbook, $workbook_1);
+    BEGIN { $tests += 2; }
+}
+}
+
 
 sub _save_file {
     my ($file, $data) = @_;
