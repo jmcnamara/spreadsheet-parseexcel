@@ -1,5 +1,16 @@
 Revision history for Perl module Spreadsheet::ParseExcel.
 
+0.62
+
+    ! Fix test 46 skip_all plan logic.
+      From CPAN testers.
+
+    ! RT #52830 (0x00 general fmt) && fix test.
+      http://rt.cpan.org/Public/Bug/Display.html?id=52830
+
+    ! RT #93138 (undefined value as ARRAY)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93138
+
 0.61
 
     ! RT #93500 (Red Cell formats)
@@ -17,7 +28,7 @@ Revision history for Perl module Spreadsheet::ParseExcel.
     + RT #93367 (hidden rows/columns)
       http://rt.cpan.org/Public/Bug/Display.html?id=93367
 
-    ! Fix RT #93065 (black)
+    ! Fix RT #93065 (black is white)
       http://rt.cpan.org/Public/Bug/Display.html?id=93065
 
     ! Fix RT #62593 (?)(merge from apla/master).

@@ -19,7 +19,7 @@ use strict;
 use warnings;
 use Scalar::Util qw(weaken);
 
-our $VERSION = '0.61';
+our $VERSION = '0.62';
 
 ###############################################################################
 #

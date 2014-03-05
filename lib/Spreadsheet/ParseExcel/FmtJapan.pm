@@ -21,7 +21,7 @@ use warnings;
 
 use Encode qw(find_encoding decode);
 use base 'Spreadsheet::ParseExcel::FmtDefault';
-our $VERSION = '0.61';
+our $VERSION = '0.62';
 
 my %FormatTable = (
     0x00 => 'General',
