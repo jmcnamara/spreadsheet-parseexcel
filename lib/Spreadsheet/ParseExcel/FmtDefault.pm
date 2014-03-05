@@ -22,7 +22,7 @@ use Spreadsheet::ParseExcel::Utility qw(ExcelFmt);
 our $VERSION = '0.61';
 
 my %hFmtDefault = (
-    0x00 => '@',
+    0x00 => 'General',
     0x01 => '0',
     0x02 => '0.00',
     0x03 => '#,##0',
