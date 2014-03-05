@@ -73,6 +73,9 @@ use constant ErrorNoFile        => 1;
 use constant ErrorNoExcelData   => 2;
 use constant ErrorFileEncrypted => 3;
 
+# Color index for the 'auto' color
+use constant AutoColor => 64;
+
 our %error_strings = (
     ErrorNone,          '',                               # 0
     ErrorNoFile,        'File not found',                 # 1
