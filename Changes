@@ -1,5 +1,13 @@
 Revision history for Perl module Spreadsheet::ParseExcel.
 
+0.63 March 7 2014
+
+    ! RT #12946 (IO::Wrap)
+      http://rt.cpan.org/Public/Bug/Display.html?id=12946
+
+    ! RT #93065 (auto color)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93065
+
 0.62
 
     ! Fix test 46 skip_all plan logic.
