@@ -3,7 +3,7 @@ name:               Spreadsheet-ParseExcel
 version:            0.63
 abstract:           Read information from an Excel file.
 author:
-    - John McNamara (jmcnamara@cpan.org)
+    - Douglas Wilson (dougw@cpan.org)
 license:            perl
 distribution_type:  module
 configure_requires:
@@ -20,7 +20,7 @@ requires:
     Digest::Perl::MD5:  0
 resources:
     MailingList:  http://groups.google.com/group/spreadsheet-parseexcel
-    repository:   http://github.com/jmcnamara/spreadsheet-parseexcel
+    repository:   http://github.com/runrig/spreadsheet-parseexcel
 no_index:
     directory:
         - t
