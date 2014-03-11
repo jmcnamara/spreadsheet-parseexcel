@@ -187,7 +187,7 @@ sub ExcelFmt {
 
     # Remove the locale, such as [$-409], from the format string.
     my $locale = '';
-    if ( $format =~ s/^(\[\$?-\d+\])// ) {
+    if ( $format =~ s/^(\[\$?-F?\d+\])// ) {
         $locale = $1;
     }
 
@@ -585,8 +585,7 @@ sub ExcelFmt {
         # Replace the placeholders in the template such as yyyy mm dd with
         # actual numbers or strings.
         my $replacement;
-        for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
-            my $placeholder = $placeholders[$i];
+        for my $placeholder ( reverse @placeholders ) {
 
             if ( $placeholder->[-1] eq 'minutes' ) {
 
@@ -736,6 +735,9 @@ sub ExcelFmt {
 
                 # Text format.
                 $replacement = $number;
+            }
+            elsif ( $placeholder->[0] eq ',' ) {
+                next;
             }
 
             # Substitute the replacement string back into the template.
