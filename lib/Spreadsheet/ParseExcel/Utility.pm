@@ -1123,6 +1123,10 @@ sub LocaltimeExcel {
     return $iTime;
 }
 
+my @month_days = qw(
+  0 31 28 31 30 31 30 31 31 30 31 30 31
+);
+
 #------------------------------------------------------------------------------
 # ExcelLocaltime (for Spreadsheet::ParseExcel::Utility)
 #------------------------------------------------------------------------------
@@ -1130,7 +1134,7 @@ sub ExcelLocaltime {
 
     my ( $dObj, $flg1904 ) = @_;
     my ( $iSec, $iMin, $iHour, $iDay, $iMon, $iYear, $iwDay, $iMSec );
-    my ( $iDt, $iTime, $iYDays );
+    my ( $iDt, $iTime, $iYDays, $iMD );
 
     $iDt   = int($dObj);
     $iTime = $dObj - $iDt;
@@ -1156,33 +1160,42 @@ sub ExcelLocaltime {
     }
     $iYear -= 1900;       # Localtime year is relative to 1900.
 
-    for ( $iMon = 1 ; $iMon < 12 ; $iMon++ ) {
-        my $iMD;
-        if (   $iMon == 1
-            || $iMon == 3
-            || $iMon == 5
-            || $iMon == 7
-            || $iMon == 8
-            || $iMon == 10
-            || $iMon == 12 )
-        {
-            $iMD = 31;
-        }
-        elsif ( $iMon == 4 || $iMon == 6 || $iMon == 9 || $iMon == 11 ) {
-            $iMD = 30;
-        }
-        elsif ( $iMon == 2 ) {
-            $iMD = ( ( $iYear % 4 ) == 0 ) ? 29 : 28;
-        }
+    for ( $iMon = 1 ; $iMon <= 12 ; $iMon++ ) {
+        $iMD = $month_days[$iMon];
+        $iMD++ if $iMon == 2 and $iYear % 4 == 0;
+
         last if ( $iDt <= $iMD );
         $iDt -= $iMD;
     }
 
-    $iMon -= 1;    # Localtime month is 0 based.
-
     #2. Calc Time
     $iDay = $iDt;
     $iTime += ( 0.0005 / 86400.0 );
+    if ($iTime >= 1.0)
+    {
+        $iTime -= int($iTime);
+        $iwDay = ($iwDay == 6) ? 0 : $iwDay + 1;
+        if ($iDay == $iMD)
+        {
+            if ($iMon == 12)
+            {
+                $iMon = 1;
+                $iYear++;
+            }
+            else
+            {
+                $iMon++;
+            }
+            $iDay = 1;
+        }
+        else
+        {
+            $iDay++;
+        }
+    }
+
+    # Localtime month is 0 based.
+    $iMon  -= 1;
     $iTime *= 24.0;
     $iHour = int($iTime);
     $iTime -= $iHour;

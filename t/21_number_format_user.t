@@ -12,7 +12,7 @@
 use strict;
 
 use Spreadsheet::ParseExcel::Utility qw( ExcelFmt LocaltimeExcel );
-use Test::More tests => 144;
+use Test::More tests => 146;
 
 my $is_1904 = 1;
 
@@ -204,6 +204,10 @@ my @testcases = (
     # http://rt.cpan.org/Public/Bug/Display.html?id=93142
     [ 143, 41700.18, 'Sunday, March 02, 2014', 'dddd, mmmm dd, yyyy' ],
     [ 144, 41700.18, 'Sunday, March 02, 2014', '[$-F800]dddd, mmmm dd, yyyy' ],
+
+    # http://rt.cpan.org/Ticket/Display.html?id=47072
+    [ 145, 39814, '1/1/2009 12:00 AM', 'm/d/yyyy h:mm AM/PM' ],
+    [ 146, '39813.999999994212963', '1/1/2009 12:00 AM', 'm/d/yyyy h:mm AM/PM' ],
 
 );
 
