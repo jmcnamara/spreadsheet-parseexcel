@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Spreadsheet-ParseExcel
-version:            0.63
+version:            0.64
 abstract:           Read information from an Excel file.
 author:
     - Douglas Wilson (dougw@cpan.org)

@@ -1,5 +1,16 @@
 Revision history for Perl module Spreadsheet::ParseExcel.
 
+0.64 March 11 2014
+
+    ! RT #47072 (ExcelLocaltime rounding)
+      http://rt.cpan.org/Public/Bug/Display.html?id=47072
+
+    ! RT #93142 (date format w/commas)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93142
+
+    ! RT #93651 (Update metadata)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93651
+
 0.63 March 7 2014
 
     ! RT #12946 (IO::Wrap)
