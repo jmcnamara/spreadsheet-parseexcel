@@ -6,3 +6,5 @@ Makefile
 .*.swp
 *~
 *.gz
+*.bak
+*.tdy

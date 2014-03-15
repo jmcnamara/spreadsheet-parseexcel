@@ -22,7 +22,7 @@ use warnings;
 use Jcode;
 use Unicode::Map;
 use base 'Spreadsheet::ParseExcel::FmtJapan';
-our $VERSION = '0.64';
+our $VERSION = '0.65';
 
 #------------------------------------------------------------------------------
 # new (for Spreadsheet::ParseExcel::FmtJapan2)
