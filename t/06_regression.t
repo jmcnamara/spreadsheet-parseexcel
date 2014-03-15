@@ -100,7 +100,7 @@ is( $got_2, $expected_1, $caption );
 $caption = "Test cell format string";
 $cell = $worksheet->get_cell( 2, 1 );
 
-$expected_1 = '@'; # TODO. Probably should be '' or 'general'.
+$expected_1 = 'General'; # TODO. Probably should be '' or 'general'.
 $got_1      = $workbook->{FmtClass}->FmtString( $cell, $workbook );
 $caption    = " \tCell regression: " . $caption;
 

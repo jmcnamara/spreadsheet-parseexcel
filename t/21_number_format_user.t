@@ -12,7 +12,7 @@
 use strict;
 
 use Spreadsheet::ParseExcel::Utility qw( ExcelFmt LocaltimeExcel );
-use Test::More tests => 142;
+use Test::More tests => 146;
 
 my $is_1904 = 1;
 
@@ -200,6 +200,14 @@ my @testcases = (
     [ 140, 27400,     '$27,400.00',      '[$$-409]#,##0.00'      ],
     [ 141, 826331.94, '826,331.94 руб.', '#,##0.00\ [$руб.-419]' ],
     [ 142, 826331.94, '826,331.94 RUR',  '#,##0.00\ [$RUR]'      ],
+
+    # http://rt.cpan.org/Public/Bug/Display.html?id=93142
+    [ 143, 41700.18, 'Sunday, March 02, 2014', 'dddd, mmmm dd, yyyy' ],
+    [ 144, 41700.18, 'Sunday, March 02, 2014', '[$-F800]dddd, mmmm dd, yyyy' ],
+
+    # http://rt.cpan.org/Ticket/Display.html?id=47072
+    [ 145, 39814, '1/1/2009 12:00 AM', 'm/d/yyyy h:mm AM/PM' ],
+    [ 146, '39813.999999994212963', '1/1/2009 12:00 AM', 'm/d/yyyy h:mm AM/PM' ],
 
 );
 
