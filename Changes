@@ -1,5 +1,8 @@
 Revision history for Perl module Spreadsheet::ParseExcel.
 
+0.65 March 15 2014
+    ! Merge support for accessing hyperlink data
+
 0.64 March 11 2014
 
     ! RT #47072 (ExcelLocaltime rounding)

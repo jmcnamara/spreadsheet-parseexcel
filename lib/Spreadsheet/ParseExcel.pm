@@ -19,13 +19,14 @@ use warnings;
 use 5.008;
 
 use OLE::Storage_Lite;
+use File::Basename;
 use IO::File;
 use Config;
 
 use Crypt::RC4;
 use Digest::Perl::MD5;
 
-our $VERSION = '0.64';
+our $VERSION = '0.65';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -108,6 +109,7 @@ our %ProcTbl = (
     0x43   => \&_subXF,                # XF for Excel < 4.
     0x0443 => \&_subXF,                # XF for Excel = 4.
     0x862  => \&_subSheetLayout,       # Sheet Layout
+    0x1B8  => \&_subHyperlink,         # HYPERLINK
 
     #Develpers' Kit P292
     0x55 => \&_subDefColWidth,         # Consider
@@ -592,9 +594,23 @@ sub parse {
 
         $PREFUNC = $record if ( $record != 0x3C );    #Not Continue
 
-        return $workbook if defined $workbook->{_ParseAbort};
+        last if defined $workbook->{_ParseAbort};
     }
 
+    foreach my $worksheet (@{$workbook->{Worksheet}} ) {
+        # Install hyperlinks into each cell
+        # Range is undocumented for user; allows reuse of data
+
+        if ($worksheet->{HyperLinks}) {
+            foreach my $link (@{$worksheet->{HyperLinks}}) {
+                for( my $row = $link->[3]; $row <= $link->[4]; $row++ ) {
+                    for( my $col = $link->[5]; $col <= $link->[6]; $col++ ) {
+                        $worksheet->{Cells}[$row][$col]{Hyperlink} = $link;
+                    }
+                }
+            }
+        }
+    }
     return $workbook;
 }
 
@@ -1390,6 +1406,129 @@ sub _subSheetLayout {
     return unless ( $rc == 0x0862 );
 
     $workbook->{Worksheet}[ $workbook->{_CurSheet} ]->{TabColor} = $color;
+}
+
+#------------------------------------------------------------------------------
+# _subHyperlink OpenOffice 5.96 (P182)
+#
+# Also see: http://msdn.microsoft.com/en-us/library/gg615407(v=office.14).aspx
+#------------------------------------------------------------------------------
+
+# Helper: Extract a GID, returns as text string
+
+sub _getguid {
+    my( $wk ) = @_;
+    my( $text, $guidl, $guids1, $guids2, @guidb );
+
+    ( $guidl, $guids1, $guids2, @guidb[0..7] ) = unpack( 'Vv2C8', $wk );
+
+    $text =  sprintf( '%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X', $guidl, $guids1, $guids2, @guidb);
+    return $text;
+}
+
+# Helper: Extract a counted (16-bit) unicode string, returns string,
+# updates $offset
+# $zterm == 1 if string is null-terminated. 
+# $bc if length is in bytes (not chars)
+
+sub _getustr {
+    my( $wk, $offset, $zterm, $bc ) = @_;
+
+    my $len = unpack( 'V', substr( $wk, $offset ) );
+    $offset += 4;
+
+    if( $bc ) {
+        $len /= 2;
+    }
+    $len -= $zterm;
+    my $text = join( '', map { chr $_ } unpack( "v$len", substr( $wk, $offset ) ) );
+    $text =~ s/\0.*\z// if( $zterm );
+    $_[1] = ( $offset += ($len + $zterm) *2 );
+    return $text;
+}
+
+# HYPERLINK record
+
+sub _subHyperlink {
+    my ( $workbook, $op, $len, $wk ) = @_;
+
+    # REF
+    my( $srow, $erow, $scol, $ecol ) = unpack( 'v4', $wk );
+
+    my $guid = _getguid( substr( $wk, 8 ) );
+    return unless( $guid eq '79EAC9D0-BAF9-11CE-8C82-00AA004BA90B' );
+
+    my( $stmvers, $flags ) = unpack( 'VV', substr( $wk, 24 ) );
+    return if( $flags & 0x60 || $stmvers != 2 );
+
+    my $offset = 32;
+    my( $desc,$frame, $link, $mark );
+
+    if( ($flags & 0x14) == 0x14 ) {
+        $desc = _getustr( $wk, $offset, 1, 0 );
+    }
+
+    if( $flags & 0x80 ) {
+        $frame = _getustr( $wk, $offset, 1, 0 );
+    }
+
+    $link = '';
+    if( $flags & 0x100 ) {
+        # UNC path
+        $link = 'file:///' . _getustr( $wk, $offset, 1, 0 );
+    } elsif( $flags & 0x1 )  {
+        # Has link (URI)
+        $guid = _getguid( substr( $wk, $offset ) );
+        $offset += 16;
+        if( $guid eq '79EAC9E0-BAF9-11CE-8C82-00AA004BA90B' ) {
+            # URI
+            $link = _getustr( $wk, $offset, 1, 1 );
+        } elsif( $guid eq '00000303-0000-0000-C000-000000000046' ) {
+            # Local file
+            $link = 'file:///';
+            # !($flags & 2) = 'relative path'
+            if( !($flags & 0x2) ) {
+                my $file = $workbook->{File};
+                if( defined $file && length $file ) {
+                    $link .= (fileparse($file))[1];
+                }
+                else {
+                    $link .= '%REL%'
+                }
+            }
+            my $dirn = unpack( 'v', substr( $wk, $offset ) );
+            $offset += 2;
+            $link .= '..\\' x $dirn;
+            my $namelen = unpack( 'V', substr( $wk, $offset ) );
+            $offset += 4;
+            my $name = unpack( 'Z*', substr( $wk, $offset ) );
+            $offset += $namelen;
+            $offset += 24;
+            my $size = unpack( 'V', substr( $wk, $offset ) );
+            $offset += 4;
+            if( $size ) {
+                my $xlen = unpack( 'V', substr( $wk, $offset ) ) / 2;
+                $name = join( '', map { chr $_} unpack( "v$xlen", substr( $wk, $offset+4+2) ) );
+                $offset += $size;
+            }
+            $link .= $name;
+        } else {
+            return;
+        }
+    }
+
+    # Text mark (Fragment identifier)
+    if( $flags & 0x8 ) {
+        # Cellrefs contain reserved characters, so url-encode
+        my $fragment = _getustr( $wk, $offset, 1 );
+        $fragment =~ s/([^\w.~-])/sprintf( '%%%02X', ord( $1 ) )/gems;
+        $link .= '#' . $fragment;
+    }
+
+    # Update loop at end of parse() if this changes
+
+    push @{ $workbook->{Worksheet}[ $workbook->{_CurSheet} ]->{HyperLinks} }, [
+                         $desc, $link, $frame, $srow, $erow, $scol, $ecol ];
 }
 
 #------------------------------------------------------------------------------
