@@ -34,6 +34,7 @@ t/43_test2000J.t
 t/44_oem.t
 t/45_oem-2.t
 t/46_save_parser.t
+t/47_hyperlinks.t
 t/90_pod.t
 t/91_minimumversion.t
 t/92_meta.t

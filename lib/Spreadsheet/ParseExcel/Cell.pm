@@ -156,7 +156,7 @@ sub get_rich_text {
 sub get_hyperlink {
     my $self = shift;
 
-    return $self->{Hyperlink} if ( exists $self->{Hyperlink} );
+    return $self->{Hyperlink} if exists $self->{Hyperlink};
     return undef;
 }
 
@@ -167,7 +167,7 @@ sub get_hyperlink {
 #
 {
     no warnings;    # Ignore warnings about variables used only once.
-    *Value = *value;
+    *Value = \&value;
 }
 
 1;

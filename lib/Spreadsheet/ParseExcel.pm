@@ -19,7 +19,7 @@ use warnings;
 use 5.008;
 
 use OLE::Storage_Lite;
-use File::Basename;
+use File::Basename qw(fileparse);
 use IO::File;
 use Config;
 
