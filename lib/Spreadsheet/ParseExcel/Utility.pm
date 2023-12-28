@@ -79,7 +79,7 @@ sub ExcelFmt {
     # Check for a conditional at the start of the format. See notes above.
     my $conditional_op;
     my $conditional_value;
-    if ( $format_str =~ /^\[([<>=])([^\]]+)\](.*)$/ ) {
+    if ( $format_str =~ /^\[([<>=]+)([^\]]+)\](.*)$/ ) {
         $conditional_op = $1;
         $conditional_value = $2;
         $format_str = $3;
