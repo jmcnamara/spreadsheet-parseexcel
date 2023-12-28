@@ -13,6 +13,7 @@ t/03_regression.t
 t/04_regression.t
 t/05_regression.t
 t/06_regression.t
+t/07_cell_handler.t
 t/10_error_codes.t
 t/11_encryption.t
 t/20_number_format_default.t
@@ -24,6 +25,7 @@ t/25_decode_rk_numbers.t
 t/26_localtime2excel.t
 t/27_localtime2excel.t
 t/28_int2col.t
+t/29_active_sheet.t
 t/30_sst_01.t
 t/32_charts.t
 t/41_test95-97j.t
@@ -31,6 +33,8 @@ t/42_test95-97j-2.t
 t/43_test2000J.t
 t/44_oem.t
 t/45_oem-2.t
+t/46_save_parser.t
+t/47_hyperlinks.t
 t/90_pod.t
 t/91_minimumversion.t
 t/92_meta.t
@@ -60,6 +64,7 @@ t/excel_files/pers-encrypted-RC4-pass-11.xls
 t/excel_files/pers-encrypted-def-pass-QwErTyUiOp.xls
 t/excel_files/pers-protected.xls
 t/excel_files/worksheet_01.xls
+t/excel_files/TestActiveSheet.xls
 
 lib/Spreadsheet/ParseExcel.pm
 lib/Spreadsheet/ParseExcel/Cell.pm

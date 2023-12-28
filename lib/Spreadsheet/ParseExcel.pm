@@ -4,7 +4,10 @@ package Spreadsheet::ParseExcel;
 #
 # Spreadsheet::ParseExcel - Extract information from an Excel file.
 #
-# Copyright 2000-2008, Takanori Kawai
+# Copyright (c) 2014      Douglas Wilson
+# Copyright (c) 2009-2013 John McNamara
+# Copyright (c) 2006-2008 Gabor Szabo
+# Copyright (c) 2000-2008 Takanori Kawai
 #
 # perltidy with standard settings.
 #
@@ -16,13 +19,14 @@ use warnings;
 use 5.008;
 
 use OLE::Storage_Lite;
+use File::Basename qw(fileparse);
 use IO::File;
 use Config;
 
 use Crypt::RC4;
 use Digest::Perl::MD5;
 
-our $VERSION = '0.59';
+our $VERSION = '0.65';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -31,10 +35,11 @@ use Spreadsheet::ParseExcel::Format;
 use Spreadsheet::ParseExcel::Cell;
 use Spreadsheet::ParseExcel::FmtDefault;
 
+my $currentbook;
 my @aColor = (
     '000000',    # 0x00
     'FFFFFF', 'FFFFFF', 'FFFFFF', 'FFFFFF',
-    'FFFFFF', 'FFFFFF', 'FFFFFF', 'FFFFFF',    # 0x08
+    'FFFFFF', 'FFFFFF', 'FFFFFF', '000000',    # 0x08
     'FFFFFF', 'FF0000', '00FF00', '0000FF',
     'FFFF00', 'FF00FF', '00FFFF', '800000',    # 0x10
     '008000', '000080', '808000', '800080',
@@ -48,7 +53,7 @@ my @aColor = (
     '33CCCC', '99CC00', 'FFCC00', 'FF9900',
     'FF6600', '666699', '969696', '003366',    # 0x38
     '339966', '003300', '333300', '993300',
-    '993366', '333399', '333333', 'FFFFFF'     # 0x40
+    '993366', '333399', '333333', '000000'     # 0x40
 );
 use constant verExcel95 => 0x500;
 use constant verExcel97 => 0x600;
@@ -71,6 +76,9 @@ use constant ErrorNone          => 0;
 use constant ErrorNoFile        => 1;
 use constant ErrorNoExcelData   => 2;
 use constant ErrorFileEncrypted => 3;
+
+# Color index for the 'auto' color
+use constant AutoColor => 64;
 
 our %error_strings = (
     ErrorNone,          '',                               # 0
@@ -97,8 +105,11 @@ our %ProcTbl = (
     0x2A   => \&_subPrintHeaders,      # Print Headers
     0x2B   => \&_subPrintGridlines,    # Print Gridlines
     0x3C   => \&_subContinue,          # Continue
+    0x3D   => \&_subWindow1,           # Window1
     0x43   => \&_subXF,                # XF for Excel < 4.
     0x0443 => \&_subXF,                # XF for Excel = 4.
+    0x862  => \&_subSheetLayout,       # Sheet Layout
+    0x1B8  => \&_subHyperlink,         # HYPERLINK
 
     #Develpers' Kit P292
     0x55 => \&_subDefColWidth,         # Consider
@@ -512,10 +523,12 @@ sub parse {
     my ( $self, $source, $formatter ) = @_;
 
     my $workbook = Spreadsheet::ParseExcel::Workbook->new();
+    $currentbook = $workbook;
     $workbook->{SheetCount} = 0;
     $workbook->{CellHandler} = $self->{CellHandler};
     $workbook->{NotSetCell}  = $self->{NotSetCell};
     $workbook->{Object}      = $self->{Object};
+    $workbook->{aColor}      = [ @aColor ];
 
     my ( $biff_data, $data_length ) = $self->_get_content( $source, $workbook );
     return undef if not $biff_data;
@@ -581,9 +594,23 @@ sub parse {
 
         $PREFUNC = $record if ( $record != 0x3C );    #Not Continue
 
-        return $workbook if defined $workbook->{_ParseAbort};
+        last if defined $workbook->{_ParseAbort};
     }
 
+    foreach my $worksheet (@{$workbook->{Worksheet}} ) {
+        # Install hyperlinks into each cell
+        # Range is undocumented for user; allows reuse of data
+
+        if ($worksheet->{HyperLinks}) {
+            foreach my $link (@{$worksheet->{HyperLinks}}) {
+                for( my $row = $link->[3]; $row <= $link->[4]; $row++ ) {
+                    for( my $col = $link->[5]; $col <= $link->[6]; $col++ ) {
+                        $worksheet->{Cells}[$row][$col]{Hyperlink} = $link;
+                    }
+                }
+            }
+        }
+    }
     return $workbook;
 }
 
@@ -600,33 +627,52 @@ sub _get_content {
 
     # Reset the error status in case method is called more than once.
     $self->{_error_status} = ErrorNone;
+ 
+    my $ref = ref($source);
 
-    if ( ref( $source ) eq "SCALAR" ) {
+    if ( $ref ) {
+         if ( $ref eq 'SCALAR' ) {
 
-        # Specified by a scalar buffer.
-        ( $biff_data, $data_length ) = $self->{GetContent}->( $source );
+             # Specified by a scalar buffer.
+             ( $biff_data, $data_length ) = $self->{GetContent}->( $source );
 
-    }
-    elsif ( ( ref( $source ) =~ /GLOB/ ) || ( ref( $source ) eq 'Fh' ) ) {
+         }
+         elsif ( $ref eq 'ARRAY' ) {
 
-        # For CGI.pm (Light FileHandle)
-        binmode( $source );
-        my $sWk;
-        my $sBuff = '';
-
-        while ( read( $source, $sWk, 4096 ) ) {
-            $sBuff .= $sWk;
+             # Specified by file content
+             $workbook->{File} = undef;
+             my $sData = join( '', @$source );
+             ( $biff_data, $data_length ) = $self->{GetContent}->( \$sData );
         }
+        else {
 
-        ( $biff_data, $data_length ) = $self->{GetContent}->( \$sBuff );
+             # Assume filehandle
 
-    }
-    elsif ( ref( $source ) eq 'ARRAY' ) {
+             # For CGI.pm (Light FileHandle)
+             my $sBuff = '';
+             if ( eval { binmode( $source ) } ) {
+                 my $sWk;
 
-        # Specified by file content
-        $workbook->{File} = undef;
-        my $sData = join( '', @$source );
-        ( $biff_data, $data_length ) = $self->{GetContent}->( \$sData );
+                 while ( read( $source, $sWk, 4096 ) ) {
+                     $sBuff .= $sWk;
+                 }
+             }
+             else {
+
+                 # Assume IO::Wrap or some other filehandle-like OO-only object
+                 my $sWk;
+
+                 # IO::Wrap does not implement binmode
+                 eval { $source->binmode() };
+
+                 while ( $source->read( $sWk, 4096 ) ) {
+                     $sBuff .= $sWk;
+                 }
+             }
+
+             ( $biff_data, $data_length ) = $self->{GetContent}->( \$sBuff );
+
+         }
     }
     else {
 
@@ -1188,8 +1234,10 @@ sub _subRow {
       unpack( "v8", $sWk );
     $iEc--;
 
-    # TODO. we need to handle hidden rows:
-    # $iGr & 0x20
+    if ( $iGr & 0x20 ) {
+        $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{RowHidden}[$iR] = 1;
+    }
+
     $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{RowHeight}[$iR] = $iHght / 20;
 
     #2.MaxRow, MaxCol, MinRow, MinCol
@@ -1318,8 +1366,169 @@ sub _subColInfo {
 
         $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{ColFmtNo}[$i] = $iXF;
 
-        # TODO. we need to handle hidden cols: $iGr & 0x01.
+        if ( $iGr & 0x01 ) {
+            $oBook->{Worksheet}[ $oBook->{_CurSheet} ]->{ColHidden}[$i] = 1;
+        }
     }
+}
+
+#------------------------------------------------------------------------------
+# _subWindow1 Window information P 273
+#------------------------------------------------------------------------------
+sub _subWindow1 {
+    my ( $workbook, $op, $len, $wk ) = @_;
+
+    return if ( $workbook->{BIFFVersion} <= verBIFF4() );
+
+    my (
+        $hpos,     $vpos,        $width,
+        $height,   $options,     $active,
+        $firsttab, $numselected, $tabbarwidth
+    ) = unpack( "v9", $wk );
+
+    $workbook->{ActiveSheet} = $active;
+}
+
+#------------------------------------------------------------------------------
+# _subSheetLayout OpenOffice 5.96 (P207)
+#------------------------------------------------------------------------------
+sub _subSheetLayout {
+    my ( $workbook, $op, $len, $wk ) = @_;
+
+    my @unused;
+    (
+        my $rc,
+        @unused[ 1 .. 10 ],
+        @unused[ 11 .. 14 ],
+        my $color, @unused[ 15, 16 ]
+    ) = unpack( "vC10C4vC2", $wk );
+
+    return unless ( $rc == 0x0862 );
+
+    $workbook->{Worksheet}[ $workbook->{_CurSheet} ]->{TabColor} = $color;
+}
+
+#------------------------------------------------------------------------------
+# _subHyperlink OpenOffice 5.96 (P182)
+#
+# Also see: http://msdn.microsoft.com/en-us/library/gg615407(v=office.14).aspx
+#------------------------------------------------------------------------------
+
+# Helper: Extract a GID, returns as text string
+
+sub _getguid {
+    my( $wk ) = @_;
+    my( $text, $guidl, $guids1, $guids2, @guidb );
+
+    ( $guidl, $guids1, $guids2, @guidb[0..7] ) = unpack( 'Vv2C8', $wk );
+
+    $text =  sprintf( '%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X', $guidl, $guids1, $guids2, @guidb);
+    return $text;
+}
+
+# Helper: Extract a counted (16-bit) unicode string, returns string,
+# updates $offset
+# $zterm == 1 if string is null-terminated. 
+# $bc if length is in bytes (not chars)
+
+sub _getustr {
+    my( $wk, $offset, $zterm, $bc ) = @_;
+
+    my $len = unpack( 'V', substr( $wk, $offset ) );
+    $offset += 4;
+
+    if( $bc ) {
+        $len /= 2;
+    }
+    $len -= $zterm;
+    my $text = join( '', map { chr $_ } unpack( "v$len", substr( $wk, $offset ) ) );
+    $text =~ s/\0.*\z// if( $zterm );
+    $_[1] = ( $offset += ($len + $zterm) *2 );
+    return $text;
+}
+
+# HYPERLINK record
+
+sub _subHyperlink {
+    my ( $workbook, $op, $len, $wk ) = @_;
+
+    # REF
+    my( $srow, $erow, $scol, $ecol ) = unpack( 'v4', $wk );
+
+    my $guid = _getguid( substr( $wk, 8 ) );
+    return unless( $guid eq '79EAC9D0-BAF9-11CE-8C82-00AA004BA90B' );
+
+    my( $stmvers, $flags ) = unpack( 'VV', substr( $wk, 24 ) );
+    return if( $flags & 0x60 || $stmvers != 2 );
+
+    my $offset = 32;
+    my( $desc,$frame, $link, $mark );
+
+    if( ($flags & 0x14) == 0x14 ) {
+        $desc = _getustr( $wk, $offset, 1, 0 );
+    }
+
+    if( $flags & 0x80 ) {
+        $frame = _getustr( $wk, $offset, 1, 0 );
+    }
+
+    $link = '';
+    if( $flags & 0x100 ) {
+        # UNC path
+        $link = 'file:///' . _getustr( $wk, $offset, 1, 0 );
+    } elsif( $flags & 0x1 )  {
+        # Has link (URI)
+        $guid = _getguid( substr( $wk, $offset ) );
+        $offset += 16;
+        if( $guid eq '79EAC9E0-BAF9-11CE-8C82-00AA004BA90B' ) {
+            # URI
+            $link = _getustr( $wk, $offset, 1, 1 );
+        } elsif( $guid eq '00000303-0000-0000-C000-000000000046' ) {
+            # Local file
+            $link = 'file:///';
+            # !($flags & 2) = 'relative path'
+            if( !($flags & 0x2) ) {
+                my $file = $workbook->{File};
+                if( defined $file && length $file ) {
+                    $link .= (fileparse($file))[1];
+                }
+                else {
+                    $link .= '%REL%'
+                }
+            }
+            my $dirn = unpack( 'v', substr( $wk, $offset ) );
+            $offset += 2;
+            $link .= '..\\' x $dirn;
+            my $namelen = unpack( 'V', substr( $wk, $offset ) );
+            $offset += 4;
+            my $name = unpack( 'Z*', substr( $wk, $offset ) );
+            $offset += $namelen;
+            $offset += 24;
+            my $size = unpack( 'V', substr( $wk, $offset ) );
+            $offset += 4;
+            if( $size ) {
+                my $xlen = unpack( 'V', substr( $wk, $offset ) ) / 2;
+                $name = join( '', map { chr $_} unpack( "v$xlen", substr( $wk, $offset+4+2) ) );
+                $offset += $size;
+            }
+            $link .= $name;
+        } else {
+            return;
+        }
+    }
+
+    # Text mark (Fragment identifier)
+    if( $flags & 0x8 ) {
+        # Cellrefs contain reserved characters, so url-encode
+        my $fragment = _getustr( $wk, $offset, 1 );
+        $fragment =~ s/([^\w.~-])/sprintf( '%%%02X', ord( $1 ) )/gems;
+        $link .= '#' . $fragment;
+    }
+
+    # Update loop at end of parse() if this changes
+
+    push @{ $workbook->{Worksheet}[ $workbook->{_CurSheet} ]->{HyperLinks} }, [
+                         $desc, $link, $frame, $srow, $erow, $scol, $ecol ];
 }
 
 #------------------------------------------------------------------------------
@@ -1592,7 +1801,7 @@ sub _subPalette {
     for ( my $i = 0 ; $i < unpack( 'v', $sWk ) ; $i++ ) {
 
         #        push @aColor, unpack('H6', substr($sWk, $i*4+2));
-        $aColor[ $i + 8 ] = unpack( 'H6', substr( $sWk, $i * 4 + 2 ) );
+        $oBook->{aColor}[ $i + 8 ] = unpack( 'H6', substr( $sWk, $i * 4 + 2 ) );
     }
 }
 
@@ -1683,11 +1892,12 @@ sub _subBoundSheet {
         }
         $oBook->{Worksheet}[ $oBook->{SheetCount} ] =
           Spreadsheet::ParseExcel::Worksheet->new(
-            Name     => $sWsName,
-            Kind     => $iKind,
-            _Pos     => $iPos,
-            _Book    => $oBook,
-            _SheetNo => $oBook->{SheetCount},
+            Name        => $sWsName,
+            Kind        => $iKind,
+            _Pos        => $iPos,
+            _Book       => $oBook,
+            _SheetNo    => $oBook->{SheetCount},
+            SheetHidden => $iGr & 0x03
           );
     }
     else {
@@ -1695,10 +1905,11 @@ sub _subBoundSheet {
           Spreadsheet::ParseExcel::Worksheet->new(
             Name =>
               $oBook->{FmtClass}->TextFmt( substr( $sWk, 7 ), '_native_' ),
-            Kind     => $iKind,
-            _Pos     => $iPos,
-            _Book    => $oBook,
-            _SheetNo => $oBook->{SheetCount},
+            Kind        => $iKind,
+            _Pos        => $iPos,
+            _Book       => $oBook,
+            _SheetNo    => $oBook->{SheetCount},
+            SheetHidden => $iGr & 0x03
           );
     }
     $oBook->{SheetCount}++;
@@ -2435,12 +2646,19 @@ sub _NewCell {
 #------------------------------------------------------------------------------
 # ColorIdxToRGB (for Spreadsheet::ParseExcel)
 #
-# TODO JMN Make this a Workbook method and re-document.
+# Returns for most recently opened book for compatibility, use
+# Workbook::color_idx_to_rgb instead
 #
 #------------------------------------------------------------------------------
 sub ColorIdxToRGB {
     my ( $sPkg, $iIdx ) = @_;
-    return ( ( defined $aColor[$iIdx] ) ? $aColor[$iIdx] : $aColor[0] );
+
+
+    unless( defined $currentbook ) {
+	return ( ( defined $aColor[$iIdx] ) ? $aColor[$iIdx] : $aColor[0] );
+    }
+
+    return $currentbook->color_idx_to_rgb( $iIdx );
 }
 
 
@@ -2544,7 +2762,7 @@ The C<new()> method is used to create a new C<Spreadsheet::ParseExcel> parser ob
 
     my $parser = Spreadsheet::ParseExcel->new();
 
-It it possible to pass a password to decrypt an encrypted file:
+It is possible to pass a password to decrypt an encrypted file:
 
     $parser = Spreadsheet::ParseExcel->new( Password => 'secret' );
 
@@ -2952,7 +3170,12 @@ Returns the style of an underlined font where the value has the following meanin
 
 =head2 $font->{Color}
 
-Returns the color index for the font. The index can be converted to a RGB string using the C<ColorIdxToRGB()> Parser method.
+Returns the color index for the font. The mapping to an RGB color is defined by each workbook.
+
+The index can be converted to a RGB string using the C<$workbook->ColorIdxToRGB()> Parser method.
+
+(Older versions of C<Spreadsheet::ParseExcel> provided the C<ColorIdxToRGB> class method, which is deprecated.)
+
 
 =head2 $font->{Strikeout}
 
@@ -3300,7 +3523,9 @@ Either the Perl Artistic Licence L<http://dev.perl.org/licenses/artistic.html> o
 
 =head1 AUTHOR
 
-Current maintainer 0.40+: John McNamara jmcnamara@cpan.org
+Current maintainer 0.60+: Douglas Wilson dougw@cpan.org
+
+Maintainer 0.40-0.59: John McNamara jmcnamara@cpan.org
 
 Maintainer 0.27-0.33: Gabor Szabo szabgab@cpan.org
 
@@ -3311,7 +3536,9 @@ Original author: Kawai Takanori (Hippo2000) kwitknr@cpan.org
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009-2011 John McNamara
+Copyright (c) 2014 Douglas Wilson
+
+Copyright (c) 2009-2013 John McNamara
 
 Copyright (c) 2006-2008 Gabor Szabo
 

@@ -3,3 +3,8 @@ pm_to_blib
 .DS_Store
 MYMETA.*
 Makefile
+.*.swp
+*~
+*.gz
+*.bak
+*.tdy

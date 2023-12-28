@@ -6,7 +6,8 @@ package Spreadsheet::ParseExcel::Cell;
 #
 # Used in conjunction with Spreadsheet::ParseExcel.
 #
-# Copyright (c) 2009      John McNamara
+# Copyright (c) 2014      Douglas Wilson
+# Copyright (c) 2009-2013 John McNamara
 # Copyright (c) 2006-2008 Gabor Szabo
 # Copyright (c) 2000-2006 Kawai Takanori
 #
@@ -18,7 +19,7 @@ package Spreadsheet::ParseExcel::Cell;
 use strict;
 use warnings;
 
-our $VERSION = '0.59';
+our $VERSION = '0.65';
 
 ###############################################################################
 #
@@ -140,11 +141,33 @@ sub get_rich_text {
 
 ###############################################################################
 #
+# get_hyperlink {
+#
+# Returns an array ref of hyperlink information if the cell contains a hyperlink.
+# Returns undef otherwise
+#
+# [0] : Description of link (You may want $cell->value, as it will have rich text)
+# [1] : URL - the link expressed as a URL. N.B. relative URLs will be defaulted to
+#       the directory of the input file, if the input file name is known. Otherwise
+#       %REL% will be inserted as a place-holder.  Depending on your application,
+#       you should either remove %REL% or replace it with the appropriate path.
+# [2] : Target frame (or undef if none)
+
+sub get_hyperlink {
+    my $self = shift;
+
+    return $self->{Hyperlink} if exists $self->{Hyperlink};
+    return undef;
+}
+
+# 
+###############################################################################
+#
 # Mapping between legacy method names and new names.
 #
 {
     no warnings;    # Ignore warnings about variables used only once.
-    *Value = *value;
+    *Value = \&value;
 }
 
 1;
@@ -176,6 +199,7 @@ The following Cell methods are available:
     $cell->encoding()
     $cell->is_merged()
     $cell->get_rich_text()
+    $cell->get_hyperlink()
 
 
 =head2 value()
@@ -267,6 +291,25 @@ The return value is an arrayref of arrayrefs in the form:
 
 Returns undef if the property isn't set.
 
+=head2 get_hyperlink()
+
+If a cell contains a hyperlink, the C<get_hyperlink()> method returns an array ref of information about it.
+
+A cell can contain at most one hyperlink.  If it does, it contains no other value.
+
+Otherwise, it returns undef;
+
+The array contains:
+
+=over
+
+=item * 0: Description (what's displayed); undef if not present
+
+=item * 1: Link, converted to an appropriate URL - Note: Relative links are based on the input file.  %REL% is used if the input file is unknown (e.g. a file handle or scalar)
+
+=item * 2: Target - target frame (or undef if none)
+
+=back
 
 =head1 Dates and Time in Excel
 
@@ -293,7 +336,9 @@ For date conversions using the CPAN C<DateTime> framework see L<DateTime::Format
 
 =head1 AUTHOR
 
-Maintainer 0.40+: John McNamara jmcnamara@cpan.org
+Current maintainer 0.60+: Douglas Wilson dougw@cpan.org
+
+Maintainer 0.40-0.59: John McNamara jmcnamara@cpan.org
 
 Maintainer 0.27-0.33: Gabor Szabo szabgab@cpan.org
 
@@ -301,7 +346,9 @@ Original author: Kawai Takanori kwitknr@cpan.org
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009-2010 John McNamara
+Copyright (c) 2014 Douglas Wilson
+
+Copyright (c) 2009-2013 John McNamara
 
 Copyright (c) 2006-2008 Gabor Szabo
 

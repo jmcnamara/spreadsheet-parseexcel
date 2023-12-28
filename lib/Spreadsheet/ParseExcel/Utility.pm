@@ -6,7 +6,8 @@ package Spreadsheet::ParseExcel::Utility;
 #
 # Used in conjunction with Spreadsheet::ParseExcel.
 #
-# Copyright (c) 2009      John McNamara
+# Copyright (c) 2014      Douglas Wilson
+# Copyright (c) 2009-2013 John McNamara
 # Copyright (c) 2006-2008 Gabor Szabo
 # Copyright (c) 2000-2006 Kawai Takanori
 #
@@ -24,7 +25,7 @@ use vars qw(@ISA @EXPORT_OK);
 @EXPORT_OK = qw(ExcelFmt LocaltimeExcel ExcelLocaltime
   col2int int2col sheetRef xls2csv);
 
-our $VERSION = '0.59';
+our $VERSION = '0.65';
 
 my $qrNUMBER = qr/(^[+-]?\d+(\.\d+)?$)|(^[+-]?\d+\.?(\d*)[eE][+-](\d+))$/;
 
@@ -180,13 +181,13 @@ sub ExcelFmt {
     # We don't use the colour but we return it to the caller.
     #
     my $color = '';
-    if ( $format =~ s/^(\[[A-Z][a-z]{2,}(\d{1,2})?\])// ) {
+    if ( $format =~ s/^(\[[A-Za-z]{3,}(\d{1,2})?\])// ) {
         $color = $1;
     }
 
     # Remove the locale, such as [$-409], from the format string.
     my $locale = '';
-    if ( $format =~ s/^(\[\$?-\d+\])// ) {
+    if ( $format =~ s/^(\[\$?-F?\d+\])// ) {
         $locale = $1;
     }
 
@@ -584,8 +585,7 @@ sub ExcelFmt {
         # Replace the placeholders in the template such as yyyy mm dd with
         # actual numbers or strings.
         my $replacement;
-        for ( my $i = @placeholders - 1 ; $i >= 0 ; $i-- ) {
-            my $placeholder = $placeholders[$i];
+        for my $placeholder ( reverse @placeholders ) {
 
             if ( $placeholder->[-1] eq 'minutes' ) {
 
@@ -735,6 +735,9 @@ sub ExcelFmt {
 
                 # Text format.
                 $replacement = $number;
+            }
+            elsif ( $placeholder->[0] eq ',' ) {
+                next;
             }
 
             # Substitute the replacement string back into the template.
@@ -1120,6 +1123,10 @@ sub LocaltimeExcel {
     return $iTime;
 }
 
+my @month_days = qw(
+  0 31 28 31 30 31 30 31 31 30 31 30 31
+);
+
 #------------------------------------------------------------------------------
 # ExcelLocaltime (for Spreadsheet::ParseExcel::Utility)
 #------------------------------------------------------------------------------
@@ -1127,7 +1134,7 @@ sub ExcelLocaltime {
 
     my ( $dObj, $flg1904 ) = @_;
     my ( $iSec, $iMin, $iHour, $iDay, $iMon, $iYear, $iwDay, $iMSec );
-    my ( $iDt, $iTime, $iYDays );
+    my ( $iDt, $iTime, $iYDays, $iMD );
 
     $iDt   = int($dObj);
     $iTime = $dObj - $iDt;
@@ -1153,33 +1160,42 @@ sub ExcelLocaltime {
     }
     $iYear -= 1900;       # Localtime year is relative to 1900.
 
-    for ( $iMon = 1 ; $iMon < 12 ; $iMon++ ) {
-        my $iMD;
-        if (   $iMon == 1
-            || $iMon == 3
-            || $iMon == 5
-            || $iMon == 7
-            || $iMon == 8
-            || $iMon == 10
-            || $iMon == 12 )
-        {
-            $iMD = 31;
-        }
-        elsif ( $iMon == 4 || $iMon == 6 || $iMon == 9 || $iMon == 11 ) {
-            $iMD = 30;
-        }
-        elsif ( $iMon == 2 ) {
-            $iMD = ( ( $iYear % 4 ) == 0 ) ? 29 : 28;
-        }
+    for ( $iMon = 1 ; $iMon <= 12 ; $iMon++ ) {
+        $iMD = $month_days[$iMon];
+        $iMD++ if $iMon == 2 and $iYear % 4 == 0;
+
         last if ( $iDt <= $iMD );
         $iDt -= $iMD;
     }
 
-    $iMon -= 1;    # Localtime month is 0 based.
-
     #2. Calc Time
     $iDay = $iDt;
     $iTime += ( 0.0005 / 86400.0 );
+    if ($iTime >= 1.0)
+    {
+        $iTime -= int($iTime);
+        $iwDay = ($iwDay == 6) ? 0 : $iwDay + 1;
+        if ($iDay == $iMD)
+        {
+            if ($iMon == 12)
+            {
+                $iMon = 1;
+                $iYear++;
+            }
+            else
+            {
+                $iMon++;
+            }
+            $iDay = 1;
+        }
+        else
+        {
+            $iDay++;
+        }
+    }
+
+    # Localtime month is 0 based.
+    $iMon  -= 1;
     $iTime *= 24.0;
     $iHour = int($iTime);
     $iTime -= $iHour;
@@ -1594,7 +1610,9 @@ See also the following xls2csv utilities: Ken Prows' C<xls2csv>: http://search.c
 
 =head1 AUTHOR
 
-Maintainer 0.40+: John McNamara jmcnamara@cpan.org
+Current maintainer 0.60+: Douglas Wilson dougw@cpan.org
+
+Maintainer 0.40-0.59: John McNamara jmcnamara@cpan.org
 
 Maintainer 0.27-0.33: Gabor Szabo szabgab@cpan.org
 
@@ -1602,7 +1620,9 @@ Original author: Kawai Takanori kwitknr@cpan.org
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009-2010 John McNamara
+Copyright (c) 2014 Douglas Wilson
+
+Copyright (c) 2009-2013 John McNamara
 
 Copyright (c) 2006-2008 Gabor Szabo
 

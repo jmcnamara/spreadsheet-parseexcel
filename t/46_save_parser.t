@@ -1,16 +1,15 @@
 #!perl -w
 
 use strict;
-use Test::More tests => 7;
+use Test::More;
 
-eval "use Spreadsheet::WriteExcel;";
-
-if ( $@ ) {
-	plan( skip_all => "Spreadsheet::ParseExcel::SaveParser require Spreadsheet::WriteExcel" );
-}
+eval "use Spreadsheet::WriteExcel; 1;"
+	or plan( skip_all => "Spreadsheet::ParseExcel::SaveParser requires Spreadsheet::WriteExcel" );
 
 use utf8;
 use Encode qw(encode);
+
+plan(tests => 7);
 
 use_ok ('Spreadsheet::ParseExcel::SaveParser');
 

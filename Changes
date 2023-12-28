@@ -1,5 +1,66 @@
 Revision history for Perl module Spreadsheet::ParseExcel.
 
+0.65 March 15 2014
+    ! Merge support for accessing hyperlink data
+
+0.64 March 11 2014
+
+    ! RT #47072 (ExcelLocaltime rounding)
+      http://rt.cpan.org/Public/Bug/Display.html?id=47072
+
+    ! RT #93142 (date format w/commas)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93142
+
+    ! RT #93651 (Update metadata)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93651
+
+0.63 March 7 2014
+
+    ! RT #12946 (IO::Wrap)
+      http://rt.cpan.org/Public/Bug/Display.html?id=12946
+
+    ! RT #93065 (auto color)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93065
+
+0.62
+
+    ! Fix test 46 skip_all plan logic.
+      From CPAN testers.
+
+    ! RT #52830 (0x00 general fmt) && fix test.
+      http://rt.cpan.org/Public/Bug/Display.html?id=52830
+
+    ! RT #93138 (undefined value as ARRAY)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93138
+
+0.61
+
+    ! RT #93500 (Red Cell formats)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93500
+
+    + RT #93379 (tab color)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93379
+
+    + RT #93393 (active worksheet)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93393
+
+    ! Fix RT #93425 (color from workbook leaks)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93425
+
+    + RT #93367 (hidden rows/columns)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93367
+
+    ! Fix RT #93065 (black is white)
+      http://rt.cpan.org/Public/Bug/Display.html?id=93065
+
+    ! Fix RT #62593 (?)(merge from apla/master).
+      http://rt.cpan.org/Public/Bug/Display.html?id=62593
+
+0.60 February 26 2014
+
+    + Fix RT #43250
+      http://rt.cpan.org/Public/Bug/Display.html?id=43250
+
 0.59 April 6 2011
 
     + Patch for decryption of default encrypted workbooks from
