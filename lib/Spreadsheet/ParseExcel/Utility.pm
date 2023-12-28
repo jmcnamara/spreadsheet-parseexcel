@@ -78,10 +78,12 @@ sub ExcelFmt {
     $format_str = '@' if uc($format_str) eq "GENERAL";
 
     # Check for a conditional at the start of the format. See notes above.
-    my $conditional;
-    if ( $format_str =~ /^\[([<>=][^\]]+)\](.*)$/ ) {
-        $conditional = $1;
-        $format_str  = $2;
+    my $conditional_op;
+    my $conditional_value;
+    if ( $format_str =~ /^\[([<>=]+)([^\]]+)\](.*)$/ ) {
+        $conditional_op = $1;
+        $conditional_value = $2;
+        $format_str = $3;
     }
 
     # Ignore the underscore token which is used to indicate a padding space.
@@ -166,12 +168,23 @@ sub ExcelFmt {
     }
 
     # Override the previous choice if the format is conditional.
-    if ($conditional) {
-
-        # TODO. Replace string eval with a function.
-        $section = eval "$number $conditional" ? 0 : 1;
+    if ($conditional_op) {
+        if ($conditional_op eq '>') {
+            $section = $number > $conditional_value ? 0 : 1;
+        } elsif ($conditional_op eq '>=') {
+            $section = $number >= $conditional_value ? 0 : 1;
+        } elsif ($conditional_op eq '<') {
+            $section = $number < $conditional_value ? 0 : 1;
+        } elsif ($conditional_op eq '<=') {
+            $section = $number <= $conditional_value ? 0 : 1;
+        } elsif ($conditional_op eq '=') {
+            $section = $number == $conditional_value ? 0 : 1;
+        } elsif ($conditional_op eq '==') {
+            $section = $number == $conditional_value ? 0 : 1;
+        } elsif ($conditional_op eq '<>') {
+            $section = $number != $conditional_value ? 0 : 1;
+        }
     }
-
     # We now have the required format.
     $format = $formats[$section];
 
