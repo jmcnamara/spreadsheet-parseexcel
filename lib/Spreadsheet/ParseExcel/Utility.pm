@@ -170,13 +170,18 @@ sub ExcelFmt {
     if ($conditional_op) {
         if ($conditional_op eq '>') {
             $section = $number > $conditional_value ? 0 : 1;
+        } elsif ($conditional_op eq '>=') {
+            $section = $number >= $conditional_value ? 0 : 1;
         } elsif ($conditional_op eq '<') {
             $section = $number < $conditional_value ? 0 : 1;
+        } elsif ($conditional_op eq '<=') {
+            $section = $number <= $conditional_value ? 0 : 1;
         } elsif ($conditional_op eq '=') {
+            $section = $number == $conditional_value ? 0 : 1;
+        } elsif ($conditional_op eq '==') {
             $section = $number == $conditional_value ? 0 : 1;
         }
     }
-
     # We now have the required format.
     $format = $formats[$section];
 
