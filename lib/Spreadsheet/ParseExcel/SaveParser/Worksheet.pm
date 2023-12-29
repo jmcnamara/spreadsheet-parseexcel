@@ -24,7 +24,7 @@ use warnings;
 #==============================================================================
 
 use base 'Spreadsheet::ParseExcel::Worksheet';
-our $VERSION = '0.65';
+our $VERSION = '0.66';
 
 sub new {
     my ( $sClass, %rhIni ) = @_;
@@ -36,7 +36,7 @@ sub new {
 #------------------------------------------------------------------------------
 sub AddCell {
     my ( $oSelf, $iR, $iC, $sVal, $oCell, $sCode ) = @_;
-    
+
 	$oSelf->{_Book}
       ->AddCell( $oSelf->{_SheetNo}, $iR, $iC, $sVal, $oCell, $sCode );
 }

@@ -19,7 +19,7 @@ package Spreadsheet::ParseExcel::Cell;
 use strict;
 use warnings;
 
-our $VERSION = '0.65';
+our $VERSION = '0.66';
 
 ###############################################################################
 #
@@ -160,7 +160,7 @@ sub get_hyperlink {
     return undef;
 }
 
-# 
+#
 ###############################################################################
 #
 # Mapping between legacy method names and new names.

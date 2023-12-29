@@ -26,7 +26,7 @@ use Config;
 use Crypt::RC4;
 use Digest::Perl::MD5;
 
-our $VERSION = '0.65';
+our $VERSION = '0.66';
 
 use Spreadsheet::ParseExcel::Workbook;
 use Spreadsheet::ParseExcel::Worksheet;
@@ -627,7 +627,7 @@ sub _get_content {
 
     # Reset the error status in case method is called more than once.
     $self->{_error_status} = ErrorNone;
- 
+
     my $ref = ref($source);
 
     if ( $ref ) {
@@ -1428,7 +1428,7 @@ sub _getguid {
 
 # Helper: Extract a counted (16-bit) unicode string, returns string,
 # updates $offset
-# $zterm == 1 if string is null-terminated. 
+# $zterm == 1 if string is null-terminated.
 # $bc if length is in bytes (not chars)
 
 sub _getustr {
@@ -3413,8 +3413,6 @@ See the following for more information on Excel encryption: L<http://office.micr
 
 =over
 
-=item * Issues reported by users: L<http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel>
-
 =item * This module cannot read the values of formulas from files created with Spreadsheet::WriteExcel unless the user specified the values when creating the file (which is generally not the case). The reason for this is that Spreadsheet::WriteExcel writes the formula but not the formula result since it isn't in a position to calculate arbitrary Excel formulas without access to Excel's formula engine.
 
 =item * If Excel has date fields where the specified format is equal to the system-default for the short-date locale, Excel does not store the format, but defaults to an internal format which is system dependent. In these cases ParseExcel uses the date format 'yyyy-mm-dd'.
@@ -3426,9 +3424,9 @@ See the following for more information on Excel encryption: L<http://office.micr
 
 =head1 REPORTING A BUG
 
-Bugs can be reported via rt.cpan.org. See the following for instructions on bug reporting for Spreadsheet::ParseExcel
+Please report bugs on GitHub with a complete, working, sample application and a test xls file.
 
-L<http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel>
+L<https://github.com/jmcnamara/spreadsheet-parseexcel/issues>
 
 
 
@@ -3456,13 +3454,6 @@ L<http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel>
 =item * Text::CSV_XS L<http://search.cpan.org/~hmbrand/Text-CSV_XS/CSV_XS.pm> by H.Merijn Brand. A fast and rigorous module for reading and writing CSV data. Don't consider rolling your own CSV handling, use this module instead.
 
 =back
-
-
-
-
-=head1 MAILING LIST
-
-There is a Google group for discussing and asking questions about Spreadsheet::ParseExcel. This is a good place to search to see if your question has been asked before:  L<http://groups-beta.google.com/group/spreadsheet-parseexcel/>
 
 
 

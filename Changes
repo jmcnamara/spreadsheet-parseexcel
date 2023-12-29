@@ -1,5 +1,10 @@
 Revision history for Perl module Spreadsheet::ParseExcel.
 
+0.66 December 29 2023
+
+    ! Fix for CVE-2023-7101
+      https://github.com/runrig/spreadsheet-parseexcel/issues/33
+
 0.65 March 15 2014
     ! Merge support for accessing hyperlink data
 
@@ -268,9 +273,7 @@ Revision history for Perl module Spreadsheet::ParseExcel.
 0.43 January 7 2009
 
     + Restructured and rewrote the main documentation. This is the start of
-      a general refactoring. If you would like to keep up to date with it
-      keep an eye on the Spreadsheet::ParseExcel Google Group.
-      http://groups.google.com/group/spreadsheet-parseexcel
+      a general refactoring.
 
     + Added worksheets() Workbook method to iterate over the Worksheet objects.
 

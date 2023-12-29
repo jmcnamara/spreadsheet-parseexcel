@@ -20,7 +20,7 @@ use strict;
 use warnings;
 
 use base 'Spreadsheet::ParseExcel::Workbook';
-our $VERSION = '0.65';
+our $VERSION = '0.66';
 
 #==============================================================================
 # Spreadsheet::ParseExcel::SaveParser::Workbook
@@ -255,7 +255,7 @@ sub SaveAs {
                 }
             }
         }
-        
+
 		my $merged_areas = $oWkS->get_merged_areas();
 		my $merged_areas_h = {};
 		if ($merged_areas) {
@@ -263,7 +263,7 @@ sub SaveAs {
 				$merged_areas_h->{$range->[0]}{$range->[1]} = $range;
 			}
 		}
-		
+
 		for (
             my $iR = $oWkS->{MinRow} ;
             defined $oWkS->{MaxRow} && $iR <= $oWkS->{MaxRow} ;

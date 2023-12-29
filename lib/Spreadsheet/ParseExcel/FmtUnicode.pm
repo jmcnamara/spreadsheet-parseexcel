@@ -22,7 +22,7 @@ use warnings;
 use Unicode::Map;
 use base 'Spreadsheet::ParseExcel::FmtDefault';
 
-our $VERSION = '0.65';
+our $VERSION = '0.66';
 
 #------------------------------------------------------------------------------
 # new (for Spreadsheet::ParseExcel::FmtUnicode)

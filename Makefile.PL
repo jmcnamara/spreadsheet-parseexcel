@@ -15,14 +15,13 @@ my %deps = (
 );
 
 my %resources = (
-    homepage  => 'http://github.com/runrig/spreadsheet-parseexcel/',
-    repository  => 'http://github.com/runrig/spreadsheet-parseexcel',
-    bugtracker  => 'http://github.com/runrig/spreadsheet-parseexcel/issues',
-    MailingList => 'http://groups.google.com/group/spreadsheet-parseexcel',
+    homepage  => 'http://github.com/jmcnamara/spreadsheet-parseexcel/',
+    repository  => 'http://github.com/jmcnamara/spreadsheet-parseexcel',
+    bugtracker  => 'http://github.com/jmcnamara/spreadsheet-parseexcel/issues',
 );
 
 my %params = (
-    'AUTHOR'        => 'Douglas Wilson (dougw@cpan.org)',
+    'AUTHOR'        => 'John McNamara (jmcnamara@cpan.org)',
     'NAME'          => 'Spreadsheet::ParseExcel',
     'ABSTRACT'      => 'Read information from an Excel file.',
     'VERSION_FROM'  => 'lib/Spreadsheet/ParseExcel.pm',

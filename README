@@ -52,7 +52,9 @@ map:     (which you copied directry)/CP932Excel.map
 
 AUTHOR
 
-    Current maintainer 0.40+: John McNamara jmcnamara@cpan.org
+    Maintainer 0.60+: Douglas Wilson dougw@cpan.org
+
+    Maintainer 0.40-0.59: John McNamara jmcnamara@cpan.org
 
     Maintainer 0.27-0.33: Gabor Szabo szabgab@cpan.org
 
@@ -60,14 +62,5 @@ AUTHOR
 
 
 SUPPORT
-    Before you report problems, please check the "KNOWN PROBLEMS" section
-    in the manual page for Spreadsheet::ParseExcel.
-
-    There is a Google group for discussing and asking questions about
-    Spreadsheet::ParseExcel.
-    http://groups-beta.google.com/group/spreadsheet-parseexcel/
-
-    Bugs can be reported via rt.cpan.org. See the following for instructions:
-    http://rt.cpan.org/Public/Dist/Display.html?Name=Spreadsheet-ParseExcel
-
-    Test cases are always welcome.
+    Please check the "KNOWN PROBLEMS" section in the manual page
+    for Spreadsheet::ParseExcel.

@@ -1,9 +1,9 @@
 --- #YAML:1.0
 name:               Spreadsheet-ParseExcel
-version:            0.65
+version:            0.66
 abstract:           Read information from an Excel file.
 author:
-    - Douglas Wilson (dougw@cpan.org)
+    - John McNamara (jmcnamara@cpan.org)
 license:            perl
 distribution_type:  module
 configure_requires:
@@ -19,8 +19,7 @@ requires:
     Crypt::RC4:         0
     Digest::Perl::MD5:  0
 resources:
-    MailingList:  http://groups.google.com/group/spreadsheet-parseexcel
-    repository:   http://github.com/runrig/spreadsheet-parseexcel
+    repository:   http://github.com/jmcnamara/spreadsheet-parseexcel
 no_index:
     directory:
         - t

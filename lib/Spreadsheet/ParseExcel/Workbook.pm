@@ -19,7 +19,7 @@ package Spreadsheet::ParseExcel::Workbook;
 use strict;
 use warnings;
 
-our $VERSION = '0.65';
+our $VERSION = '0.66';
 
 ###############################################################################
 #
