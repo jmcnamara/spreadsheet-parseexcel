@@ -34,7 +34,7 @@ BEGIN { $tests += 1; }
 
 my $workbook_1;
 {
-    my $workbook = Spreadsheet::ParseExcel::Workbook->Parse('sample/Excel/Test95.xls');
+    my $workbook = Spreadsheet::ParseExcel::Workbook->Parse('t/excel_files/Test95.xls');
     $workbook_1 = $workbook;
     use Data::Dumper;
     #diag Dumper $excel;
@@ -67,7 +67,7 @@ my $workbook_1;
 
     is($workbook->{Version}, 1280);
     is($workbook->{BIFFVersion}, 8);
-    is($workbook->{File}, 'sample/Excel/Test95.xls');
+    is($workbook->{File}, 't/excel_files/Test95.xls');
     is($workbook->{Author}, 'kawait');
 
 
