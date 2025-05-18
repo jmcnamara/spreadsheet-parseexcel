@@ -6,13 +6,13 @@
 #
 # Tests for Utility int2col() and col2int() functions..
 #
-# reverse('©'), August 2009, John McNamara, jmcnamara@cpan.org
+# Copyright, August 2009, John McNamara, jmcnamara@cpan.org
 #
 
 use strict;
 
 use Spreadsheet::ParseExcel::Utility qw( int2col col2int );
-use Test::More tests => 3;
+use Test::More tests => 13;
 
 ##############################################################################
 #
@@ -43,5 +43,17 @@ my ($got) = int2col(27);
 my $expected = 'AB';
 
 is($got, $expected);
+
+# Test some other edge cases.
+is(col2int('A'), 0);
+is(col2int('Z'), 25);
+is(col2int('AA'), 26);
+is(col2int('AZ'), 51);
+is(col2int('BA'), 52);
+is(col2int('ZZ'), 701);
+is(col2int('AAA'), 702);
+is(col2int('AAB'), 703);
+is(col2int('ABA'), 728);
+is(col2int('XFD'), 16383);
 
 __END__

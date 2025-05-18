@@ -1235,10 +1235,10 @@ sub col2int {
 
     for ( my $i = length($str) ; $i > 0 ; $i-- ) {
         my $char = substr( $str, $i - 1 );
-        my $curr += ord( lc($char) ) - ord('a') + 1;
-        $curr *= $incr if ($incr);
-        $result += $curr;
-        $incr   += 26;
+        my $curr = ord( lc($char) ) - ord('a') + 1;
+        $curr    *= 26 ** $incr;
+        $result  += $curr;
+        $incr++;
     }
 
     # this is one out as we range 0..x-1 not 1..x
