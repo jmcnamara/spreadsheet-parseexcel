@@ -200,7 +200,11 @@ sub ExcelFmt {
 
     # Remove the locale, such as [$-409], from the format string.
     my $locale = '';
-    if ( $format =~ s/^(\[\$?-F?\d+\])// ) {
+    # Custom format has the option to specify locale/location - this is
+    # represented by a [$-xxxx] section which can be in various formats
+    # $-CA_US, $-,F, $-G, $-409, $-1C09 etc
+    # https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-lcid/70feba9f-294e-491e-b6eb-56532684c37f
+    if ( $format =~ s/^(\[\$-[a-zA-Z\-\d]+\])// ) {
         $locale = $1;
     }
 
